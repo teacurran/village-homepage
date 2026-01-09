@@ -46,9 +46,18 @@ public enum JobType {
      * <p>
      * <b>Cadence:</b> Daily at 2am UTC
      * <p>
-     * <b>Handler:</b> ListingExpirationHandler (future)
+     * <b>Handler:</b> ListingExpirationJobHandler
      */
     LISTING_EXPIRATION(JobQueue.DEFAULT, "Listing expiration (daily)"),
+
+    /**
+     * Sends reminder emails to sellers for listings expiring within 2-3 days.
+     * <p>
+     * <b>Cadence:</b> Daily at 10am UTC
+     * <p>
+     * <b>Handler:</b> ListingReminderJobHandler
+     */
+    LISTING_REMINDER(JobQueue.DEFAULT, "Listing reminder (daily)"),
 
     /**
      * Recalculates Good Sites ranking scores based on votes and category position.
