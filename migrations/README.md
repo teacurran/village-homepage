@@ -75,20 +75,165 @@ Set the environment via `-Dmigration.env=<name>`.
 
 ## 5. Geographic Dataset Loading
 
-The [dr5hn/countries-states-cities](https://github.com/dr5hn/countries-states-cities-database) dataset powers marketplace geo search.
+The [dr5hn/countries-states-cities](https://github.com/dr5hn/countries-states-cities-database) dataset powers marketplace geo search. Per **Policy P6**, Village Homepage imports **US + Canada only** (~40K cities) with PostGIS spatial indexing for efficient radius queries.
+
+### 5.1 Import Process Overview
+
+Geographic data import follows a **two-phase process**:
+
+1. **Migration Phase** (`20250110001800_create_geo_tables.sql`):
+   - Creates application schema tables: `geo_countries`, `geo_states`, `geo_cities`
+   - Defines PostGIS `location` column (GEOGRAPHY Point) on `geo_cities`
+   - Creates spatial indexes (GIST) and foreign key constraints
+
+2. **Data Load Phase** (`import-geo-data-to-app-schema.sh`):
+   - Downloads dr5hn dataset (153K+ global cities)
+   - Loads into temporary native tables (`countries`, `states`, `cities`)
+   - Transforms and copies to application tables with US + Canada filtering
+   - Populates PostGIS `location` column from latitude/longitude
+   - Cleans up temporary tables
+
+### 5.2 Running the Import
+
+**Prerequisites:**
+- Run migrations first to create schema
+- Start docker-compose services
+- Ensure PostGIS is enabled (automatic via `bootstrap/init-postgis.sql`)
 
 ```bash
-# Validate setup without loading data
-./scripts/load-geo-data.sh --dry-run
+# Step 1: Apply migration to create schema
+cd migrations
+set -a && source ../.env && set +a
+mvn migration:up -Dmigration.env=development
+cd ..
 
-# Perform idempotent load (~5–10 minutes)
-./scripts/load-geo-data.sh
+# Step 2: Import data (idempotent, ~5-10 minutes)
+./scripts/import-geo-data-to-app-schema.sh
 
-# Force a full reload
-./scripts/load-geo-data.sh --force
+# Optional: Force reload
+./scripts/import-geo-data-to-app-schema.sh --force
+
+# Debug: Keep temporary native tables after import
+./scripts/import-geo-data-to-app-schema.sh --keep-temp-tables
 ```
 
-The script downloads the latest archive, extracts `sql/world.sql`, and streams it into PostgreSQL with spatial indexes. See the script header and `docs/ops/dev-services.md` for troubleshooting tips.
+### 5.3 Validating PostGIS Setup
+
+After import, verify the data and spatial indexes:
+
+```bash
+# Connect to database
+psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```
+
+**Verify PostGIS Version:**
+```sql
+SELECT PostGIS_Version();
+-- Expected: PostGIS 3.4.x or higher
+```
+
+**Check Import Counts:**
+```sql
+SELECT
+    (SELECT COUNT(*) FROM geo_countries) as countries,
+    (SELECT COUNT(*) FROM geo_states) as states,
+    (SELECT COUNT(*) FROM geo_cities) as cities,
+    (SELECT COUNT(*) FROM geo_cities WHERE location IS NOT NULL) as cities_with_location;
+
+-- Expected Results (approximate):
+-- countries: 2 (US + Canada)
+-- states: 65-70 (US states + Canadian provinces)
+-- cities: 38,000-42,000 (US + Canada per Policy P6)
+-- cities_with_location: Same as cities (100% coverage)
+```
+
+**Test Radius Query (50 miles from Seattle):**
+```sql
+SELECT name,
+       ST_Distance(location, ST_MakePoint(-122.3321, 47.6062)::geography) / 1609.34 as distance_miles
+FROM geo_cities
+WHERE ST_DWithin(location, ST_MakePoint(-122.3321, 47.6062)::geography, 80467)  -- 50 miles in meters
+ORDER BY distance_miles
+LIMIT 10;
+
+-- Should return cities like Tacoma, Bellevue, Everett, etc.
+```
+
+**Verify Spatial Index Usage:**
+```sql
+EXPLAIN (FORMAT TEXT)
+SELECT COUNT(*) FROM geo_cities
+WHERE ST_DWithin(location, ST_MakePoint(-74.0060, 40.7128)::geography, 160934);  -- 100 miles from NYC
+
+-- Look for: "Index Scan using idx_geo_cities_location on geo_cities"
+-- If you see "Seq Scan", the spatial index is not being used
+```
+
+**Benchmark Query Performance (Policy P11 target: p95 < 100ms):**
+```sql
+EXPLAIN ANALYZE
+SELECT COUNT(*) FROM geo_cities
+WHERE ST_DWithin(location, ST_MakePoint(-74.0060, 40.7128)::geography, 160934);
+
+-- Check "Execution Time" in output - should be well under 100ms for 100-mile radius
+```
+
+### 5.4 Troubleshooting
+
+**Import script reports "Application schema not found":**
+- Ensure migration `20250110001800_create_geo_tables.sql` is applied first
+- Check: `psql -c "SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'geo_%';"`
+
+**Fewer cities than expected (~40K):**
+- Verify US + Canada filtering is working: `SELECT iso2 FROM geo_countries;` should return only `US` and `CA`
+- Check dr5hn dataset version - city counts may vary slightly between releases
+
+**Spatial queries are slow (> 100ms):**
+- Verify GIST index exists: `\d geo_cities` should show `idx_geo_cities_location GIST (location)`
+- Run `ANALYZE geo_cities;` to update query planner statistics
+- Ensure PostGIS extension is enabled: `SELECT PostGIS_Version();`
+
+**PostGIS extension not found:**
+- The docker container should enable PostGIS automatically via `bootstrap/init-postgis.sql`
+- If using external DB: `psql -c 'CREATE EXTENSION IF NOT EXISTS postgis;'`
+
+### 5.5 Example Use Cases
+
+**Find cities within radius of a known city:**
+```sql
+SELECT c2.name, c2.state_id,
+       ST_Distance(c1.location, c2.location) / 1609.34 as distance_miles
+FROM geo_cities c1
+CROSS JOIN geo_cities c2
+WHERE c1.name = 'Portland' AND c1.state_id = (SELECT id FROM geo_states WHERE state_code = 'OR')
+  AND ST_DWithin(c1.location, c2.location, 160934)  -- 100 miles
+  AND c1.id != c2.id
+ORDER BY distance_miles
+LIMIT 20;
+```
+
+**Count cities by state (top 10):**
+```sql
+SELECT s.name, s.state_code, COUNT(c.id) as city_count
+FROM geo_states s
+JOIN geo_cities c ON c.state_id = s.id
+GROUP BY s.name, s.state_code
+ORDER BY city_count DESC
+LIMIT 10;
+```
+
+**Find nearest city to arbitrary coordinates:**
+```sql
+SELECT name, state_id,
+       ST_Distance(location, ST_MakePoint(-118.2437, 34.0522)::geography) / 1609.34 as distance_miles
+FROM geo_cities
+ORDER BY location <-> ST_MakePoint(-118.2437, 34.0522)::geography
+LIMIT 1;
+
+-- Should return Los Angeles, CA
+```
+
+See the script header (`scripts/import-geo-data-to-app-schema.sh`) and **Policy P6**, **P11** for additional context.
 
 ## 6. Feature Flags
 
