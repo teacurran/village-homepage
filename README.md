@@ -210,6 +210,83 @@ mvn migration:new -Dmigration.description="add_user_preferences_table"
 cd ..
 ```
 
+### Feed Management
+
+```bash
+# Navigate to migrations directory for seed data
+cd migrations
+
+# Load environment variables
+set -a && source ../.env && set +a
+
+# Load default RSS sources (TechCrunch, BBC, Reuters, etc.)
+psql -h localhost -p 5432 -U village -d village_homepage -f seeds/rss_sources.sql
+
+# Return to project root
+cd ..
+```
+
+**Default System Feeds:**
+
+The seed script loads 19 curated RSS sources across categories:
+- **Technology:** TechCrunch, Hacker News, Ars Technica, The Verge
+- **Business & Finance:** Reuters, Financial Times, MarketWatch
+- **World News:** BBC World News, The Guardian, Al Jazeera
+- **Science & Health:** Scientific American, Nature News, Science Daily
+- **Politics:** Politico, The Hill
+- **Entertainment:** Entertainment Weekly, Variety
+- **Sports:** ESPN, Sports Illustrated
+
+**Admin API Operations:**
+
+Admin-only CRUD operations require `super_admin` role (bootstrap user or granted via admin UI):
+
+```bash
+# List all RSS sources
+curl -X GET http://localhost:8080/admin/api/feeds/sources \
+  -H "Authorization: Bearer <admin_token>"
+
+# Create new system feed
+curl -X POST http://localhost:8080/admin/api/feeds/sources \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "New Tech Feed",
+    "url": "https://example.com/feed.xml",
+    "category": "Technology",
+    "refresh_interval_minutes": 60
+  }'
+
+# Update feed configuration (e.g., disable broken feed)
+curl -X PATCH http://localhost:8080/admin/api/feeds/sources/{id} \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"is_active": false}'
+
+# Delete feed (cascade deletes items and subscriptions)
+curl -X DELETE http://localhost:8080/admin/api/feeds/sources/{id} \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+**Health Monitoring:**
+
+System feeds are auto-disabled after 5 consecutive fetch errors. Check feed health:
+
+```sql
+-- Find disabled feeds with errors
+SELECT name, url, error_count, last_error_message, last_fetched_at
+FROM rss_sources
+WHERE is_active = false AND error_count > 0
+ORDER BY last_fetched_at DESC NULLS LAST;
+
+-- Re-enable after fixing (development only - use admin API in production)
+UPDATE rss_sources
+SET error_count = 0, last_error_message = NULL, is_active = true, updated_at = NOW()
+WHERE id = '<source_uuid>';
+```
+
+**See [docs/ops/feed-governance.md](docs/ops/feed-governance.md) for detailed operational procedures.**
+
 ---
 
 ## CI/CD Pipeline

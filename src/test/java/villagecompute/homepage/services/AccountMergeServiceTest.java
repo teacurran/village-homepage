@@ -11,7 +11,6 @@ import villagecompute.homepage.data.models.User;
 import villagecompute.homepage.data.models.AccountMergeAudit;
 import villagecompute.homepage.testing.H2TestResource;
 
-import java.time.Instant;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,9 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for AccountMergeService.
  *
- * Tests cover anonymous-to-authenticated merge flows, consent recording,
- * and audit trail creation. Ensures acceptance criteria for I2.T9:
- * "Coverage ≥80% for auth/preferences modules".
+ * Tests cover anonymous-to-authenticated merge flows, consent recording, and audit trail creation. Ensures acceptance
+ * criteria for I2.T9: "Coverage ≥80% for auth/preferences modules".
  *
  * Coverage target: ≥80% line and branch coverage.
  */
@@ -53,13 +51,9 @@ class AccountMergeServiceTest {
         String userAgent = "Mozilla/5.0";
 
         // Record consent
-        AccountMergeService.MergeConsentResult result = accountMergeService.recordConsent(
-            anonymousUser.id,
-            authenticatedUser.id,
-            true,  // consent given
-            ipAddress,
-            userAgent
-        );
+        AccountMergeService.MergeConsentResult result = accountMergeService.recordConsent(anonymousUser.id,
+                authenticatedUser.id, true, // consent given
+                ipAddress, userAgent);
 
         // Verify result
         assertNotNull(result, "Consent result should not be null");
@@ -88,13 +82,9 @@ class AccountMergeServiceTest {
         String userAgent = "Safari/17.0";
 
         // Record consent declined
-        AccountMergeService.MergeConsentResult result = accountMergeService.recordConsent(
-            anonymousUser.id,
-            authenticatedUser.id,
-            false,  // consent declined
-            ipAddress,
-            userAgent
-        );
+        AccountMergeService.MergeConsentResult result = accountMergeService.recordConsent(anonymousUser.id,
+                authenticatedUser.id, false, // consent declined
+                ipAddress, userAgent);
 
         // Verify result
         assertNotNull(result);
@@ -110,13 +100,8 @@ class AccountMergeServiceTest {
     void testRecordConsent_NullAnonymousUserId_ThrowsException() {
         // Note: NullPointerException is thrown before null check due to tracing span builder
         assertThrows(NullPointerException.class, () -> {
-            accountMergeService.recordConsent(
-                null,  // null anonymous user ID
-                UUID.randomUUID(),
-                true,
-                "192.168.1.1",
-                "Mozilla/5.0"
-            );
+            accountMergeService.recordConsent(null, // null anonymous user ID
+                    UUID.randomUUID(), true, "192.168.1.1", "Mozilla/5.0");
         });
     }
 
@@ -124,13 +109,8 @@ class AccountMergeServiceTest {
     void testRecordConsent_NullAuthenticatedUserId_ThrowsException() {
         // Note: NullPointerException is thrown before null check due to tracing span builder
         assertThrows(NullPointerException.class, () -> {
-            accountMergeService.recordConsent(
-                UUID.randomUUID(),
-                null,  // null authenticated user ID
-                true,
-                "192.168.1.1",
-                "Mozilla/5.0"
-            );
+            accountMergeService.recordConsent(UUID.randomUUID(), null, // null authenticated user ID
+                    true, "192.168.1.1", "Mozilla/5.0");
         });
     }
 
@@ -142,13 +122,8 @@ class AccountMergeServiceTest {
         User auth = User.createAuthenticated("test@example.com", "google", "google-8", "Test User", null);
 
         assertThrows(IllegalArgumentException.class, () -> {
-            accountMergeService.recordConsent(
-                anon.id,
-                auth.id,
-                true,
-                null,  // null IP address
-                "Mozilla/5.0"
-            );
+            accountMergeService.recordConsent(anon.id, auth.id, true, null, // null IP address
+                    "Mozilla/5.0");
         });
     }
 
@@ -160,12 +135,7 @@ class AccountMergeServiceTest {
         User auth = User.createAuthenticated("test@example.com", "google", "google-9", "Test User", null);
 
         assertThrows(IllegalArgumentException.class, () -> {
-            accountMergeService.recordConsent(
-                anon.id,
-                auth.id,
-                true,
-                "192.168.1.1",
-                null  // null user agent
+            accountMergeService.recordConsent(anon.id, auth.id, true, "192.168.1.1", null // null user agent
             );
         });
     }
@@ -175,7 +145,8 @@ class AccountMergeServiceTest {
         // Create test users in their own transaction
         UUID[] ids = QuarkusTransaction.requiringNew().call(() -> {
             User anon = User.createAnonymous();
-            User auth = User.createAuthenticated("merge-test@example.com", "google", "google-merge-1", "Merge Test", null);
+            User auth = User.createAuthenticated("merge-test@example.com", "google", "google-merge-1", "Merge Test",
+                    null);
             return new UUID[]{anon.id, auth.id};
         });
 
@@ -183,18 +154,12 @@ class AccountMergeServiceTest {
         UUID authId = ids[1];
 
         // Record consent (manages its own transaction)
-        AccountMergeService.MergeConsentResult consentResult = accountMergeService.recordConsent(
-            anonId,
-            authId,
-            true,
-            "192.168.1.1",
-            "Mozilla/5.0"
-        );
+        AccountMergeService.MergeConsentResult consentResult = accountMergeService.recordConsent(anonId, authId, true,
+                "192.168.1.1", "Mozilla/5.0");
 
         // Execute merge (manages its own transaction)
-        AccountMergeService.MergeExecutionResult mergeResult = accountMergeService.executeMerge(
-            consentResult.auditId()
-        );
+        AccountMergeService.MergeExecutionResult mergeResult = accountMergeService
+                .executeMerge(consentResult.auditId());
 
         // Verify merge result
         assertNotNull(mergeResult, "Merge result should not be null");

@@ -16,11 +16,11 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration tests for RateLimitFilter.
  *
- * Tests verify rate limit filter configuration and database integration.
- * Ensures acceptance criteria for I2.T9: "rate limit tests assert 429 path".
+ * Tests verify rate limit filter configuration and database integration. Ensures acceptance criteria for I2.T9: "rate
+ * limit tests assert 429 path".
  *
- * Note: HTTP 429 responses are tested via RateLimitService unit tests.
- * This test class verifies the filter's configuration and integration points.
+ * Note: HTTP 429 responses are tested via RateLimitService unit tests. This test class verifies the filter's
+ * configuration and integration points.
  *
  * Coverage target: Verify filter behavior and configuration.
  */
@@ -49,8 +49,7 @@ class RateLimitFilterTest {
         config.persist();
 
         // Verify config was stored
-        RateLimitConfig retrieved = RateLimitConfig.findByActionAndTier("test_action", "anonymous")
-            .orElseThrow();
+        RateLimitConfig retrieved = RateLimitConfig.findByActionAndTier("test_action", "anonymous").orElseThrow();
 
         assertEquals("test_action", retrieved.actionType);
         assertEquals("anonymous", retrieved.tier);
@@ -67,16 +66,13 @@ class RateLimitFilterTest {
         createConfig("search", "anonymous", 100, 60);
 
         // Verify specific config retrieval
-        RateLimitConfig loginAnon = RateLimitConfig.findByActionAndTier("login", "anonymous")
-            .orElseThrow();
+        RateLimitConfig loginAnon = RateLimitConfig.findByActionAndTier("login", "anonymous").orElseThrow();
         assertEquals(5, loginAnon.limitCount);
 
-        RateLimitConfig loginAuth = RateLimitConfig.findByActionAndTier("login", "logged_in")
-            .orElseThrow();
+        RateLimitConfig loginAuth = RateLimitConfig.findByActionAndTier("login", "logged_in").orElseThrow();
         assertEquals(20, loginAuth.limitCount);
 
-        RateLimitConfig searchAnon = RateLimitConfig.findByActionAndTier("search", "anonymous")
-            .orElseThrow();
+        RateLimitConfig searchAnon = RateLimitConfig.findByActionAndTier("search", "anonymous").orElseThrow();
         assertEquals(100, searchAnon.limitCount);
     }
 
@@ -87,15 +83,13 @@ class RateLimitFilterTest {
         createConfig("api_call", "anonymous", 50, 60);
 
         // Verify config exists
-        RateLimitConfig existing = RateLimitConfig.findByActionAndTier("api_call", "anonymous")
-            .orElseThrow();
+        RateLimitConfig existing = RateLimitConfig.findByActionAndTier("api_call", "anonymous").orElseThrow();
         assertEquals(50, existing.limitCount);
 
         // Note: H2 in-memory database may not enforce unique constraints the same way as PostgreSQL
         // In production, the database enforces UNIQUE(action_type, tier)
         // For testing purposes, we verify the finder method returns the correct config
-        RateLimitConfig found = RateLimitConfig.findByActionAndTier("api_call", "anonymous")
-            .orElseThrow();
+        RateLimitConfig found = RateLimitConfig.findByActionAndTier("api_call", "anonymous").orElseThrow();
         assertEquals(existing.id, found.id, "Should return the same config for duplicate lookup");
     }
 
@@ -104,8 +98,7 @@ class RateLimitFilterTest {
     void testRateLimitConfig_Update() {
         createConfig("vote", "logged_in", 50, 3600);
 
-        RateLimitConfig config = RateLimitConfig.findByActionAndTier("vote", "logged_in")
-            .orElseThrow();
+        RateLimitConfig config = RateLimitConfig.findByActionAndTier("vote", "logged_in").orElseThrow();
 
         // Update config
         config.limitCount = 75;
@@ -114,8 +107,7 @@ class RateLimitFilterTest {
         config.persist();
 
         // Verify update persisted
-        RateLimitConfig updated = RateLimitConfig.findByActionAndTier("vote", "logged_in")
-            .orElseThrow();
+        RateLimitConfig updated = RateLimitConfig.findByActionAndTier("vote", "logged_in").orElseThrow();
         assertEquals(75, updated.limitCount);
         assertEquals(1800, updated.windowSeconds);
     }
@@ -132,7 +124,7 @@ class RateLimitFilterTest {
         assertTrue(configs.size() >= 3, "Should find all created configs");
 
         boolean hasAction1 = configs.stream()
-            .anyMatch(c -> "action1".equals(c.actionType) && "anonymous".equals(c.tier));
+                .anyMatch(c -> "action1".equals(c.actionType) && "anonymous".equals(c.tier));
         assertTrue(hasAction1, "Should include action1 config");
     }
 
@@ -149,7 +141,7 @@ class RateLimitFilterTest {
         assertThrows(Exception.class, () -> {
             RateLimitConfig config = new RateLimitConfig();
             config.id = UUID.randomUUID();
-            config.actionType = null;  // Should fail NOT NULL constraint
+            config.actionType = null; // Should fail NOT NULL constraint
             config.tier = "anonymous";
             config.limitCount = 10;
             config.windowSeconds = 60;
@@ -163,8 +155,7 @@ class RateLimitFilterTest {
     void testRateLimitConfig_UpdatedByTracking() {
         createConfig("moderated_action", "anonymous", 5, 60);
 
-        RateLimitConfig config = RateLimitConfig.findByActionAndTier("moderated_action", "anonymous")
-            .orElseThrow();
+        RateLimitConfig config = RateLimitConfig.findByActionAndTier("moderated_action", "anonymous").orElseThrow();
 
         // Set updatedByUserId
         config.updatedByUserId = 123L;
@@ -172,8 +163,7 @@ class RateLimitFilterTest {
         config.persist();
 
         // Verify tracking
-        RateLimitConfig tracked = RateLimitConfig.findByActionAndTier("moderated_action", "anonymous")
-            .orElseThrow();
+        RateLimitConfig tracked = RateLimitConfig.findByActionAndTier("moderated_action", "anonymous").orElseThrow();
         assertEquals(123L, tracked.updatedByUserId, "Should track who updated config");
     }
 
