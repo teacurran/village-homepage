@@ -1,140 +1,140 @@
 <!-- anchor: iteration-3-plan -->
-### Iteration 3: Marketplace Domain & Payment Architecture
+### Iteration 3: Content Aggregation, AI Tagging, and External Integrations
 
-- **Iteration ID:** `I3`
-- **Goal:** Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.
-- **Prerequisites:** I1 artifacts (architecture intake, ERD, job/gov docs) plus I2 outputs (OpenAPI draft, migration notes, AI tagging spec, mount scaffolding).
-- **Iteration Narrative:** Marketplace functionality spans taxonomy ingestion, PostGIS radius search, Elasticsearch ranking, listing lifecycle (draft→active→expired), screenshot/image workflows, Stripe posting fees/promotions, refund/fraud compliance (Policy P3), masked email relays, and moderation/flagging. This iteration delivers specs, migration notes, payment blueprints, and ops playbooks so subsequent engineering iterations can code features with minimal ambiguity.
+*   **Iteration ID:** `I3`
+*   **Goal:** Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.
+*   **Prerequisites:** `I1` + `I2` (auth, preferences, feature flags, rate limits).
+*   **Iteration KPIs:** Feed ingestion throughput, AI tagging budget enforcement, weather/stocks/social cache hit ratios, widget API latencies <200ms, error budget tracked via observability metrics.
+*   **Iteration Testing Focus:** Unit + integration coverage for feed parsing, job handlers, LangChain budget gating, weather fallback logic, social staleness banners, storage upload mocks, and widget API contract tests.
+*   **Iteration Exit Criteria:** News/weather/stocks/social widgets consume live data with graceful degradation, AI tagging respects budgets w alerts, StorageGateway emits signed URLs, and docs describe refresh intervals + cost controls.
+*   **Iteration Collaboration Notes:** Coordinate with ops for AI budget alerts, UI squad for widget rendering states, infra for API keys, and compliance for AI tagging prompts referencing policy reasoning.
+*   **Iteration Documentation Outputs:** Update docs for feeds, AI budget, weather, stock refresh, social banners, storage gateway, widget API usage, and monitoring dashboards with anchors.
+*   **Iteration Risks:** External APIs (Alpha Vantage, Meta, NWS) may throttle or change contracts; mitigate via circuit breakers, fallback caches, and feature flag kill switches documented in runbooks.
+*   **Iteration Communications:** Weekly digest to stakeholders summarizing backlog health (feeds/jobs), AI spend, and API incidents; escalate blockers within 24 hours via ops channel.
+*   **Iteration Dependencies:** Outputs unlock marketplace listing metadata, Good Sites screenshot service, AI categorization, and analytics instrumentation.
 
 <!-- anchor: task-i3-t1 -->
-- **Task 3.1:**
-  - **Task ID:** `I3.T1`
-  - **Description:** Document marketplace taxonomy import strategy mapping the provided hierarchical list into `marketplace_categories`. Define slug rules, sorting, reserved keywords, seeding tooling, and integration with dr5hn geo dataset for location tags.
-  - **Agent Type Hint:** `DataArchitectureAgent`
-  - **Inputs:** Requirements F12.3, ERD, migration guidance.
-  - **Input Files:** ["CLAUDE.md", "docs/architecture/data_model.puml"]
-  - **Target Files:** ["docs/marketplace/taxonomy_plan.md", "migrations/notes/iteration3_taxonomy.md"]
-  - **Deliverables:** Taxonomy plan + migration note describing parent-child structure, slug patterns, translation/internationalization considerations, and CLI/SQL seeding instructions.
-  - **Acceptance Criteria:** Document lists full tree, numbering scheme, future expansion approach, and cross-links to UI/UX plan; migration note outlines idempotent seeding script with rollback steps.
-  - **Dependencies:** `I2.T3`
-  - **Parallelizable:** Yes
+*   **Task 3.1:**
+    *   **Task ID:** `I3.T1`
+    *   **Description:** Implement `rss_sources`, `feed_items`, and `user_feed_subscriptions` models, migrations, Panache entities, and admin CRUD for system feeds (categories, refresh intervals, status metrics).
+        Seed categories per requirements, add CLI to import default RSS list, document governance.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Section F3, ERD, architecture diagrams.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/data/models/","src/main/java/villagecompute/homepage/api/rest/admin/"]`
+    *   **Target Files:** `["migrations/V7__rss_sources.sql","src/main/java/villagecompute/homepage/data/models/RssSource.java","src/main/java/villagecompute/homepage/data/models/FeedItem.java","src/main/java/villagecompute/homepage/api/rest/admin/FeedAdminResource.java","docs/ops/feed-governance.md"]`
+    *   **Deliverables:** Schema migration, Panache entities, admin APIs, CLI seed, doc.
+    *   **Acceptance Criteria:** CRUD endpoints secured, validations for URL/interval, CLI seeds default feeds, doc outlines moderation + error handling.
+    *   **Dependencies:** `I1.T3`, `I2.T8`.
+    *   **Parallelizable:** Partial.
 
 <!-- anchor: task-i3-t2 -->
-- **Task 3.2:**
-  - **Task ID:** `I3.T2`
-  - **Description:** Produce PostGIS + Elasticsearch search specification detailing radius handling, bounding box approximations, sort orders, filters, caching, and instrumentation. Provide SQL/DSL examples and index requirements.
-  - **Agent Type Hint:** `BackendAgent`
-  - **Inputs:** ERD, architecture diagrams, policy P6/P11, requirements F12.2, F14.8.
-  - **Input Files:** ["docs/architecture/data_model.puml", "docs/architecture/component_overview.mmd"]
-  - **Target Files:** ["docs/marketplace/search_spec.md"]
-  - **Deliverables:** Spec with diagrams, sample queries, fallback strategy, and API contract alignment with `MarketplaceSearchType`.
-  - **Acceptance Criteria:** Document covers radius options (5–250 miles), PostGIS indexes + queries, Elasticsearch analyzers, ranking weights, caching windows, and instrumentation plan tied to click tracking.
-  - **Dependencies:** `I3.T1`
-  - **Parallelizable:** Partially
+*   **Task 3.2:**
+    *   **Task ID:** `I3.T2`
+    *   **Description:** Build `RssFeedRefreshJobHandler` with queue scheduling per feed priority (5/15/60 mins), HTTP client with retries, dedupe by URL hash, `feed_items` persistence, and error tracking.
+        Update job matrix doc, implement telemetry + rate limiting for fetch counts, and provide tests with mock feeds.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Section F3, P2, job blueprint from I1.T4.
+    *   **Input Files:** `["src/main/java/villagecompute/homepage/jobs/","src/main/java/villagecompute/homepage/services/","docs/ops/job-playbook.md"]`
+    *   **Target Files:** `["src/main/java/villagecompute/homepage/jobs/RssFeedRefreshJobHandler.java","src/main/java/villagecompute/homepage/services/FeedAggregationService.java","docs/ops/job-playbook.md"]`
+    *   **Deliverables:** Job handler, service updates, telemetry notes, tests.
+    *   **Acceptance Criteria:** Job schedules per feed config, dedupe works, metrics exported, tests cover error cases, documentation updated.
+    *   **Dependencies:** `I3.T1`, `I1.T4`, `I1.T8`.
+    *   **Parallelizable:** No.
 
 <!-- anchor: task-i3-t3 -->
-- **Task 3.3:**
-  - **Task ID:** `I3.T3`
-  - **Description:** Extend OpenAPI + DTO definitions for marketplace listing CRUD, promotions, contact masked email flows, moderation actions, and refund endpoints. Capture validation rules, feature flag hooks, and error responses.
-  - **Agent Type Hint:** `BackendAgent`
-  - **Inputs:** Existing OpenAPI, taxonomy plan, policy P3.
-  - **Input Files:** ["api/openapi.yaml", "docs/marketplace/taxonomy_plan.md", "docs/ops/feature_flag_playbook.md"]
-  - **Target Files:** ["api/openapi.yaml", "docs/marketplace/listing_contract.md"]
-  - **Deliverables:** Updated OpenAPI spec plus listing contract describing state machine (draft/pending/active/flagged/expired/sold), DTO fields, and samples.
-  - **Acceptance Criteria:** Spec validated, new schemas added, endpoints documented with rate-limit headers, listing contract cross-references policies and queue usage for status transitions.
-  - **Dependencies:** `I3.T2`
-  - **Parallelizable:** No
+*   **Task 3.3:**
+    *   **Task ID:** `I3.T3`
+    *   **Description:** Implement AI tagging pipeline: `AiTaggingJobHandler`, LangChain4j client configuration, batching logic (10–20 items), dedupe using URL hash, `AiTagsType` serialization, `ai_usage_tracking` table updates, and `AiTaggingBudgetService` enforcement per P2/P10.
+        Add admin report summarizing spend, thresholds, email/slack alerts.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Policies P2, P10, Section 2 components, job blueprint.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/services/","src/main/java/villagecompute/homepage/jobs/","docs/ops/ai-budget.md"]`
+    *   **Target Files:** `["migrations/V8__ai_usage_tracking.sql","src/main/java/villagecompute/homepage/services/AiTaggingBudgetService.java","src/main/java/villagecompute/homepage/jobs/AiTaggingJobHandler.java","docs/ops/ai-budget.md"]`
+    *   **Deliverables:** Migration, services, job handler, doc, tests.
+    *   **Acceptance Criteria:** Budget states (NORMAL/REDUCE/QUEUE/HARD_STOP) follow thresholds, job persists tags, telemetry logs cost, admin endpoint exposes usage, tests verify throttles.
+    *   **Dependencies:** `I3.T1`, `I3.T2`, `I1.T8`.
+    *   **Parallelizable:** No.
 
 <!-- anchor: task-i3-t4 -->
-- **Task 3.4:**
-  - **Task ID:** `I3.T4`
-  - **Description:** Design Stripe integration blueprint covering posting fees, promotion purchases, webhook lifecycle, refund triggers, chargeback handling, and evidence preservation per Policy P3. Include diagrams, metadata mapping, and alerting requirements.
-  - **Agent Type Hint:** `PaymentsAgent`
-  - **Inputs:** Requirements F12.8, Policy P3, ERD.
-  - **Input Files:** ["CLAUDE.md", "docs/architecture/data_model.puml"]
-  - **Target Files:** ["docs/marketplace/payments_blueprint.md"]
-  - **Deliverables:** Payment blueprint with flowcharts, metadata tables, webhook handler pseudo-code, failure recovery steps, and admin dashboard requirements.
-  - **Acceptance Criteria:** Document references `payment_refunds`, `listing_promotions`, Stripe event names, budgets, sandbox/test plan, and compliance controls.
-  - **Dependencies:** `I3.T3`
-  - **Parallelizable:** Yes
+*   **Task 3.4:**
+    *   **Task ID:** `I3.T4`
+    *   **Description:** Integrate Open-Meteo + NWS: create WeatherService with provider-specific clients, caching table `weather_cache`, location resolution (lat/lon/city ID), severe alert polling job, and fallback logic.
+        Build REST endpoint `/api/widgets/weather` referencing preferences.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Feature F4, Section 2 components, job blueprint.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/integration/weather/","src/main/java/villagecompute/homepage/services/","src/main/java/villagecompute/homepage/api/rest/widgets/"]`
+    *   **Target Files:** `["migrations/V9__weather_cache.sql","src/main/java/villagecompute/homepage/integration/weather/OpenMeteoClient.java","src/main/java/villagecompute/homepage/integration/weather/NwsClient.java","src/main/java/villagecompute/homepage/services/WeatherService.java","src/main/java/villagecompute/homepage/jobs/WeatherRefreshJobHandler.java","src/main/java/villagecompute/homepage/api/rest/widgets/WeatherResource.java"]`
+    *   **Deliverables:** Clients, cache, job, API resource, tests, docs.
+    *   **Acceptance Criteria:** Hourly refresh + 15 min alerts, provider selection based on location, API returns current/hourly/daily/alerts, metrics track cache hits/misses, tests cover fallbacks.
+    *   **Dependencies:** `I2.T5`, `I2.T6`.
+    *   **Parallelizable:** Partial.
 
 <!-- anchor: task-i3-t5 -->
-- **Task 3.5:**
-  - **Task ID:** `I3.T5`
-  - **Description:** Define listing image pipeline: upload limits, file validation, Cloudflare R2 key structure, thumbnail generation, BULK queue handler design, CDN invalidation, retention/cleanup when listings expire or are removed.
-  - **Agent Type Hint:** `StorageAgent`
-  - **Inputs:** StorageGateway spec, job blueprint, policy P4.
-  - **Input Files:** ["docs/architecture/job_orchestration.md", "docs/architecture/component_overview.mmd"]
-  - **Target Files:** ["docs/marketplace/image_pipeline.md"]
-  - **Deliverables:** Pipeline doc + PlantUML sequence showing upload→queue→processing→R2 storage→CDN; includes error handling + monitoring.
-  - **Acceptance Criteria:** Document covers concurrency, timeouts, thumbnail/full-size specs, cleanup job frequency, and instrumentation for processing duration + failures.
-  - **Dependencies:** `I3.T3`
-  - **Parallelizable:** Yes
+*   **Task 3.5:**
+    *   **Task ID:** `I3.T5`
+    *   **Description:** Implement StockService with Alpha Vantage integration: watchlist persistence (limit 20), refresh scheduler with market hours detection, caching, rate limit handling, sparkline generation, and `/api/widgets/stocks` endpoint.
+        Provide fallback data for rate limit exhaustion, display notifications.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Feature F5, Section 2 components, job blueprint.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/services/","src/main/java/villagecompute/homepage/api/rest/widgets/"]`
+    *   **Target Files:** `["migrations/V10__stock_watchlist.sql","src/main/java/villagecompute/homepage/services/StockService.java","src/main/java/villagecompute/homepage/jobs/StockRefreshJobHandler.java","src/main/java/villagecompute/homepage/api/rest/widgets/StockResource.java","docs/ops/stock-refresh.md"]`
+    *   **Deliverables:** Schema, service, job, endpoint, doc, tests.
+    *   **Acceptance Criteria:** Market hour logic accurate, rate limit fallback triggers warnings + reduced refresh, sparkline arrays produced, watchlist limit enforced, integration tests pass.
+    *   **Dependencies:** `I2.T5`, `I2.T6`, `I1.T4`.
+    *   **Parallelizable:** Partial.
 
 <!-- anchor: task-i3-t6 -->
-- **Task 3.6:**
-  - **Task ID:** `I3.T6`
-  - **Description:** Draft moderation, flagging, and fraud detection playbook mapping Policy P3 heuristics. Outline AI scoring, manual queues, thresholds, notification templates, and integration with rate limit + feature flag audits.
-  - **Agent Type Hint:** `OpsDocumentationAgent`
-  - **Inputs:** Requirements F12.9, AI tagging spec, policy table.
-  - **Input Files:** ["CLAUDE.md", "docs/architecture/ai_tagging_widget_spec.md"]
-  - **Target Files:** ["docs/marketplace/moderation_playbook.md"]
-  - **Deliverables:** Playbook describing submission review states, flag categories, automated actions, SLA targets, and reporting metrics.
-  - **Acceptance Criteria:** Document ties heuristics to data points, defines auto-hide thresholds, describes manual override process, and references audit logging + delayed job usage.
-  - **Dependencies:** `I3.T3`
-  - **Parallelizable:** Yes
+*   **Task 3.6:**
+    *   **Task ID:** `I3.T6`
+    *   **Description:** Build SocialIntegrationService for Meta Graph API: store tokens encrypted, background token refresh 7 days before expiry, cached posts retention, staleness banner logic, reconnect CTA, degrade gracefully when tokens invalid.
+        Implement `/api/widgets/social` endpoint returning `SocialWidgetStateType` and update UI to display banners.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Features F6, P5, P13, Section 2 components.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/integration/social/","src/main/java/villagecompute/homepage/services/","src/main/java/villagecompute/homepage/api/rest/widgets/"]`
+    *   **Target Files:** `["migrations/V11__social_tokens.sql","src/main/java/villagecompute/homepage/integration/social/MetaClient.java","src/main/java/villagecompute/homepage/services/SocialIntegrationService.java","src/main/java/villagecompute/homepage/jobs/SocialFeedRefreshJobHandler.java","src/main/java/villagecompute/homepage/api/rest/widgets/SocialResource.java","docs/ui-guides/social-widget.md"]`
+    *   **Deliverables:** Migration, client, service, job, endpoint, UI doc.
+    *   **Acceptance Criteria:** Tokens encrypted, refresh job scheduled, stale banners show correct color per days, cached posts served offline, e2e tests validate degrade path.
+    *   **Dependencies:** `I2.T1`, `I2.T5`, `I2.T6`.
+    *   **Parallelizable:** Partial.
 
 <!-- anchor: task-i3-t7 -->
-- **Task 3.7:**
-  - **Task ID:** `I3.T7`
-  - **Description:** Specify masked email relay + inbound processing architecture referencing Policy F14.3: email address schema, masked tokens, Mailpit dev setup, inbound queue handler, spam filtering, rate limiting, logging, and analytics.
-  - **Agent Type Hint:** `IntegrationAgent`
-  - **Inputs:** Requirements F12.6, job blueprint, rate limit plan.
-  - **Input Files:** ["docs/architecture/job_orchestration.md", "docs/ops/rate_limit_playbook.md", "docs/architecture/data_model.puml"]
-  - **Target Files:** ["docs/marketplace/messaging_spec.md"]
-  - **Deliverables:** Messaging spec with flow diagrams, payload schemas, email templates, inbound parsing rules, and monitoring checklist.
-  - **Acceptance Criteria:** Document details masked address format, inbound job scheduling, spam filter heuristics, user notifications, and retention for `marketplace_messages` + `inbound_emails`.
-  - **Dependencies:** `I3.T3`
-  - **Parallelizable:** Yes
+*   **Task 3.7:**
+    *   **Task ID:** `I3.T7`
+    *   **Description:** Implement StorageGateway abstraction for Cloudflare R2: S3 client config, helper for WebP conversion + thumbnail/full variants, signed URL generation, prefixing strategy for screenshots/listings/profiles, and retention metadata mapping.
+        Provide doc + tests mocking R2.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Policy P4, P12, Section 2 components.
+    *   **Input Files:** `["src/main/java/villagecompute/homepage/services/","src/main/java/villagecompute/homepage/util/","docs/ops/storage.md"]`
+    *   **Target Files:** `["src/main/java/villagecompute/homepage/services/StorageGateway.java","src/main/java/villagecompute/homepage/services/StorageConfig.java","docs/ops/storage.md"]`
+    *   **Deliverables:** Service, config, doc, tests verifying conversions + signed URL TTL.
+    *   **Acceptance Criteria:** Upload/download functions exist, WebP conversion stub ready, signed URLs include TTL/perms, doc references buckets + retention, unit tests pass.
+    *   **Dependencies:** `I1.T8`, `I1.T9`.
+    *   **Parallelizable:** No.
 
-- **Iteration Workstreams & Owners:**
-  - **Data & Search Pod:** Owns taxonomy (I3.T1), PostGIS/Elasticsearch spec (I3.T2), listing contract contributions.
-  - **Payments & Media Pod:** Leads OpenAPI extension, Stripe blueprint, image pipeline docs.
-  - **Ops & Trust Pod:** Handles moderation playbook and messaging spec with support from platform team.
+<!-- anchor: task-i3-t8 -->
+*   **Task 3.8:**
+    *   **Task ID:** `I3.T8`
+    *   **Description:** Wire widget REST endpoints for news (personalized, AI tags), weather, stocks, social by composing services built in earlier tasks; return DTOs with click-tracking tokens and feature flag gating info.
+        Add caching headers, integrate RateLimitService, update OpenAPI spec and docs.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Tasks T3.1–T3.7, Section 2 API contract style.
+    *   **Input Files:** `["src/main/java/villagecompute/homepage/api/rest/widgets/","api/openapi/v1.yaml"]`
+    *   **Target Files:** `["src/main/java/villagecompute/homepage/api/rest/widgets/NewsResource.java","src/main/java/villagecompute/homepage/api/rest/widgets/WeatherResource.java","src/main/java/villagecompute/homepage/api/rest/widgets/StockResource.java","src/main/java/villagecompute/homepage/api/rest/widgets/SocialResource.java","api/openapi/v1.yaml"]`
+    *   **Deliverables:** REST controllers, DTO wiring, OpenAPI updates, tests.
+    *   **Acceptance Criteria:** Endpoints respond <200ms median, include AiTags/alerts/watchlist data, respect feature flags + consent, OpenAPI spec updated, tests verifying serialization + caching headers.
+    *   **Dependencies:** Prior I3 service tasks, `I2.T7`.
+    *   **Parallelizable:** No.
 
-- **Dependency Mapping:** I3 outputs rely on I2 migrations for user/flag schema, leverage AI tagging spec for fraud detection, and feed I4 tasks (public profiles referencing listings) plus I5 analytics dashboards through click tracking/Stripe data.
-
-- **Parallelization Guidance:** Start taxonomy + payments documentation immediately; search spec must precede OpenAPI updates; moderation + messaging docs can proceed after listing contract solidifies; image pipeline can run parallel with payments once queue requirements known.
-
-- **Risks & Mitigations:** Taxonomy growth (handle via slug strategy and ADR triggers), Stripe downtime (document retries + monitoring), queue overload for images (set concurrency + alerts), email abuse (rate limiting + spam heuristics), search performance (load testing plan referenced in spec).
-
-- **Metrics & Validation Hooks:** Validate PostGIS queries with EXPLAIN; run Stripe sandbox flows; simulate image uploads; test masked email path using Mailpit; capture results in docs + QA plan.
-
-- **Timeline & Milestones:** Week 1 taxonomy/search drafts; Week 2 OpenAPI + payments blueprint; Week 3 image pipeline + moderation playbook; Week 4 messaging spec + review.
-
-- **Review & Sign-off Participants:** Marketplace PM, Backend lead, Finance/Payments owner, Ops/Trust lead, Compliance representative.
-
-- **Hand-off Checklist:** Taxonomy + migration note merged; OpenAPI listing sections validated; payments blueprint + image pipeline + moderation/messaging docs stored in `docs/marketplace`; backlog tickets reference anchors.
-
-- **Governance Alignment Notes:**
-  - Policy P3 enforced via payment + moderation playbooks and refund workflows.
-  - Policy P4 applied to listing image retention + WebP processing.
-  - Policy P6/P11 implemented through PostGIS spec with explicit radius caps.
-  - Policy P14 acknowledged in messaging spec for logging retention + consent handling.
-
-- **Stakeholder Communication Plan:** Weekly sync with PM + finance to review payment spec; async review doc for moderation/fraud; Slack channel for search spec questions; end-of-iteration walkthrough recorded for onboarding.
-
-- **Testing & QA Alignment:** QA team drafts test suites for listing CRUD + payments based on contracts; load tests planned for search queries; image pipeline includes failure injection scenarios; messaging spec includes mock SMTP tests for inbound/outbound flows.
-
-- **Monitoring Deliverables:** Define dashboards for Stripe webhook success, image processing backlog, search latency, and masked email throughput; include Grafana panel descriptions in respective specs.
-
-- **Open Questions to Track:** Promotional inventory caps, refund exception cases, potential use of CAPTCHA for inquiries, CDN invalidation tooling for listing assets.
-
-- **Post-Iteration Actions:** Schedule engineering kickoff for marketplace implementation, open ADR placeholders if policy clarifications emerge, and assign doc owners for future updates.
-
-- **Iteration Exit Criteria:**
-  - Marketplace specs approved and linked from README/plan manifest.
-  - Migration + queue requirements queued for implementation, with tasks created for engineering squads.
-  - Stripe, image, moderation, and messaging blueprints reference policies and include monitoring/alerting requirements.
-  - Dependency tickets created for future iterations relying on marketplace data (profiles, analytics dashboards).
-  - QA owners confirm test suites + load scenarios are documented for upcoming build iterations.
+<!-- anchor: task-i3-t9 -->
+*   **Task 3.9:**
+    *   **Task ID:** `I3.T9`
+    *   **Description:** Build monitoring + alerting for content services: Grafana dashboards for feed throughput, AI budget usage, weather cache staleness, stock rate limit hits, social refresh failures, StorageGateway errors; configure alert rules + runbooks.
+        Update docs with troubleshooting steps and on-call actions.
+    *   **Agent Type Hint:** `DevOpsAgent`
+    *   **Inputs:** I1 observability, tasks T3.1–T3.8 outputs, Section 3.1.
+    *   **Input Files:** `["docs/ops/observability.md","docs/ops/runbooks/"]`
+    *   **Target Files:** `["docs/ops/observability.md","docs/ops/runbooks/content-monitoring.md",".github/workflows/build.yml"]`
+    *   **Deliverables:** Dashboard definitions (JSON/YAML), alert config descriptions, runbook.
+    *   **Acceptance Criteria:** Metrics exported for each service, dashboards documented, alerts thresholded (AI budget 75/90/100, feed backlog >500, weather cache >90 min), runbook includes escalation path.
+    *   **Dependencies:** `I1.T8`, all preceding I3 tasks.
+    *   **Parallelizable:** No.

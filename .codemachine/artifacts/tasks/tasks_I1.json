@@ -2,18 +2,14 @@
   {
     "task_id": "I1.T1",
     "iteration_id": "I1",
-    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
-    "description": "Consolidate the policy decisions (P1–P14) and feature requirements into a single Architecture Intake brief summarizing scope, assumptions, compliance mandates, stakeholder roles, and open questions. Produce a traceability matrix linking every policy to relevant domains (widgets, marketplace, Good Sites, profiles, analytics) plus callouts for required ADRs.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "CLAUDE.md policies, existing standards from sibling repos, blueprint foundation Section 6 assumptions.",
-    "target_files": [
-      "docs/architecture/architecture_intake.md"
-    ],
-    "input_files": [
-      "CLAUDE.md"
-    ],
-    "deliverables": "Markdown brief with executive summary, policy-to-domain matrix, risk register, assumption log, and stakeholder sign-off blocks.",
-    "acceptance_criteria": "Document references all P1–P14 items, differentiates hard vs soft requirements, lists unknowns requiring ADRs, highlights dependencies per Section 6, and is cross-linked from README + future tasks.",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Audit repo prerequisites, upgrade Quarkus BOM + Maven wrapper to Java 21 compatible 3.26.x release, and align plugin versions (Jib, frontend-maven-plugin 1.15.0) with policy requirements.\n        Validate compatibility with Spotless, Surefire, LangChain4j, and Hibernate Search dependencies before tagging baseline.\n        Document upgrade rationale and potential regressions in ADR to inform future merges and release playbooks.",
+    "agent_type_hint": "SetupAgent",
+    "inputs": "Sections 1–2, technology stack mandates, P8 TypeScript integration requirements, policy table.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Updated Maven wrapper + Quarkus BOM, aligned plugin versions, ADR covering upgrade scope + rollback steps, README snippet about Java 21 target.",
+    "acceptance_criteria": "Builds pass with `./mvnw quarkus:dev`, CI compiles with Java 21, plugin checks succeed, ADR merged with sign-off, no dependency conflicts.",
     "dependencies": [],
     "parallelizable": true,
     "done": false
@@ -21,48 +17,14 @@
   {
     "task_id": "I1.T2",
     "iteration_id": "I1",
-    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
-    "description": "Establish repo scaffolding and build integration: ensure Maven `pom.xml` includes frontend plugin (Policy P8), TypeScript workspace, linting configs, esbuild entry points, and docker-compose stack for Postgres/PostGIS, Elasticsearch, Mailpit, MinIO, Jaeger. Document workflows for `./mvnw quarkus:dev`, `npm run watch`, docker-compose spin-up, and Sonar/lint hooks.",
-    "agent_type_hint": "SetupAgent",
-    "inputs": "Architecture intake, stack requirements, existing skeleton files.",
-    "target_files": [
-      "pom.xml",
-      "package.json",
-      "esbuild.config.js",
-      "tsconfig.json",
-      "docker-compose.yml",
-      "README.md"
-    ],
-    "input_files": [
-      "pom.xml",
-      "package.json",
-      "docker-compose.yml",
-      "README.md"
-    ],
-    "deliverables": "Updated build files, docs describing local dev workflow, `.editorconfig` additions aligning formatting, and verification script outputs appended to README.",
-    "acceptance_criteria": "Maven build succeeds with frontend plugin steps, esbuild entry points stubbed, TypeScript config established, docker-compose services defined with volumes + healthchecks, README instructions align with Section 2 stack, and lint/test stubs execute without failure.",
-    "dependencies": [
-      "I1.T1"
-    ],
-    "parallelizable": false,
-    "done": false
-  },
-  {
-    "task_id": "I1.T3",
-    "iteration_id": "I1",
-    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
-    "description": "Produce system component + container diagrams (Mermaid/PlantUML) capturing ExperienceShell, domain services, shared utilities, delayed job orchestrator, worker pools, and external providers (Stripe, Meta, Cloudflare R2, Postgres, Elasticsearch, k3s). Include flow annotations for policies (P2 AI budget, P4 screenshots, P7 feature flags, P12 screenshot pool) and queue responsibilities.",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Generate PlantUML system context + container diagrams capturing actors (anonymous/auth users, admins, Stripe, Meta, Cloudflare R2, LangChain4j, Elasticsearch, Postgres) and Quarkus modules.\n        Highlight enforced policies (P1–P14) near boundaries, queue segregation, deployment nodes, and Kubernetes runtime characteristics for ops alignment.",
     "agent_type_hint": "DiagrammingAgent",
-    "inputs": "Architecture intake, repo scaffolding knowledge, requirements for services.",
-    "target_files": [
-      "docs/architecture/component_overview.mmd",
-      "docs/architecture/deployment_views.puml"
-    ],
-    "input_files": [
-      "docs/architecture/architecture_intake.md"
-    ],
-    "deliverables": "Two diagrams (component + container) with legends, policy annotations, and captions referencing anchors from Section 2.1.",
-    "acceptance_criteria": "Diagrams render without syntax errors, cover every major component listed in Section 2, highlight queue pods, label worker pods vs experience pods, and include callouts for external systems + security posture.",
+    "inputs": "Sections 2, 2.1, 3, blueprint directives, UI/ops references.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "System context + container diagrams with legends, exported previews (optional), README snippet referencing diagrams.",
+    "acceptance_criteria": "PlantUML sources render without errors, include policy annotations, show integration boundaries + worker pods, approved by structural architect.",
     "dependencies": [
       "I1.T1"
     ],
@@ -70,22 +32,35 @@
     "done": false
   },
   {
+    "task_id": "I1.T3",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Draft ERD covering core tables (users, rss_sources, feed_items, ai_usage_tracking, weather_cache, stock_quotes, social_tokens/posts, marketplace_*, directory_*, user_profiles, feature_flags, delayed_jobs, link_clicks, rate_limit tables, payment_refunds, directory_screenshot_versions).\n        Include JSONB fields, partition keys, indexes, retention annotations, and future expansion placeholders for internationalization.",
+    "agent_type_hint": "DatabaseAgent",
+    "inputs": "Section 2 data model overview, policy decisions (P1–P14), architecture diagrams produced in T1.2.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "ERD source + explanatory markdown summarizing retention, indexes, relationships, and compliance tags.",
+    "acceptance_criteria": "Diagram renders, references all mandated tables, indicates partitioning + indexes, includes textual summary linking to policies, reviewed by data architect.",
+    "dependencies": [
+      "I1.T2"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
     "task_id": "I1.T4",
     "iteration_id": "I1",
-    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
-    "description": "Author comprehensive data model ERD covering users, feeds, ai_usage_tracking, marketplace, directory, profiles, feature flags, delayed jobs, analytics tables, geo datasets, screenshot versions, and inbound emails. Document JSONB payload columns, indexes, relationships, and retention windows within diagram notes.",
-    "agent_type_hint": "DatabaseAgent",
-    "inputs": "Architecture intake, component diagram, requirements Section F10–F14.",
-    "target_files": [
-      "docs/architecture/data_model.puml"
-    ],
-    "input_files": [
-      "docs/architecture/architecture_intake.md",
-      "docs/architecture/component_overview.mmd"
-    ],
-    "deliverables": "PlantUML ERD file with grouped domains, legend for policy references, and exported PNG referenced from README + ops docs.",
-    "acceptance_criteria": "ERD depicts all tables enumerated in Section 2, includes JSONB columns, PostGIS indicators, partitioning callouts, screenshot retention notes, and cross-links to feature flag + click tracking tables.",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Document async workload matrix + job handler skeletons; define queue enum, handler interface, base `DelayedJobService` integration, SCREENSHOT pool semaphore plan per P12, and job telemetry fields.\n        Provide PlantUML sequence for job dispatch plus markdown describing concurrency, retry/backoff defaults, and escalation paths.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Sections 2–4, queue requirements table, policy P12 + P10.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Diagram + doc + job types + handler interface skeleton referencing queues and metrics tags.",
+    "acceptance_criteria": "Matrix enumerates DEFAULT/HIGH/LOW/BULK/SCREENSHOT with owners + SLA, code compiles, doc cross-links to policy IDs, review sign-off from ops architect.",
     "dependencies": [
+      "I1.T2",
       "I1.T3"
     ],
     "parallelizable": false,
@@ -94,22 +69,17 @@
   {
     "task_id": "I1.T5",
     "iteration_id": "I1",
-    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
-    "description": "Draft Job Orchestration Blueprint describing queue definitions, handler contracts, payload schema versioning, retry policies, instrumentation requirements, backlog alert thresholds, and manual override procedures aligning with Policies P12, P10, F9, and analytics rollups.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Component + container diagrams, requirements for jobs (Section F9, F13.13, F14.3, F14.8), ERD relationships.",
-    "target_files": [
-      "docs/architecture/job_orchestration.md"
-    ],
-    "input_files": [
-      "docs/architecture/deployment_views.puml",
-      "docs/architecture/component_overview.mmd",
-      "docs/architecture/data_model.puml"
-    ],
-    "deliverables": "Markdown blueprint with queue table, handler checklist, instrumentation guidelines, failure handling ladder, and references to AI budget + screenshot pool semantics.",
-    "acceptance_criteria": "Document lists DEFAULT/HIGH/LOW/BULK/SCREENSHOT queues, handler responsibilities, concurrency settings, idempotency rules, instrumentation hooks, alert triggers, and escalation process; reviewed with ops stakeholders.",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Configure TypeScript toolchain: `package.json`, `tsconfig.json`, `esbuild.config.js`, Ant Design + gridstack dependencies, npm scripts, frontend-maven-plugin wiring, lint/typecheck commands, and React mount registry stub.\n        Provide README instructions for dev (watch mode vs Maven), ensure `npm ci` invoked via plugin, and create placeholder `mounts.ts` with sample component mapping.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Sections 2 (Frontend stack), P8 plugin requirements, UI architecture doc.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Working npm scripts, esbuild bundling config, instructions describing React island pattern, lint/typecheck baseline, sample widget stub.",
+    "acceptance_criteria": "`./mvnw compile` triggers npm build, watch instructions verified, TypeScript strict mode on, README updated, sample mount compiles.",
     "dependencies": [
-      "I1.T3"
+      "I1.T1",
+      "I1.T4"
     ],
     "parallelizable": true,
     "done": false
@@ -117,55 +87,73 @@
   {
     "task_id": "I1.T6",
     "iteration_id": "I1",
-    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
-    "description": "Define Feature Flag & Rate Limit governance package: schema extensions, evaluation flow, consent handling, rollout dashboard requirements, analytics sampling, cohort hashing formula, violation thresholds, and log retention policy aligning with Policies P7 and P14.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture intake, job blueprint (for evaluation logging), requirements for feature flags + rate limiting, ERD relationships.",
-    "target_files": [
-      "docs/ops/feature_flag_playbook.md",
-      "docs/ops/rate_limit_playbook.md"
-    ],
-    "input_files": [
-      "docs/architecture/architecture_intake.md",
-      "docs/architecture/job_orchestration.md",
-      "docs/architecture/data_model.puml"
-    ],
-    "deliverables": "Two Markdown playbooks describing schema fields, evaluation algorithm pseudo-code, consent fallback handling, analytics logging pipeline, violation handling, admin UI expectations, and future automation notes.",
-    "acceptance_criteria": "Documents map to Section 2 components, include hashing formula, consent fallback logic, rate tier table (anonymous/logged-in/trusted), alert triggers, cross-links to click tracking + analytics modules, and guidance for GDPR purge jobs.",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Stand up docker-compose stack (Postgres 17 + PostGIS, Elasticsearch 8, Mailpit, MinIO, Jaeger) with healthchecks, env examples, and scripts for quick bootstrap.\n        Seed baseline config (.env, sample secrets) referencing `../villagecompute` repo guidance; confirm migrations run via MyBatis plugin and provide instructions for loading geo datasets + feature flags.",
+    "agent_type_hint": "DevOpsAgent",
+    "inputs": "Section 3 directory tree, infrastructure references, policy requirements for dependencies.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Verified docker-compose config, instructions for seeding geo data + feature flags, .env sample, troubleshooting doc, helper script.",
+    "acceptance_criteria": "`docker-compose up -d` brings services healthy, README instructions accurate, migrations succeed, secrets instructions align with compliance, helper script tested.",
     "dependencies": [
-      "I1.T1"
+      "I1.T1",
+      "I1.T5"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I1.T7",
     "iteration_id": "I1",
-    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
-    "description": "Prepare README + onboarding supplement summarizing outputs from I1 (diagrams, ERD, job + flag playbooks) and establishing reference anchors for future iterations; include contribution guidelines (branching, ADR process, lint/test expectations, policy references) and architecture digest.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "All artifacts from I1 tasks.",
-    "target_files": [
-      "README.md",
-      "docs/ops/onboarding_overview.md"
-    ],
-    "input_files": [
-      "README.md",
-      "docs/architecture/architecture_intake.md",
-      "docs/architecture/component_overview.mmd",
-      "docs/architecture/data_model.puml",
-      "docs/architecture/job_orchestration.md",
-      "docs/ops/feature_flag_playbook.md",
-      "docs/ops/rate_limit_playbook.md"
-    ],
-    "deliverables": "Updated README referencing anchors, onboarding overview enumerating available diagrams/docs, link table to future iteration tasks, and checklist for verifying compliance references.",
-    "acceptance_criteria": "README includes quick links to sections 1–4 artifacts, describes iteration cadence, references docker-compose + build steps, highlights compliance obligations, and instructs contributors on ADR + feature flag requirements.",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Configure CI/CD skeleton (GitHub Actions or Jenkins) running lint, tests, sonar, and plan verification commands; embed Spotless, unit/integration jobs, npm cache, and artifact publishing steps with Jib push placeholders.\n        Include badges + instructions in README and comment on gating policies (80% coverage, zero critical sonar issues, plan compliance) referencing Section 4 directives.",
+    "agent_type_hint": "DevOpsAgent",
+    "inputs": "Section 4 directives, quality gate requirements, sibling repo standards.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "CI workflow file, documentation for pipeline, status badge snippet, caching strategy notes.",
+    "acceptance_criteria": "Workflow runs `./mvnw verify`, `npm run build`, sonar stub; caching configured; README explains pipeline; ops sign-off recorded.",
     "dependencies": [
-      "I1.T2",
-      "I1.T3",
-      "I1.T4",
+      "I1.T1",
       "I1.T5",
       "I1.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I1.T8",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Establish observability baseline—configure structured logging format (JSON), OpenTelemetry exporters, SmallRye Metrics endpoints, and Jaeger exporter config per Section 3.1.\n        Produce `docs/ops/observability.md` describing trace IDs, log fields, metrics naming, and dashboard seeds for queue depth + AI budget.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Sections 2, 4, observability blueprint, ops directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Config entries for logging/metrics/tracing, helper class or producer, doc describing instrumentation expectations.",
+    "acceptance_criteria": "Application emits JSON logs with trace_id/span_id, metrics endpoint exposes queue depth + HTTP metrics, doc reviewed by ops, toggle for Jaeger endpoints documented.",
+    "dependencies": [
+      "I1.T1",
+      "I1.T4",
+      "I1.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I1.T9",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish upgraded Quarkus/Java toolchain, dev services, CI hooks, architectural artifacts, migration seeds, and TypeScript build integration so subsequent squads can work in parallel with reliable scaffolding.",
+    "description": "Define security + secrets baseline: create `.gitignore`/`.env` templates, document secret sources (Kubernetes secrets, sealed secrets), configure Quarkus Vault or config injection stubs, and add lint rules preventing secret leaks.\n        Draft `docs/ops/security.md` summarizing cookie policies (P9), OAuth bootstrap guardrails, Stripe key handling, and command usage constraints from Section 4.",
+    "agent_type_hint": "SecurityAgent",
+    "inputs": "Sections 1, 4, policy decisions P1, P3, P5, P9, P14.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Updated env template, security doc, optional secrets template referencing Kubernetes secret names, lint rule config.",
+    "acceptance_criteria": "Documentation covers cookies, OAuth, Stripe, AI keys, S3 credentials; env template lists required variables with descriptions; lint/husky rule catches committed secrets; security review sign-off.",
+    "dependencies": [
+      "I1.T6",
+      "I1.T7"
     ],
     "parallelizable": false,
     "done": false

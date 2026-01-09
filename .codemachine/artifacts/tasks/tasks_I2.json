@@ -2,45 +2,35 @@
   {
     "task_id": "I2.T1",
     "iteration_id": "I2",
-    "iteration_goal": "Translate architectural artifacts into actionable specs for personalized homepage delivery, covering user preference schemas, widget contracts, consent/merge UX flows, and initial OpenAPI definitions so frontend/backend squads can begin implementation in parallel.",
-    "description": "Build the Homepage Requirements Backlog document summarizing widget capabilities, layouts per device, personalization rules, and default anonymous experiences. Include acceptance criteria for each widget (news, weather, stocks, social, quick links, RSS, search) referencing policies (P1, P2, P5, P9, P13) and mapping to user preference fields.",
-    "agent_type_hint": "ProductDocumentationAgent",
-    "inputs": "Architecture intake, Section 1 requirements, job blueprint.",
-    "target_files": [
-      "docs/ui-guides/widget_matrix.md"
-    ],
-    "input_files": [
-      "docs/architecture/architecture_intake.md",
-      "CLAUDE.md"
-    ],
-    "deliverables": "Widget matrix with columns for state coverage, data sources, feature flags, merge behavior, instrumentation, rate limits, and dependencies.",
-    "acceptance_criteria": "Matrix covers all widget types, ties each to relevant policy IDs and delayed job triggers, and highlights analytics/feature flag requirements.",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Implement Quarkus OIDC multi-tenant config for Google, Facebook, Apple; wire `/bootstrap` superuser endpoint with guard (403 after first admin) and JWT session issuance.\n        Create `AuthIdentityService` facade, configure `vu_anon_id` cookie issuance, and integrate with RateLimitService for login/bootstrap endpoints.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Sections 1–2, Policy F1, P1, P9.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "OIDC config, Auth resource, bootstrap guard, cookie issuer logic, documentation for configuring providers.",
+    "acceptance_criteria": "OAuth login works for all providers, `vu_anon_id` cookie adheres to HttpOnly/Secure/SameSite, bootstrap returns 403 after admin exists, rate limits logged.",
     "dependencies": [
-      "I1.T1"
+      "I1.T1",
+      "I1.T9"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I2.T2",
     "iteration_id": "I2",
-    "iteration_goal": "Translate architectural artifacts into actionable specs for personalized homepage delivery, covering user preference schemas, widget contracts, consent/merge UX flows, and initial OpenAPI definitions so frontend/backend squads can begin implementation in parallel.",
-    "description": "Produce OpenAPI v1 draft covering authentication bootstrap, anonymous ID issuance, user preferences CRUD, widget data fetch endpoints, and `/track/click` instrumentation payloads. Include error models, rate limit headers, and examples for each endpoint.",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Build FeatureFlagService with Panache entity, evaluation method using MD5 hash, whitelist support, analytics toggle, audit logging (`feature_flag_audit`).\n        Implement REST endpoints `/admin/api/feature-flags` (list/update) and CLI seeding migration for initial flags.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "ERD, widget matrix, feature flag/rate limit playbooks.",
-    "target_files": [
-      "api/openapi.yaml"
-    ],
-    "input_files": [
-      "docs/architecture/data_model.puml",
-      "docs/ui-guides/widget_matrix.md",
-      "docs/ops/feature_flag_playbook.md",
-      "docs/ops/rate_limit_playbook.md"
-    ],
-    "deliverables": "OpenAPI YAML with security schemes, schemas for UserPreferencesType, WidgetResponseType, Consent payloads, and ClickTrackingType.",
-    "acceptance_criteria": "Spec validates via `openapi-generator` or `spectral`, covers all endpoints required by homepage widgets, includes policy-relevant headers (consent, rate limits), and references DTO anchors.",
+    "inputs": "Policies P7 & P14, Section 2 components, Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Schema migration, service, resource endpoints, DTOs, seed data.",
+    "acceptance_criteria": "CRUD endpoints secured via roles, evaluations log to partitioned table respecting consent, unit tests cover cohort hashing + analytics opt-out, doc updated.",
     "dependencies": [
-      "I2.T1"
+      "I2.T1",
+      "I1.T3"
     ],
     "parallelizable": false,
     "done": false
@@ -48,22 +38,17 @@
   {
     "task_id": "I2.T3",
     "iteration_id": "I2",
-    "iteration_goal": "Translate architectural artifacts into actionable specs for personalized homepage delivery, covering user preference schemas, widget contracts, consent/merge UX flows, and initial OpenAPI definitions so frontend/backend squads can begin implementation in parallel.",
-    "description": "Design database migration plan and schema notes for user preference storage (`users.preferences` JSONB), anonymous user lifecycle (Policy P9), feature flag evaluation retention, and click tracking partitions specific to homepage interactions.",
-    "agent_type_hint": "DatabaseAgent",
-    "inputs": "ERD, OpenAPI draft, governance docs.",
-    "target_files": [
-      "migrations/notes/iteration2_prefs_and_flags.md"
-    ],
-    "input_files": [
-      "docs/architecture/data_model.puml",
-      "api/openapi.yaml",
-      "docs/ops/feature_flag_playbook.md"
-    ],
-    "deliverables": "Migration note with table/column definitions, JSONB schema versioning plan, indexes, retention jobs, and test strategies.",
-    "acceptance_criteria": "Document lists SQL statements for new columns/indexes, describes migration ordering, identifies rollback steps, and references policies P1, P7, P14.",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Implement RateLimitService with Caffeine caches, tier definitions (anonymous, logged_in, trusted), violation logging table, enforcement middleware for key endpoints (login, search, votes, submissions).\n        Provide admin endpoints to view/update rate limit config, integrate with observability metrics.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Policy F14.2, Section 2 components, Section 4 directives, ERD from I1.T3.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Migration, service, CDI interceptors, admin endpoints, docs.",
+    "acceptance_criteria": "Rate limits enforced with headers + 429 responses, violation logs recorded with TTL, admin UI returns config, metrics exported.",
     "dependencies": [
-      "I2.T2"
+      "I1.T4",
+      "I1.T8"
     ],
     "parallelizable": false,
     "done": false
@@ -71,93 +56,103 @@
   {
     "task_id": "I2.T4",
     "iteration_id": "I2",
-    "iteration_goal": "Translate architectural artifacts into actionable specs for personalized homepage delivery, covering user preference schemas, widget contracts, consent/merge UX flows, and initial OpenAPI definitions so frontend/backend squads can begin implementation in parallel.",
-    "description": "Specify consent + anonymous merge UX (copy, modals, flows, decision states). Deliver flow diagrams for OAuth merge, GDPR consent options, anonymous data discard, and audit logging triggers.",
-    "agent_type_hint": "UXDocumentationAgent",
-    "inputs": "Policy decisions P1, P9, Section 6 assumptions, widget requirements.",
-    "target_files": [
-      "docs/ui-guides/consent_flows.mmd",
-      "docs/ui-guides/consent_copy.md"
-    ],
-    "input_files": [
-      "docs/ui-guides/widget_matrix.md",
-      "docs/architecture/architecture_intake.md"
-    ],
-    "deliverables": "Mermaid sequence diagram, copy matrix, banner text, error states, and event logging checklist.",
-    "acceptance_criteria": "Flow covers accepted/declined/partial merges, references audit table fields, includes accessibility copy, and ties to OpenAPI endpoints.",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Implement anonymous-to-auth merge flow: `account_merge_audit` table, consent modal API, merge logic merging layout/preferences/topic data, opt-out path, and 90-day purge scheduling.\n        Provide PlantUML sequence diagram for login + consent + merge + audit + purge job and update docs.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Policies P1 & P9, Section 2 components, Section 4 command rules.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Migration, merge service, cleanup job handler, diagram, privacy doc.",
+    "acceptance_criteria": "Consent recorded with timestamp/version/IP, merge summarises data, anonymized entries soft-delete, cleanup job scheduled for 90-day purge, diagram reviewed by compliance.",
     "dependencies": [
-      "I2.T1"
+      "I2.T1",
+      "I1.T4",
+      "I1.T8"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I2.T5",
     "iteration_id": "I2",
-    "iteration_goal": "Translate architectural artifacts into actionable specs for personalized homepage delivery, covering user preference schemas, widget contracts, consent/merge UX flows, and initial OpenAPI definitions so frontend/backend squads can begin implementation in parallel.",
-    "description": "Scaffold TypeScript/React mount architecture: define `mounts.ts` registry pattern, shared hooks, widget skeleton components, and telemetry wrappers. Provide coding standards (naming, props validation, data-component usage) for islands.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Build scaffolding (I1.T2), widget matrix, OpenAPI spec.",
-    "target_files": [
-      "src/main/resources/META-INF/resources/assets/ts/mounts.ts",
-      "docs/ui-guides/ts_architecture.md"
-    ],
-    "input_files": [
-      "README.md",
-      "docs/ui-guides/widget_matrix.md",
-      "api/openapi.yaml"
-    ],
-    "deliverables": "Implementation-ready TypeScript registry skeleton, documentation describing mount lifecycle, instrumentation hooks, error boundaries, and theming approach.",
-    "acceptance_criteria": "`mounts.ts` compiles, auto-mount logic documented, sample widget stub commits, and doc references tokens + analytics requirements.",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Design `UserPreferencesType` JSON schema (layout widgets array, news topics, watchlist, weather locations, theme, widget configs, schema_version) and persist to `users.preferences`.\n        Provide migration default, service for CRUD, REST endpoints `/api/preferences`, validation, and schema upgrade strategy documentation.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 data models, P1/P9, UI governance doc.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Schema doc, service methods, REST endpoints, tests verifying anonymous + auth flows.",
+    "acceptance_criteria": "Preferences validated, schema version stored, GET/PUT endpoints secured with rate limits, doc explains migrations.",
     "dependencies": [
-      "I2.T2"
+      "I2.T4"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I2.T6",
     "iteration_id": "I2",
-    "iteration_goal": "Translate architectural artifacts into actionable specs for personalized homepage delivery, covering user preference schemas, widget contracts, consent/merge UX flows, and initial OpenAPI definitions so frontend/backend squads can begin implementation in parallel.",
-    "description": "Create AI Tagging & Feed Prioritization spec covering batching, budget enforcement, dedupe hashing, personalization ranking, and click tracking alignment for news widgets. Document fallback behaviors for budget thresholds per Policy P10.",
-    "agent_type_hint": "DataArchitectureAgent",
-    "inputs": "Job blueprint, widget matrix, AI budget policy.",
-    "target_files": [
-      "docs/architecture/ai_tagging_widget_spec.md"
-    ],
-    "input_files": [
-      "docs/architecture/job_orchestration.md",
-      "docs/ui-guides/widget_matrix.md",
-      "docs/ops/ai_budget_monitoring.md"
-    ],
-    "deliverables": "Spec describing queue usage, scoring formula, caching windows, instrumentation, and user-facing badges for untagged stories.",
-    "acceptance_criteria": "Document references AiUsageTracking fields, defines ranking weights, lists fallback UI cues, and enumerates monitoring metrics.",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Build homepage Qute layout + gridstack integration: implement `ExperienceShell` controllers, server-rendered widget placeholders, React mount attachments, `gridstack` JS config, and edit mode toggles.\n        Add default layout definition (anonymous) and quick start instructions plus CSS tokens for theme alignment.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Sections 2 (frontend stack), `UserPreferenceService`, UI architecture doc.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Template, controller, React island, documentation for editing controls.",
+    "acceptance_criteria": "Anonymous + auth views render with correct default layout, edit mode toggles, data-props include preferences + flag states, tests cover SSR + React hydration.",
     "dependencies": [
-      "I2.T1"
+      "I2.T5"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I2.T7",
     "iteration_id": "I2",
-    "iteration_goal": "Translate architectural artifacts into actionable specs for personalized homepage delivery, covering user preference schemas, widget contracts, consent/merge UX flows, and initial OpenAPI definitions so frontend/backend squads can begin implementation in parallel.",
-    "description": "Produce Homepage QA & Telemetry plan describing unit/integration tests, accessibility audits, click-tracking validation, and feature flag cohort testing for personalization features.",
-    "agent_type_hint": "QAAgent",
-    "inputs": "Widget matrix, OpenAPI spec, mount architecture doc.",
-    "target_files": [
-      "docs/ops/homepage_validation_plan.md"
-    ],
-    "input_files": [
-      "docs/ui-guides/widget_matrix.md",
-      "api/openapi.yaml",
-      "docs/ui-guides/ts_architecture.md"
-    ],
-    "deliverables": "Plan with test matrix, automation targets, manual exploratory guidelines, telemetry dashboards, and gating criteria for enabling widgets via feature flags.",
-    "acceptance_criteria": "Document covers accessibility/performance/security checks, enumerates instrumentation requirements, and ties each test grouping to policies P2, P5, P7, P14.",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Produce OpenAPI v3 draft covering auth, preferences, widget placeholders (news/weather/stocks stub), feature flags, rate limit introspection; share DTO definitions for frontend.\n        Integrate spec generation with Maven build and publish to `api/openapi` directory.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Section 2 API contract style, tasks T2.1–T2.6 outputs.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "OpenAPI file, generation script/README snippet.",
+    "acceptance_criteria": "Spec validates with `swagger-cli`, includes schemas for DTOs, referenced in README, CI fails on drift.",
     "dependencies": [
-      "I2.T5"
+      "I2.T1",
+      "I2.T6"
     ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T8",
+    "iteration_id": "I2",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Implement admin role + permission import referencing `village-storefront` constants; seed `admin_roles` table, create impersonation guard rails, add `/admin/api/users/roles` endpoints.\n        Provide doc describing RBAC mapping and bootstrap steps for support/ops roles.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section F1 roles/permissions, Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Migration, entity, service/resource, RBAC doc.",
+    "acceptance_criteria": "Roles seeded, endpoints secured, impersonation audit log stub created, doc describes provisioning.",
+    "dependencies": [
+      "I2.T1"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T9",
+    "iteration_id": "I2",
+    "iteration_goal": "Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.",
+    "description": "Implement automated testing harness for personalization flows: create Quarkus tests covering OAuth callback, anonymous merge, preference CRUD, feature flag evaluation, rate limit enforcement; add Cypress/Playwright smoke covering homepage edit.\n        Update CI pipeline to run new suites and publish coverage metrics + artifacts.",
+    "agent_type_hint": "QAAgent",
+    "inputs": "Outputs of T2.1–T2.6, Section 4 quality gate.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Unit/integration tests, e2e spec, doc updates, CI job snippet.",
+    "acceptance_criteria": "Coverage ≥80% for auth/preferences modules, e2e smoke runs in CI, rate limit tests assert 429 path, documentation updated.",
+    "dependencies": [],
     "parallelizable": false,
     "done": false
   }

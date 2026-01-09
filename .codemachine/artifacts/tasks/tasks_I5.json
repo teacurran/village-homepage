@@ -2,47 +2,35 @@
   {
     "task_id": "I5.T1",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
-    "description": "Draft Analytics Dashboard specification for the admin portal covering click stats, AI usage, job health, rate limits, and marketplace/directory KPIs. Detail REST endpoints, filter behavior, caching, and AntV visualization choices.",
-    "agent_type_hint": "ProductDocumentationAgent",
-    "inputs": "Click tracking schema, AI budget requirements, rate limit playbook.",
-    "target_files": [
-      "docs/analytics/admin_dashboard_spec.md"
-    ],
-    "input_files": [
-      "docs/ops/homepage_validation_plan.md",
-      "docs/architecture/job_orchestration.md",
-      "docs/ops/feature_flag_playbook.md"
-    ],
-    "deliverables": "Spec listing charts/tables, KPI formulas, data sources, sample payloads, and UX wireframes.",
-    "acceptance_criteria": "Document details overview, per-category, top items, traffic sources, job health, and AI budget panels referencing policy IDs + thresholds.",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Create schema + models for `directory_categories` with unlimited depth, admin CRUD UI, caching, and seeds per requirements; include fields for icons, sort order, bubbled link settings.\n        Provide CLI command hooking into Quarkus `CommandLineRunner` to import tree data from YAML/JSON so ops can adjust quickly.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Feature F13.1, Section 2 data model, Section 3 tree structure.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Migration, entity, admin resource, seeds.",
+    "acceptance_criteria": "Category tree manageable, caching layer works, admin controls active, tests cover recursion + sort.",
     "dependencies": [
-      "I2.T7",
-      "I3.T6",
-      "I4.T6"
+      "I1.T3",
+      "I2.T8"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I5.T2",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
-    "description": "Define click tracking rollup + retention automation (partitions, SQL, schedules, monitoring, export API) supporting dashboard requirements and compliance retention windows.",
-    "agent_type_hint": "DataArchitectureAgent",
-    "inputs": "ERD, job blueprint, analytics spec.",
-    "target_files": [
-      "docs/analytics/click_rollup_plan.md"
-    ],
-    "input_files": [
-      "docs/architecture/data_model.puml",
-      "docs/analytics/admin_dashboard_spec.md",
-      "docs/architecture/job_orchestration.md"
-    ],
-    "deliverables": "Plan covering raw partitions, rollup jobs, retention enforcement, export interface, troubleshooting steps, and validation queries.",
-    "acceptance_criteria": "Document references `link_clicks`, `click_stats_daily`, `click_stats_daily_items`, includes SQL, cron schedules, alert thresholds, and testing checklists.",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Implement `directory_sites` + `directory_site_categories` + `directory_votes` schema, submission API (`SubmitSiteType`), moderation queue, status transitions (pending/approved/rejected/dead), and UI for submissions.\n        Include metadata fetcher using StorageGateway for OG fallback and provide sanitization utilities for user overrides.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Feature F13.2–F13.6, Section 2 components.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Schemas, services, submission endpoint, doc.",
+    "acceptance_criteria": "Users submit sites with validation, queue records status, votes stored, doc explains flow, tests cover duplicates + pending moderation.",
     "dependencies": [
-      "I5.T1"
+      "I5.T1",
+      "I3.T7"
     ],
     "parallelizable": false,
     "done": false
@@ -50,91 +38,69 @@
   {
     "task_id": "I5.T3",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
-    "description": "Produce AI budget monitoring + enforcement runbook expanding Policies P2/P10 with instrumentation, alerting, throttling scripts, override approvals, and monthly reset tasks.",
-    "agent_type_hint": "OpsDocumentationAgent",
-    "inputs": "AiUsageTracking schema, job blueprint, analytics spec.",
-    "target_files": [
-      "docs/ops/ai_budget_runbook.md"
-    ],
-    "input_files": [
-      "docs/architecture/job_orchestration.md",
-      "docs/ops/ai_budget_monitoring.md"
-    ],
-    "deliverables": "Runbook covering dashboards, alert channels (75/90/100%), throttle actions (batch reduction, queue pause, hard stop), override logging, and compliance reporting.",
-    "acceptance_criteria": "Document lists automation scripts, CLI examples, escalation contacts, and integration with feature flag toggles + release plan.",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Build screenshot capture service using jvppeteer: browser pool initialization per P12, capture pipeline (thumbnail/full), version history table `directory_screenshot_versions`, queue handler, fallback OG images, admin retry UI.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Policy P4, F13.3, Section 2 components.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Migration, service, job handlers, doc, tests.",
+    "acceptance_criteria": "Pools respect concurrency, captures stored in R2, version history maintained, admin can request recapture, tests cover failure fallback.",
     "dependencies": [
-      "I5.T1"
+      "I3.T7",
+      "I1.T4"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I5.T4",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
-    "description": "Finalize GDPR/CCPA export + deletion workflow referencing Policies P1/P14: endpoints, delayed job payloads, R2 bundle storage, notification templates, consent record updates, and audit trails.",
-    "agent_type_hint": "ComplianceAgent",
-    "inputs": "Consent flows, storage blueprint, jobs matrix.",
-    "target_files": [
-      "docs/ops/compliance_export_plan.md"
-    ],
-    "input_files": [
-      "docs/ui-guides/consent_flows.mmd",
-      "docs/architecture/job_orchestration.md",
-      "docs/good-sites/jobs_matrix.md"
-    ],
-    "deliverables": "Workflow doc with diagrams, DTO schemas, retention schedule, manual review steps, and SLA tracking.",
-    "acceptance_criteria": "Document covers export packaging, deletion cascade, purge confirmation, legal approvals, and integration with click tracking + feature flag evaluation purge jobs.",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Implement karma/trust system: extend `users` table with `directory_karma`, trust levels, submission/vote impact, auto-publish thresholds, moderator eligibility.\n        Provide APIs for karma summary, admin adjustments, and UI messaging.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Feature F13.6, Section 2 components.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Migration, service, API, doc.",
+    "acceptance_criteria": "Karma adjustments triggered by submissions/votes, thresholds enforced, admin overrides logged, doc clarifies points.",
     "dependencies": [
-      "I4.T7"
+      "I5.T2"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I5.T5",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
-    "description": "Author CI/CD + release runbook describing pipeline stages, promotion flow (dev→beta→prod), feature flag rollout strategy, smoke/regression tests, rollback procedures, and communication plan (beta announcements, incident updates).",
-    "agent_type_hint": "InfrastructureAgent",
-    "inputs": "Build tooling docs, QA plan, feature flag playbook.",
-    "target_files": [
-      "docs/ops/release_runbook.md"
-    ],
-    "input_files": [
-      "README.md",
-      "docs/ops/homepage_validation_plan.md",
-      "docs/ops/feature_flag_playbook.md"
-    ],
-    "deliverables": "Runbook with pipeline diagrams, gate criteria, checklists, on-call expectations, and message templates.",
-    "acceptance_criteria": "Document references Jib/TypeScript builds, sonar/lint/test gating, feature flag toggles, rollback commands, and go/no-go rules tied to dashboards.",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Build public Good Sites browsing UI: Qute templates for category pages, bubbled link logic, voting controls, filters, search, click tracking integration, and `DirectoryViewType` API.\n        Provide `GoodSitesModerationResource` for queue + approvals and document bubbled badge semantics for accessibility.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Features F13.4–F13.11, Section 2 components, UI doc.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Templates, controllers, docs, tests.",
+    "acceptance_criteria": "Category pages show direct+bubbled links, voting works with rate limits, search optional filter, doc outlines UX, tests ensure SSR + hydration.",
     "dependencies": [
-      "I2.T5",
-      "I2.T7"
+      "I5.T1",
+      "I5.T4"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I5.T6",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
-    "description": "Expand observability + incident response plan covering logging schema, metrics catalog, tracing coverage, alert thresholds, on-call rotation, and incident workflow mapping.",
-    "agent_type_hint": "SREAgent",
-    "inputs": "Job blueprint, analytics spec, payments blueprint.",
-    "target_files": [
-      "docs/ops/observability_plan.md"
-    ],
-    "input_files": [
-      "docs/architecture/job_orchestration.md",
-      "docs/analytics/admin_dashboard_spec.md",
-      "docs/marketplace/payments_blueprint.md"
-    ],
-    "deliverables": "Plan mapping metrics/logs/traces to dashboards, severity thresholds, escalation chain, and runbook cross-references.",
-    "acceptance_criteria": "Document lists metrics per subsystem (homepage, marketplace, Good Sites, profiles, AI tagging, payments), defines severity levels, alert channels, and detection→response SLAs.",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Integrate AI categorization + bulk import: `BulkImportJobHandler`, LangChain prompt template, admin UI for reviewing suggestions, data structures for reasoning/confidence, CLI for CSV uploads.\n        Provide admin diff view comparing AI suggestion vs moderator-seleted category to aid auditing and training data feedback.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Feature F13.14, Policy P2, Section 2 components.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Service, job, admin resource, doc, tests.",
+    "acceptance_criteria": "Bulk import processes rows asynchronously, AI suggestions stored with confidence, admin approves/overrides, prompts documented, budget tracked.",
     "dependencies": [
-      "I5.T1",
+      "I3.T3",
       "I5.T2"
     ],
     "parallelizable": false,
@@ -143,26 +109,51 @@
   {
     "task_id": "I5.T7",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
-    "description": "Compile final integration checklist + plan manifest updates referencing all artifacts, verifying README + onboarding anchors, capturing residual risks, and preparing implementation backlog references.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "All iteration outputs, release runbook, compliance plan.",
-    "target_files": [
-      "docs/ops/integration_checklist.md",
-      "README.md"
-    ],
-    "input_files": [
-      "README.md",
-      "docs/analytics/admin_dashboard_spec.md",
-      "docs/ops/release_runbook.md",
-      "docs/ops/compliance_export_plan.md"
-    ],
-    "deliverables": "Checklist linking to every doc, policy mapping table, open ADR placeholders, README updates, and manifest instructions.",
-    "acceptance_criteria": "Checklist confirms artifacts exist, anchors recorded for plan_manifest, risks logged with owners, and backlog epics noted.",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Implement link health monitoring + bubbling rules: `LinkHealthCheckJobHandler`, mark dead sites, notify moderators, compute bubble thresholds (score ≥10 and rank ≤3) and surface indicator in UI.\n        Update analytics to report bubbled link performance.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Feature F13.5, F13.8, Section 2 components.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Jobs, doc, tests.",
+    "acceptance_criteria": "Health checks detect repeated failures, bubbled logic implemented, ranking job updates scores hourly, doc explains operations.",
     "dependencies": [
-      "I5.T1",
-      "I5.T6"
+      "I5.T2",
+      "I5.T5"
     ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T8",
+    "iteration_id": "I5",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Extend click tracking + analytics for Good Sites: ensure `/track/click` stores directory metadata, create dashboards for submissions, votes, top sites, bubble contributions, integrate with admin analytics page.",
+    "agent_type_hint": "DevOpsAgent",
+    "inputs": "Click tracking spec, Section 2 components, analytics portal.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Analytics endpoints updates, docs, charts definitions.",
+    "acceptance_criteria": "Click logs include category IDs for Good Sites, dashboards show top sites + bubbled contributions, docs reference queries, tests verify endpoints.",
+    "dependencies": [
+      "I3.T9",
+      "I5.T5"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T9",
+    "iteration_id": "I5",
+    "iteration_goal": "Launch Good Sites directory with hierarchical categories, submissions, voting, karma moderation, screenshot capture/versioning, AI-assisted categorization, browsing/search, and background maintenance jobs.",
+    "description": "Comprehensive QA/regression: tests for submissions, voting, karma impacts, screenshot capture, AI suggestions, bubbled display, moderation actions; load tests for screenshot queue + feed ingestion interplay.\n        Document runbooks + checklist for release.",
+    "agent_type_hint": "QAAgent",
+    "inputs": "Outputs of T5.1–T5.8, Section 4 quality gate.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Automated tests, updated docs, release checklist.",
+    "acceptance_criteria": "Tests cover success/failure flows, coverage metrics updated, load test results documented, release checklist approved.",
+    "dependencies": [],
     "parallelizable": false,
     "done": false
   }

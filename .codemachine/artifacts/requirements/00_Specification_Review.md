@@ -1,4 +1,4 @@
-# Specification Review & Recommendations: Village Homepage
+# Specification Review & Recommendations: Village Homepage SaaS Portal
 
 **Date:** 2026-01-08
 **Status:** Awaiting Specification Enhancement
@@ -13,86 +13,86 @@ This document is an automated analysis of the provided project specifications. I
 
 *Based on the provided data, the core project objective is to engineer a system that:*
 
-Delivers a customizable homepage portal SaaS (Yahoo/Bing-style) built on Java Quarkus, enabling users to aggregate news, weather, stocks, and social media content through drag-and-drop widgets. The system extends beyond basic portals to include a Craigslist-style marketplace with location-based filtering and a hand-curated web directory (Yahoo Directory/DMOZ-inspired) with Reddit-style voting and automated screenshot capture.
+Delivers a customizable homepage portal SaaS combining personalized content aggregation (news, weather, stocks, social media) with community features (marketplace classifieds and curated web directory), leveraging AI-powered content tagging and user-centric customization via drag-and-drop widgets.
 
 ### **3.0 Critical Assertions & Required Clarifications**
 
 ---
 
-#### **Assertion 1: TypeScript Build Integration Strategy**
+#### **Assertion 1: AI Tagging Infrastructure & Fallback Architecture**
 
-*   **Observation:** The specification mandates TypeScript for all frontend code with Ant Design components mounted as React islands, but does not define the build pipeline integration point with Maven/Quarkus lifecycle.
-*   **Architectural Impact:** This decision determines developer experience, CI/CD complexity, and whether frontend and backend can be developed independently.
-    *   **Path A (Maven Frontend Plugin):** Integrate npm/esbuild via `frontend-maven-plugin`, ensuring frontend builds during `mvn compile`. Single-command builds but slower iteration.
-    *   **Path B (Parallel Watch Mode):** Separate `npm run watch` process alongside `./mvnw quarkus:dev`. Faster frontend iteration but requires two terminal sessions.
-    *   **Path C (Quarkus Web Bundler):** Use experimental Quarkus web-bundler extension for integrated TypeScript compilation. Unified dev experience but less mature tooling.
-*   **Default Assumption & Required Action:** To balance development velocity and production reliability, the system will assume **Path A (Maven Frontend Plugin)** with optional parallel watch mode during development. **The specification must be updated** to explicitly define the TypeScript build integration strategy and document the developer workflow (single vs dual-process).
-
----
-
-#### **Assertion 2: Anonymous User Widget Persistence Architecture**
-
-*   **Observation:** The specification states anonymous users can customize their homepage with widgets stored server-side via cookie-based user ID, but does not address the data model for storing layouts before user authentication.
-*   **Architectural Impact:** This decision affects database schema design, cookie security requirements, and the complexity of the authentication merge logic.
-    *   **Option A (Shared Users Table):** Store anonymous and authenticated users in the same `users` table with `is_anonymous` flag. Simple schema but requires careful query filtering.
-    *   **Option B (Separate Anonymous Table):** Dedicated `anonymous_users` table with scheduled cleanup. Clean separation but adds migration complexity during OAuth merge.
-    *   **Option C (Session Storage Only):** Store anonymous layouts in Redis/session store, not PostgreSQL. Ephemeral by design but limits 30-day persistence requirement.
-*   **Default Assumption & Required Action:** To minimize schema complexity and support the specified 30-day retention policy, the system will use **Option A (Shared Users Table)** with indexed `is_anonymous` and `last_active_at` columns for efficient cleanup jobs. **The specification must be updated** to confirm this approach and define the cookie security requirements (HttpOnly, Secure, SameSite attributes).
+*   **Observation:** The specification mandates LangChain4j integration with Claude API for all feed item tagging, with a $500/month cost ceiling and batch processing controls. However, the architectural response when budget exhaustion occurs mid-month remains strategically undefined.
+*   **Architectural Impact:** This decision determines whether the platform maintains feature parity during budget constraints or accepts degraded functionality. It affects user experience consistency, caching infrastructure complexity, and operational predictability.
+    *   **Path A (Hard Degradation):** Queue all items when budget exhausted, display untagged content with visual indicators. Minimal infrastructure, but creates inconsistent UX.
+    *   **Path B (Hybrid Fallback):** Implement rule-based tagging fallback using keyword extraction and category mapping. Adds complexity but maintains feature continuity.
+    *   **Path C (Dynamic Budget Reallocation):** Auto-increase budget ceiling with admin alerts, treating $500 as soft limit. Reduces technical debt but increases operational cost unpredictability.
+*   **Default Assumption & Required Action:** To balance UX consistency with cost control, the system will implement **Path A (Hard Degradation)** with graceful UI messaging. **The specification must be updated** to explicitly define: (1) acceptable UX degradation tolerance during budget exhaustion, (2) whether backup tagging methods are required, (3) prioritization rules for limited budget allocation across user feeds vs system feeds.
 
 ---
 
-#### **Assertion 3: AI Tagging Cost Control Enforcement Mechanism**
+#### **Assertion 2: Geographic Search Performance & Index Strategy**
 
-*   **Observation:** Policy P2 establishes a $500/month AI tagging budget ceiling with batch processing and deduplication, but does not specify the enforcement point (pre-queue rejection vs post-billing cap).
-*   **Architectural Impact:** This determines whether the system proactively blocks tagging jobs when approaching the limit or allows overage with alerting.
-    *   **Strategy A (Hard Pre-Queue Limit):** Check budget before enqueueing AI jobs; reject if budget exhausted. Prevents overage but may cause user-visible delays in feed updates.
-    *   **Strategy B (Soft Post-Billing Cap):** Allow jobs to run but track costs asynchronously; pause future jobs when 100% threshold hit. Allows burst capacity but risks small overage.
-    *   **Strategy C (Tiered Throttling):** At 75% budget, reduce batch sizes; at 90%, queue for next cycle; at 100%, hard stop. Gradual degradation with predictable behavior.
-*   **Default Assumption & Required Action:** To balance cost control with user experience, the system will implement **Strategy C (Tiered Throttling)** with admin email alerts at each threshold. **The specification must be updated** to explicitly define the budget enforcement strategy and clarify whether "queue for next billing cycle" means immediate pause or reduced priority.
-
----
-
-#### **Assertion 4: Marketplace Location Search Performance Guarantee**
-
-*   **Observation:** Policy P6 specifies PostGIS with p95 < 100ms and p99 < 200ms latency targets for radius searches, but does not define the geographic scope per query (city-level vs multi-state).
-*   **Architectural Impact:** This affects index design, query complexity, and whether caching layers are required to meet performance targets.
-    *   **Scenario A (Single City Search):** Users search within their immediate metro area (10-50 mile radius). Spatial index alone likely sufficient for sub-100ms queries.
-    *   **Scenario B (Multi-State Search):** Users can search "Any" radius across entire US/Canada dataset (40k cities). May require materialized views or Elasticsearch geo-spatial support to hit p95 target.
-    *   **Scenario C (Hybrid Approach):** Optimize for 95% of queries (Scenario A) with graceful degradation for "Any" radius searches. Adds complexity to UI messaging.
-*   **Default Assumption & Required Action:** To meet the specified performance targets for the majority use case, the system will optimize for **Scenario A (Single City Search)** with spatial indexes on `geo_cities.location` and expect most queries to use 5-100 mile radius filters. **The specification must be updated** to define the expected distribution of search radius values and whether "Any" radius is a required feature for v1 or acceptable to defer.
+*   **Observation:** The specification requires PostGIS spatial indexes for marketplace radius searches with p95 < 100ms latency targets, supporting 40,000 US/Canada cities with radii up to 250 miles. However, the query optimization strategy for high-concurrency scenarios and the relationship between Elasticsearch full-text search and PostGIS spatial queries is architecturally ambiguous.
+*   **Architectural Impact:** This determines whether spatial and text search are unified or split, affecting index duplication, query complexity, and infrastructure cost.
+    *   **Tier 1 (PostGIS-Only):** All queries route through PostgreSQL with GiST indexes. Simplest architecture but may struggle under concurrent load (100+ qps).
+    *   **Tier 2 (Hybrid: ES Text + PostGIS Spatial):** Elasticsearch for text search, PostGIS for spatial filtering. Dual-index maintenance overhead but better horizontal scaling.
+    *   **Tier 3 (Elasticsearch Geo-Spatial Unified):** Migrate all spatial queries to Elasticsearch geo_point fields. Single index, best performance at scale, but diverges from "PostGIS" specification language.
+*   **Default Assumption & Required Action:** The architecture will assume **Tier 1 (PostGIS-Only)** for v1 simplicity, with Elasticsearch reserved for text search only. **The specification must be updated** to define: (1) expected peak concurrent search load (queries/second), (2) whether Elasticsearch geo-spatial capabilities should be leveraged for unified search, (3) performance targets for combined text+spatial queries vs spatial-only queries.
 
 ---
 
-#### **Assertion 5: Screenshot Capture Concurrency & Resource Limits**
+#### **Assertion 3: Screenshot Capture Concurrency & Resource Allocation**
 
-*   **Observation:** The specification requires jvppeteer for screenshot capture with unlimited retention and version history (Policy P4), but does not define concurrency limits for the Puppeteer browser pool.
-*   **Architectural Impact:** This determines container resource allocation (CPU/memory), job queue throughput, and whether screenshot capture can become a bottleneck.
-    *   **Model A (Single Browser, Sequential):** One Puppeteer browser instance processing screenshots sequentially. Minimal memory (~500MB) but slow for bulk imports (10+ minutes for 100 sites).
-    *   **Model B (Browser Pool, Parallel):** Pool of 3-5 browser instances with concurrent page rendering. Faster bulk processing (~2-3 minutes for 100 sites) but higher memory footprint (~2-3GB).
-    *   **Model C (On-Demand Instances):** Launch browser per screenshot, terminate immediately. Lowest idle memory but highest startup overhead (2-5 seconds per screenshot).
-*   **Default Assumption & Required Action:** To balance throughput for the bulk import feature (F13.14) with container cost, the system will use **Model B (Browser Pool, Parallel)** with a default pool size of 3 browsers and configurable max concurrency. **The specification must be updated** to define acceptable screenshot capture SLAs (e.g., "100 screenshots processed within 5 minutes") and confirm container memory allocation (recommend 4GB minimum for Quarkus + 3 Chrome instances).
-
----
-
-#### **Assertion 6: Social Media Token Refresh Failure User Experience**
-
-*   **Observation:** Policy P5 specifies proactive token refresh 7 days before expiry with email notification on failure, but does not define the UI state when tokens cannot be refreshed due to Meta API permission revocation.
-*   **Architectural Impact:** This affects the user notification strategy, widget display logic, and whether the system supports partial degradation vs full disconnect.
-    *   **UX Path A (Graceful Archive Mode):** Show cached posts with prominent "Reconnect" banner; treat as indefinite archive. User can browse history but knows it's stale.
-    *   **UX Path B (Hard Disconnect):** Hide social widget entirely after 7 days of failed refresh; require full re-authentication to restore. Clean state but disruptive.
-    *   **UX Path C (Hybrid Notification):** Show banner at 3 days stale, hide widget at 7 days, preserve cached data. Balances user awareness with data retention policy.
-*   **Default Assumption & Required Action:** To align with Policy P5's "indefinite post retention" clause while respecting user attention, the system will implement **UX Path C (Hybrid Notification)** with configurable staleness thresholds. **The specification must be updated** to explicitly define the UI behavior at 3-day, 7-day, and 30-day staleness milestones, and clarify whether "archived" posts should be visually distinguished from live posts (e.g., grayscale treatment, timestamp warning).
+*   **Observation:** The specification mandates self-hosted jvppeteer with configurable browser pool size (default 3 per pod) and defines screenshot capture as a BULK queue job. However, the provisioning strategy for pods processing screenshot queues vs general application pods is undefined, as is the behavior under bulk import scenarios (e.g., 10,000 directory sites).
+*   **Architectural Impact:** This decision affects infrastructure cost, job completion SLA, and pod resource allocation patterns.
+    *   **Path A (Unified Pods):** All application pods process all job queues including screenshots. Simple deployment but risks memory pressure on general-purpose pods (Chrome requires ~300MB per instance).
+    *   **Path B (Dedicated Screenshot Workers):** Deploy specialized pods configured to process only SCREENSHOT queue with higher memory allocation (6GB+). Clean separation but increases deployment complexity and minimum infrastructure footprint.
+    *   **Path C (Serverless Screenshot Service):** Extract screenshot capture to external service (e.g., AWS Lambda with Puppeteer layer). Eliminates in-pod Chrome overhead but introduces latency and external dependency.
+*   **Default Assumption & Required Action:** The system will implement **Path A (Unified Pods)** with runtime queue filtering via environment variable, accepting 4GB minimum pod memory. **The specification must be updated** to define: (1) acceptable bulk import completion time for screenshot batches (e.g., 1,000 sites), (2) whether dedicated screenshot worker pods are required or acceptable, (3) maximum concurrent screenshot jobs per deployment environment (dev vs prod).
 
 ---
 
-#### **Assertion 7: Feature Flag Analytics Data Retention & Privacy**
+#### **Assertion 4: Social Media Token Refresh & Failure UX Persistence**
 
-*   **Observation:** Policy P7 mandates logging all feature flag evaluations for A/B testing analysis with 90-day retention, but does not specify whether this includes personally identifiable user IDs or anonymized session hashes.
-*   **Architectural Impact:** This determines GDPR compliance requirements, data export complexity, and whether analytics can correlate flag exposure with user behavior across sessions.
-    *   **Privacy Model A (User ID Logging):** Store `user_id` in `feature_flag_evaluations` for full cross-session analysis. Enables cohort tracking but requires GDPR data export/deletion support.
-    *   **Privacy Model B (Session Hash Only):** Store anonymized session hash instead of user ID. Privacy-preserving but cannot track same user across login sessions.
-    *   **Privacy Model C (Dual Logging):** Log user ID for authenticated users (with consent), session hash for anonymous. Hybrid approach with conditional analytics.
-*   **Default Assumption & Required Action:** To maximize analytics value while respecting the existing GDPR implementation (Policy P1), the system will use **Privacy Model A (User ID Logging)** with flag evaluation data included in the user data export endpoint. **The specification must be updated** to confirm this approach and define whether flag evaluation logs should be purged immediately upon user account deletion (right to erasure) or retained in aggregate form for 90 days with user IDs anonymized.
+*   **Observation:** Policy P5 mandates proactive token refresh 7 days before expiry with email notification on failure, displaying cached posts with a reconnect banner indefinitely. However, the post refresh strategy during degraded token states (expired but not yet reconnected) and the cache invalidation policy when users explicitly disconnect are undefined.
+*   **Architectural Impact:** This determines data retention obligations, cache storage growth patterns, and GDPR compliance surface area.
+    *   **Path A (Indefinite Retention):** Cached posts persist forever unless user deletes widget or account. Maximum user convenience but unbounded storage growth and potential GDPR concerns.
+    *   **Path B (Staleness Expiry):** Auto-purge cached posts after 90 days of token failure. Balances storage with usability, aligns with GDPR minimization principles.
+    *   **Path C (User-Controlled Archive):** On token failure, prompt user to explicitly archive or discard cached posts. Maximum transparency but adds UX friction.
+*   **Default Assumption & Required Action:** The architecture will implement **Path B (Staleness Expiry)** with 90-day auto-purge and user notification before deletion. **The specification must be updated** to define: (1) explicit cache retention policy for disconnected social accounts, (2) whether GDPR "right to erasure" applies to cached social posts, (3) user notification requirements before cached data purge.
+
+---
+
+#### **Assertion 5: Feature Flag Analytics & User Cohort Stability**
+
+*   **Observation:** Policy P7 mandates stable cohorts via user ID hash (MD5 mod 100) for rollout percentages, supporting both A/B testing and deployment control. However, the specification does not define how cohort assignment interacts with user account transitions (anonymous → authenticated) or how flag evaluation logs are used for A/B test statistical analysis.
+*   **Architectural Impact:** This affects cohort consistency during user lifecycle transitions and determines whether internal analytics suffice or external tools (e.g., Amplitude, Mixpanel) are required.
+    *   **Path A (Session-Stable Only):** Anonymous users get session-based cohorts that reset on login. Simplest implementation but breaks A/B test continuity across authentication boundary.
+    *   **Path B (Cookie-Stable with Migration):** Use persistent cookie hash for anonymous users, migrate cohort assignment on authentication. Maintains experiment integrity but requires cookie→user mapping table.
+    *   **Path C (External Analytics Integration):** Export flag evaluations to external A/B testing platform for analysis. Highest fidelity but adds vendor dependency and cost.
+*   **Default Assumption & Required Action:** The system will implement **Path B (Cookie-Stable with Migration)** using the same `vu_anon_id` cookie for cohort hashing. **The specification must be updated** to define: (1) whether A/B test cohorts must persist across anonymous→authenticated transition, (2) required statistical analysis capabilities (chi-square tests, confidence intervals, etc.), (3) whether external analytics tools will be integrated or all analysis is internal.
+
+---
+
+#### **Assertion 6: Marketplace Payment Processing & Chargeback Dispute Strategy**
+
+*   **Observation:** Policy P3 defines a 24-hour conditional refund window with chargeback handling and 2-strike ban policy. However, the operational process for contesting chargebacks (evidence gathering, Stripe dispute API automation) and the user communication strategy during disputes are undefined.
+*   **Architectural Impact:** This determines whether chargeback handling is fully automated, semi-automated with admin intervention, or manual, affecting admin workload and financial risk exposure.
+    *   **Path A (Manual Process):** Admins manually review chargebacks, gather evidence, and submit disputes via Stripe dashboard. No custom automation but highest operational overhead.
+    *   **Path B (Semi-Automated):** System auto-collects dispute evidence (listing details, timestamps, email logs) and presents in admin UI for one-click submission. Balances automation with human judgment.
+    *   **Path C (Fully Automated):** Auto-contest all chargebacks with stored transaction metadata, auto-ban users exceeding threshold. Minimal overhead but risks inappropriate bans.
+*   **Default Assumption & Required Action:** The architecture will implement **Path B (Semi-Automated)** with an admin moderation queue for chargeback review. **The specification must be updated** to define: (1) acceptable admin response time for chargeback disputes (Stripe deadline is 7 days), (2) whether auto-ban on chargebacks requires manual review or is automatic, (3) user communication templates for chargeback-related account actions.
+
+---
+
+#### **Assertion 7: Good Sites Screenshot Version History & Storage Growth Model**
+
+*   **Observation:** Policy P4 mandates unlimited screenshot retention with version history, storing both thumbnail (320x200) and full (1280x800) WebP images. With 30-day auto-refresh for all active directory sites, this creates unbounded storage growth without defined archival or compression strategy.
+*   **Architectural Impact:** This determines long-term storage cost predictability and whether old screenshots are truly accessible or archived to cold storage.
+    *   **Path A (Hot Storage Unlimited):** All screenshot versions remain in primary S3/R2 bucket indefinitely. Simplest architecture but storage cost grows linearly with directory size and age.
+    *   **Path B (Cold Archive After 1 Year):** Migrate screenshot versions older than 1 year to Glacier/cold storage tier. Balances accessibility with cost optimization.
+    *   **Path C (LRU Eviction):** Retain only last 5 versions per site in hot storage, archive older versions to cold tier. Caps hot storage growth at predictable multiplier.
+*   **Default Assumption & Required Action:** The architecture will implement **Path C (LRU Eviction)** with 5-version hot retention and auto-archive to cold storage. **The specification must be updated** to define: (1) expected directory site count at 1 year, 3 years, 5 years for cost modeling, (2) acceptable latency for accessing archived screenshot versions (cold storage retrieval is ~minutes), (3) whether screenshot version history UI should indicate cold vs hot storage status.
 
 ---
 

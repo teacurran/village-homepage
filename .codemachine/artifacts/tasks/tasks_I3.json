@@ -2,44 +2,36 @@
   {
     "task_id": "I3.T1",
     "iteration_id": "I3",
-    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
-    "description": "Document marketplace taxonomy import strategy mapping the provided hierarchical list into `marketplace_categories`. Define slug rules, sorting, reserved keywords, seeding tooling, and integration with dr5hn geo dataset for location tags.",
-    "agent_type_hint": "DataArchitectureAgent",
-    "inputs": "Requirements F12.3, ERD, migration guidance.",
-    "target_files": [
-      "docs/marketplace/taxonomy_plan.md",
-      "migrations/notes/iteration3_taxonomy.md"
-    ],
-    "input_files": [
-      "CLAUDE.md",
-      "docs/architecture/data_model.puml"
-    ],
-    "deliverables": "Taxonomy plan + migration note describing parent-child structure, slug patterns, translation/internationalization considerations, and CLI/SQL seeding instructions.",
-    "acceptance_criteria": "Document lists full tree, numbering scheme, future expansion approach, and cross-links to UI/UX plan; migration note outlines idempotent seeding script with rollback steps.",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Implement `rss_sources`, `feed_items`, and `user_feed_subscriptions` models, migrations, Panache entities, and admin CRUD for system feeds (categories, refresh intervals, status metrics).\n        Seed categories per requirements, add CLI to import default RSS list, document governance.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section F3, ERD, architecture diagrams.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Schema migration, Panache entities, admin APIs, CLI seed, doc.",
+    "acceptance_criteria": "CRUD endpoints secured, validations for URL/interval, CLI seeds default feeds, doc outlines moderation + error handling.",
     "dependencies": [
-      "I2.T3"
+      "I1.T3",
+      "I2.T8"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I3.T2",
     "iteration_id": "I3",
-    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
-    "description": "Produce PostGIS + Elasticsearch search specification detailing radius handling, bounding box approximations, sort orders, filters, caching, and instrumentation. Provide SQL/DSL examples and index requirements.",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Build `RssFeedRefreshJobHandler` with queue scheduling per feed priority (5/15/60 mins), HTTP client with retries, dedupe by URL hash, `feed_items` persistence, and error tracking.\n        Update job matrix doc, implement telemetry + rate limiting for fetch counts, and provide tests with mock feeds.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "ERD, architecture diagrams, policy P6/P11, requirements F12.2, F14.8.",
-    "target_files": [
-      "docs/marketplace/search_spec.md"
-    ],
-    "input_files": [
-      "docs/architecture/data_model.puml",
-      "docs/architecture/component_overview.mmd"
-    ],
-    "deliverables": "Spec with diagrams, sample queries, fallback strategy, and API contract alignment with `MarketplaceSearchType`.",
-    "acceptance_criteria": "Document covers radius options (5–250 miles), PostGIS indexes + queries, Elasticsearch analyzers, ranking weights, caching windows, and instrumentation plan tied to click tracking.",
+    "inputs": "Section F3, P2, job blueprint from I1.T4.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Job handler, service updates, telemetry notes, tests.",
+    "acceptance_criteria": "Job schedules per feed config, dedupe works, metrics exported, tests cover error cases, documentation updated.",
     "dependencies": [
-      "I3.T1"
+      "I3.T1",
+      "I1.T4",
+      "I1.T8"
     ],
     "parallelizable": false,
     "done": false
@@ -47,23 +39,18 @@
   {
     "task_id": "I3.T3",
     "iteration_id": "I3",
-    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
-    "description": "Extend OpenAPI + DTO definitions for marketplace listing CRUD, promotions, contact masked email flows, moderation actions, and refund endpoints. Capture validation rules, feature flag hooks, and error responses.",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Implement AI tagging pipeline: `AiTaggingJobHandler`, LangChain4j client configuration, batching logic (10–20 items), dedupe using URL hash, `AiTagsType` serialization, `ai_usage_tracking` table updates, and `AiTaggingBudgetService` enforcement per P2/P10.\n        Add admin report summarizing spend, thresholds, email/slack alerts.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Existing OpenAPI, taxonomy plan, policy P3.",
-    "target_files": [
-      "api/openapi.yaml",
-      "docs/marketplace/listing_contract.md"
-    ],
-    "input_files": [
-      "api/openapi.yaml",
-      "docs/marketplace/taxonomy_plan.md",
-      "docs/ops/feature_flag_playbook.md"
-    ],
-    "deliverables": "Updated OpenAPI spec plus listing contract describing state machine (draft/pending/active/flagged/expired/sold), DTO fields, and samples.",
-    "acceptance_criteria": "Spec validated, new schemas added, endpoints documented with rate-limit headers, listing contract cross-references policies and queue usage for status transitions.",
+    "inputs": "Policies P2, P10, Section 2 components, job blueprint.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Migration, services, job handler, doc, tests.",
+    "acceptance_criteria": "Budget states (NORMAL/REDUCE/QUEUE/HARD_STOP) follow thresholds, job persists tags, telemetry logs cost, admin endpoint exposes usage, tests verify throttles.",
     "dependencies": [
-      "I3.T2"
+      "I3.T1",
+      "I3.T2",
+      "I1.T8"
     ],
     "parallelizable": false,
     "done": false
@@ -71,90 +58,109 @@
   {
     "task_id": "I3.T4",
     "iteration_id": "I3",
-    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
-    "description": "Design Stripe integration blueprint covering posting fees, promotion purchases, webhook lifecycle, refund triggers, chargeback handling, and evidence preservation per Policy P3. Include diagrams, metadata mapping, and alerting requirements.",
-    "agent_type_hint": "PaymentsAgent",
-    "inputs": "Requirements F12.8, Policy P3, ERD.",
-    "target_files": [
-      "docs/marketplace/payments_blueprint.md"
-    ],
-    "input_files": [
-      "CLAUDE.md",
-      "docs/architecture/data_model.puml"
-    ],
-    "deliverables": "Payment blueprint with flowcharts, metadata tables, webhook handler pseudo-code, failure recovery steps, and admin dashboard requirements.",
-    "acceptance_criteria": "Document references `payment_refunds`, `listing_promotions`, Stripe event names, budgets, sandbox/test plan, and compliance controls.",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Integrate Open-Meteo + NWS: create WeatherService with provider-specific clients, caching table `weather_cache`, location resolution (lat/lon/city ID), severe alert polling job, and fallback logic.\n        Build REST endpoint `/api/widgets/weather` referencing preferences.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Feature F4, Section 2 components, job blueprint.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Clients, cache, job, API resource, tests, docs.",
+    "acceptance_criteria": "Hourly refresh + 15 min alerts, provider selection based on location, API returns current/hourly/daily/alerts, metrics track cache hits/misses, tests cover fallbacks.",
     "dependencies": [
-      "I3.T3"
+      "I2.T5",
+      "I2.T6"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I3.T5",
     "iteration_id": "I3",
-    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
-    "description": "Define listing image pipeline: upload limits, file validation, Cloudflare R2 key structure, thumbnail generation, BULK queue handler design, CDN invalidation, retention/cleanup when listings expire or are removed.",
-    "agent_type_hint": "StorageAgent",
-    "inputs": "StorageGateway spec, job blueprint, policy P4.",
-    "target_files": [
-      "docs/marketplace/image_pipeline.md"
-    ],
-    "input_files": [
-      "docs/architecture/job_orchestration.md",
-      "docs/architecture/component_overview.mmd"
-    ],
-    "deliverables": "Pipeline doc + PlantUML sequence showing upload→queue→processing→R2 storage→CDN; includes error handling + monitoring.",
-    "acceptance_criteria": "Document covers concurrency, timeouts, thumbnail/full-size specs, cleanup job frequency, and instrumentation for processing duration + failures.",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Implement StockService with Alpha Vantage integration: watchlist persistence (limit 20), refresh scheduler with market hours detection, caching, rate limit handling, sparkline generation, and `/api/widgets/stocks` endpoint.\n        Provide fallback data for rate limit exhaustion, display notifications.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Feature F5, Section 2 components, job blueprint.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Schema, service, job, endpoint, doc, tests.",
+    "acceptance_criteria": "Market hour logic accurate, rate limit fallback triggers warnings + reduced refresh, sparkline arrays produced, watchlist limit enforced, integration tests pass.",
     "dependencies": [
-      "I3.T3"
+      "I2.T5",
+      "I2.T6",
+      "I1.T4"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I3.T6",
     "iteration_id": "I3",
-    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
-    "description": "Draft moderation, flagging, and fraud detection playbook mapping Policy P3 heuristics. Outline AI scoring, manual queues, thresholds, notification templates, and integration with rate limit + feature flag audits.",
-    "agent_type_hint": "OpsDocumentationAgent",
-    "inputs": "Requirements F12.9, AI tagging spec, policy table.",
-    "target_files": [
-      "docs/marketplace/moderation_playbook.md"
-    ],
-    "input_files": [
-      "CLAUDE.md",
-      "docs/architecture/ai_tagging_widget_spec.md"
-    ],
-    "deliverables": "Playbook describing submission review states, flag categories, automated actions, SLA targets, and reporting metrics.",
-    "acceptance_criteria": "Document ties heuristics to data points, defines auto-hide thresholds, describes manual override process, and references audit logging + delayed job usage.",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Build SocialIntegrationService for Meta Graph API: store tokens encrypted, background token refresh 7 days before expiry, cached posts retention, staleness banner logic, reconnect CTA, degrade gracefully when tokens invalid.\n        Implement `/api/widgets/social` endpoint returning `SocialWidgetStateType` and update UI to display banners.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Features F6, P5, P13, Section 2 components.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Migration, client, service, job, endpoint, UI doc.",
+    "acceptance_criteria": "Tokens encrypted, refresh job scheduled, stale banners show correct color per days, cached posts served offline, e2e tests validate degrade path.",
     "dependencies": [
-      "I3.T3"
+      "I2.T1",
+      "I2.T5",
+      "I2.T6"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I3.T7",
     "iteration_id": "I3",
-    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
-    "description": "Specify masked email relay + inbound processing architecture referencing Policy F14.3: email address schema, masked tokens, Mailpit dev setup, inbound queue handler, spam filtering, rate limiting, logging, and analytics.",
-    "agent_type_hint": "IntegrationAgent",
-    "inputs": "Requirements F12.6, job blueprint, rate limit plan.",
-    "target_files": [
-      "docs/marketplace/messaging_spec.md"
-    ],
-    "input_files": [
-      "docs/architecture/job_orchestration.md",
-      "docs/ops/rate_limit_playbook.md",
-      "docs/architecture/data_model.puml"
-    ],
-    "deliverables": "Messaging spec with flow diagrams, payload schemas, email templates, inbound parsing rules, and monitoring checklist.",
-    "acceptance_criteria": "Document details masked address format, inbound job scheduling, spam filter heuristics, user notifications, and retention for `marketplace_messages` + `inbound_emails`.",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Implement StorageGateway abstraction for Cloudflare R2: S3 client config, helper for WebP conversion + thumbnail/full variants, signed URL generation, prefixing strategy for screenshots/listings/profiles, and retention metadata mapping.\n        Provide doc + tests mocking R2.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Policy P4, P12, Section 2 components.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Service, config, doc, tests verifying conversions + signed URL TTL.",
+    "acceptance_criteria": "Upload/download functions exist, WebP conversion stub ready, signed URLs include TTL/perms, doc references buckets + retention, unit tests pass.",
     "dependencies": [
-      "I3.T3"
+      "I1.T8",
+      "I1.T9"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I3.T8",
+    "iteration_id": "I3",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Wire widget REST endpoints for news (personalized, AI tags), weather, stocks, social by composing services built in earlier tasks; return DTOs with click-tracking tokens and feature flag gating info.\n        Add caching headers, integrate RateLimitService, update OpenAPI spec and docs.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Tasks T3.1–T3.7, Section 2 API contract style.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "REST controllers, DTO wiring, OpenAPI updates, tests.",
+    "acceptance_criteria": "Endpoints respond <200ms median, include AiTags/alerts/watchlist data, respect feature flags + consent, OpenAPI spec updated, tests verifying serialization + caching headers.",
+    "dependencies": [
+      "I2.T7"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I3.T9",
+    "iteration_id": "I3",
+    "iteration_goal": "Implement RSS ingestion, AI tagging pipelines, weather, stocks, social integrations, StorageGateway foundation, and widget REST endpoints so personalized homepage content becomes dynamic and policy-compliant.",
+    "description": "Build monitoring + alerting for content services: Grafana dashboards for feed throughput, AI budget usage, weather cache staleness, stock rate limit hits, social refresh failures, StorageGateway errors; configure alert rules + runbooks.\n        Update docs with troubleshooting steps and on-call actions.",
+    "agent_type_hint": "DevOpsAgent",
+    "inputs": "I1 observability, tasks T3.1–T3.8 outputs, Section 3.1.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Dashboard definitions (JSON/YAML), alert config descriptions, runbook.",
+    "acceptance_criteria": "Metrics exported for each service, dashboards documented, alerts thresholded (AI budget 75/90/100, feed backlog >500, weather cache >90 min), runbook includes escalation path.",
+    "dependencies": [
+      "I1.T8"
+    ],
+    "parallelizable": false,
     "done": false
   }
 ]

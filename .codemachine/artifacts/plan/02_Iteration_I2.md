@@ -1,140 +1,140 @@
 <!-- anchor: iteration-2-plan -->
-### Iteration 2: Homepage Personalization & Widget Contracts
+### Iteration 2: Identity, Feature Flags, and Personalization Core
 
-- **Iteration ID:** `I2`
-- **Goal:** Translate architectural artifacts into actionable specs for personalized homepage delivery, covering user preference schemas, widget contracts, consent/merge UX flows, and initial OpenAPI definitions so frontend/backend squads can begin implementation in parallel.
-- **Prerequisites:** Completion of I1 artifacts (architecture intake, diagrams, ERD, job + governance playbooks, onboarding overview).
-- **Iteration Narrative:** This iteration sets the blueprint for user-facing homepage experiences. It defines DTOs, OpenAPI endpoints, layout schema validations, widget behavior specs, TypeScript mount scaffolding, and compliance flows for anonymous merges. It also aligns AI tagging prioritization with feed lifecycles and ensures feature flag gating is embedded into widget contracts from the start.
+*   **Iteration ID:** `I2`
+*   **Goal:** Deliver OAuth bootstrap, anonymous account lifecycle, feature flag engine, rate limiting, preference storage, and gridstack-based homepage shell with OpenAPI contracts so personalization flows function securely for both anonymous and authenticated users.
+*   **Prerequisites:** `I1` completion (tooling, diagrams, jobs, CI, security baseline).
+*   **Iteration KPIs:** Successful OAuth login + bootstrap, consent modal integration, feature flag evaluation logging with GDPR toggles, layout persistence for anonymous + auth users, baseline OpenAPI covering auth/preferences/widgets, and rate limits enforced on key endpoints.
+*   **Iteration Testing Focus:** Automated coverage for OAuth callback, cookie issuance, anonymous merge, flag evaluation hashing, and preference validation; integrate e2e smoke for homepage editing + rate limiting scenarios.
+*   **Iteration Exit Criteria:** All auth/flag/rate-limit endpoints have unit + integration tests, consent diagram approved by compliance, default layout renders in prod parity env, and OpenAPI spec published with version tag `v1alpha`.
+*   **Iteration Collaboration Notes:** Coordinate daily with UI squad for gridstack UX, with security/compliance on consent copy, and with infra for OAuth secrets + feature flag analytics retention to avoid rework.
+*   **Iteration Documentation Outputs:** Update docs for security, privacy, preferences schema, UI layout guidelines, API spec notes, and RBAC instructions; ensure anchors added for manifest cross-linking.
+*   **Iteration Risks:** OAuth provider quota issues, gridstack performance regressions, or consent UX disagreements may delay iteration; mitigate via mock providers, perf budgets, and early compliance reviews.
+*   **Iteration Communications:** Provide weekly status summary referencing blueprint anchors to stakeholders, highlighting any policy escalations (P1/P7/P9/P14) triggered by discovered gaps.
+*   **Iteration Dependencies:** I2 outputs unlock content services (I3) and vertical modules; feature flags + preferences required for later iterations to guard slow rollouts.
 
 <!-- anchor: task-i2-t1 -->
-- **Task 2.1:**
-  - **Task ID:** `I2.T1`
-  - **Description:** Build the Homepage Requirements Backlog document summarizing widget capabilities, layouts per device, personalization rules, and default anonymous experiences. Include acceptance criteria for each widget (news, weather, stocks, social, quick links, RSS, search) referencing policies (P1, P2, P5, P9, P13) and mapping to user preference fields.
-  - **Agent Type Hint:** `ProductDocumentationAgent`
-  - **Inputs:** Architecture intake, Section 1 requirements, job blueprint.
-  - **Input Files:** ["docs/architecture/architecture_intake.md", "CLAUDE.md"]
-  - **Target Files:** ["docs/ui-guides/widget_matrix.md"]
-  - **Deliverables:** Widget matrix with columns for state coverage, data sources, feature flags, merge behavior, instrumentation, rate limits, and dependencies.
-  - **Acceptance Criteria:** Matrix covers all widget types, ties each to relevant policy IDs and delayed job triggers, and highlights analytics/feature flag requirements.
-  - **Dependencies:** `I1.T1`
-  - **Parallelizable:** Yes
+*   **Task 2.1:**
+    *   **Task ID:** `I2.T1`
+    *   **Description:** Implement Quarkus OIDC multi-tenant config for Google, Facebook, Apple; wire `/bootstrap` superuser endpoint with guard (403 after first admin) and JWT session issuance.
+        Create `AuthIdentityService` facade, configure `vu_anon_id` cookie issuance, and integrate with RateLimitService for login/bootstrap endpoints.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Sections 1–2, Policy F1, P1, P9.
+    *   **Input Files:** `["src/main/resources/application.properties","src/main/java/villagecompute/homepage/api/rest/AuthResource.java"]`
+    *   **Target Files:** `["src/main/java/villagecompute/homepage/services/AuthIdentityService.java","src/main/java/villagecompute/homepage/api/rest/AuthResource.java","src/main/resources/application.properties","docs/ops/security.md"]`
+    *   **Deliverables:** OIDC config, Auth resource, bootstrap guard, cookie issuer logic, documentation for configuring providers.
+    *   **Acceptance Criteria:** OAuth login works for all providers, `vu_anon_id` cookie adheres to HttpOnly/Secure/SameSite, bootstrap returns 403 after admin exists, rate limits logged.
+    *   **Dependencies:** `I1.T1`, `I1.T9`.
+    *   **Parallelizable:** Partial.
 
 <!-- anchor: task-i2-t2 -->
-- **Task 2.2:**
-  - **Task ID:** `I2.T2`
-  - **Description:** Produce OpenAPI v1 draft covering authentication bootstrap, anonymous ID issuance, user preferences CRUD, widget data fetch endpoints, and `/track/click` instrumentation payloads. Include error models, rate limit headers, and examples for each endpoint.
-  - **Agent Type Hint:** `BackendAgent`
-  - **Inputs:** ERD, widget matrix, feature flag/rate limit playbooks.
-  - **Input Files:** ["docs/architecture/data_model.puml", "docs/ui-guides/widget_matrix.md", "docs/ops/feature_flag_playbook.md", "docs/ops/rate_limit_playbook.md"]
-  - **Target Files:** ["api/openapi.yaml"]
-  - **Deliverables:** OpenAPI YAML with security schemes, schemas for UserPreferencesType, WidgetResponseType, Consent payloads, and ClickTrackingType.
-  - **Acceptance Criteria:** Spec validates via `openapi-generator` or `spectral`, covers all endpoints required by homepage widgets, includes policy-relevant headers (consent, rate limits), and references DTO anchors.
-  - **Dependencies:** `I2.T1`
-  - **Parallelizable:** Partially
+*   **Task 2.2:**
+    *   **Task ID:** `I2.T2`
+    *   **Description:** Build FeatureFlagService with Panache entity, evaluation method using MD5 hash, whitelist support, analytics toggle, audit logging (`feature_flag_audit`).
+        Implement REST endpoints `/admin/api/feature-flags` (list/update) and CLI seeding migration for initial flags.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Policies P7 & P14, Section 2 components, Section 4 directives.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/data/models/","src/main/java/villagecompute/homepage/services/"]`
+    *   **Target Files:** `["migrations/V2__feature_flags.sql","src/main/java/villagecompute/homepage/data/models/FeatureFlag.java","src/main/java/villagecompute/homepage/services/FeatureFlagService.java","src/main/java/villagecompute/homepage/api/rest/admin/FeatureFlagResource.java"]`
+    *   **Deliverables:** Schema migration, service, resource endpoints, DTOs, seed data.
+    *   **Acceptance Criteria:** CRUD endpoints secured via roles, evaluations log to partitioned table respecting consent, unit tests cover cohort hashing + analytics opt-out, doc updated.
+    *   **Dependencies:** `I2.T1`, `I1.T3`.
+    *   **Parallelizable:** No.
 
 <!-- anchor: task-i2-t3 -->
-- **Task 2.3:**
-  - **Task ID:** `I2.T3`
-  - **Description:** Design database migration plan and schema notes for user preference storage (`users.preferences` JSONB), anonymous user lifecycle (Policy P9), feature flag evaluation retention, and click tracking partitions specific to homepage interactions.
-  - **Agent Type Hint:** `DatabaseAgent`
-  - **Inputs:** ERD, OpenAPI draft, governance docs.
-  - **Input Files:** ["docs/architecture/data_model.puml", "api/openapi.yaml", "docs/ops/feature_flag_playbook.md"]
-  - **Target Files:** ["migrations/notes/iteration2_prefs_and_flags.md"]
-  - **Deliverables:** Migration note with table/column definitions, JSONB schema versioning plan, indexes, retention jobs, and test strategies.
-  - **Acceptance Criteria:** Document lists SQL statements for new columns/indexes, describes migration ordering, identifies rollback steps, and references policies P1, P7, P14.
-  - **Dependencies:** `I2.T2`
-  - **Parallelizable:** No
+*   **Task 2.3:**
+    *   **Task ID:** `I2.T3`
+    *   **Description:** Implement RateLimitService with Caffeine caches, tier definitions (anonymous, logged_in, trusted), violation logging table, enforcement middleware for key endpoints (login, search, votes, submissions).
+        Provide admin endpoints to view/update rate limit config, integrate with observability metrics.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Policy F14.2, Section 2 components, Section 4 directives, ERD from I1.T3.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/services/","src/main/java/villagecompute/homepage/api/rest/admin/"]`
+    *   **Target Files:** `["migrations/V3__rate_limits.sql","src/main/java/villagecompute/homepage/services/RateLimitService.java","src/main/java/villagecompute/homepage/api/rest/admin/RateLimitResource.java","docs/ops/rate-limits.md"]`
+    *   **Deliverables:** Migration, service, CDI interceptors, admin endpoints, docs.
+    *   **Acceptance Criteria:** Rate limits enforced with headers + 429 responses, violation logs recorded with TTL, admin UI returns config, metrics exported.
+    *   **Dependencies:** `I1.T4`, `I1.T8`.
+    *   **Parallelizable:** Partial.
 
 <!-- anchor: task-i2-t4 -->
-- **Task 2.4:**
-  - **Task ID:** `I2.T4`
-  - **Description:** Specify consent + anonymous merge UX (copy, modals, flows, decision states). Deliver flow diagrams for OAuth merge, GDPR consent options, anonymous data discard, and audit logging triggers.
-  - **Agent Type Hint:** `UXDocumentationAgent`
-  - **Inputs:** Policy decisions P1, P9, Section 6 assumptions, widget requirements.
-  - **Input Files:** ["docs/ui-guides/widget_matrix.md", "docs/architecture/architecture_intake.md"]
-  - **Target Files:** ["docs/ui-guides/consent_flows.mmd", "docs/ui-guides/consent_copy.md"]
-  - **Deliverables:** Mermaid sequence diagram, copy matrix, banner text, error states, and event logging checklist.
-  - **Acceptance Criteria:** Flow covers accepted/declined/partial merges, references audit table fields, includes accessibility copy, and ties to OpenAPI endpoints.
-  - **Dependencies:** `I2.T1`
-  - **Parallelizable:** Yes
+*   **Task 2.4:**
+    *   **Task ID:** `I2.T4`
+    *   **Description:** Implement anonymous-to-auth merge flow: `account_merge_audit` table, consent modal API, merge logic merging layout/preferences/topic data, opt-out path, and 90-day purge scheduling.
+        Provide PlantUML sequence diagram for login + consent + merge + audit + purge job and update docs.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Policies P1 & P9, Section 2 components, Section 4 command rules.
+    *   **Input Files:** `["migrations/","docs/diagrams/","src/main/java/villagecompute/homepage/services/"]`
+    *   **Target Files:** `["migrations/V4__account_merge_audit.sql","src/main/java/villagecompute/homepage/services/AccountMergeService.java","src/main/java/villagecompute/homepage/jobs/AccountMergeCleanupJobHandler.java","docs/diagrams/anon-merge-seq.puml","docs/ops/privacy.md"]`
+    *   **Deliverables:** Migration, merge service, cleanup job handler, diagram, privacy doc.
+    *   **Acceptance Criteria:** Consent recorded with timestamp/version/IP, merge summarises data, anonymized entries soft-delete, cleanup job scheduled for 90-day purge, diagram reviewed by compliance.
+    *   **Dependencies:** `I2.T1`, `I1.T4`, `I1.T8`.
+    *   **Parallelizable:** No.
 
 <!-- anchor: task-i2-t5 -->
-- **Task 2.5:**
-  - **Task ID:** `I2.T5`
-  - **Description:** Scaffold TypeScript/React mount architecture: define `mounts.ts` registry pattern, shared hooks, widget skeleton components, and telemetry wrappers. Provide coding standards (naming, props validation, data-component usage) for islands.
-  - **Agent Type Hint:** `FrontendAgent`
-  - **Inputs:** Build scaffolding (I1.T2), widget matrix, OpenAPI spec.
-  - **Input Files:** ["README.md", "docs/ui-guides/widget_matrix.md", "api/openapi.yaml"]
-  - **Target Files:** ["src/main/resources/META-INF/resources/assets/ts/mounts.ts", "docs/ui-guides/ts_architecture.md"]
-  - **Deliverables:** Implementation-ready TypeScript registry skeleton, documentation describing mount lifecycle, instrumentation hooks, error boundaries, and theming approach.
-  - **Acceptance Criteria:** `mounts.ts` compiles, auto-mount logic documented, sample widget stub commits, and doc references tokens + analytics requirements.
-  - **Dependencies:** `I2.T2`
-  - **Parallelizable:** Yes
+*   **Task 2.5:**
+    *   **Task ID:** `I2.T5`
+    *   **Description:** Design `UserPreferencesType` JSON schema (layout widgets array, news topics, watchlist, weather locations, theme, widget configs, schema_version) and persist to `users.preferences`.
+        Provide migration default, service for CRUD, REST endpoints `/api/preferences`, validation, and schema upgrade strategy documentation.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Section 2 data models, P1/P9, UI governance doc.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/services/UserPreferenceService.java","src/main/java/villagecompute/homepage/api/rest/PreferencesResource.java"]`
+    *   **Target Files:** `["migrations/V5__user_preferences_defaults.sql","src/main/java/villagecompute/homepage/services/UserPreferenceService.java","src/main/java/villagecompute/homepage/api/rest/PreferencesResource.java","docs/architecture/preferences-schema.md"]`
+    *   **Deliverables:** Schema doc, service methods, REST endpoints, tests verifying anonymous + auth flows.
+    *   **Acceptance Criteria:** Preferences validated, schema version stored, GET/PUT endpoints secured with rate limits, doc explains migrations.
+    *   **Dependencies:** `I2.T4`.
+    *   **Parallelizable:** Partial.
 
 <!-- anchor: task-i2-t6 -->
-- **Task 2.6:**
-  - **Task ID:** `I2.T6`
-  - **Description:** Create AI Tagging & Feed Prioritization spec covering batching, budget enforcement, dedupe hashing, personalization ranking, and click tracking alignment for news widgets. Document fallback behaviors for budget thresholds per Policy P10.
-  - **Agent Type Hint:** `DataArchitectureAgent`
-  - **Inputs:** Job blueprint, widget matrix, AI budget policy.
-  - **Input Files:** ["docs/architecture/job_orchestration.md", "docs/ui-guides/widget_matrix.md", "docs/ops/ai_budget_monitoring.md"]
-  - **Target Files:** ["docs/architecture/ai_tagging_widget_spec.md"]
-  - **Deliverables:** Spec describing queue usage, scoring formula, caching windows, instrumentation, and user-facing badges for untagged stories.
-  - **Acceptance Criteria:** Document references AiUsageTracking fields, defines ranking weights, lists fallback UI cues, and enumerates monitoring metrics.
-  - **Dependencies:** `I2.T1`
-  - **Parallelizable:** Yes
+*   **Task 2.6:**
+    *   **Task ID:** `I2.T6`
+    *   **Description:** Build homepage Qute layout + gridstack integration: implement `ExperienceShell` controllers, server-rendered widget placeholders, React mount attachments, `gridstack` JS config, and edit mode toggles.
+        Add default layout definition (anonymous) and quick start instructions plus CSS tokens for theme alignment.
+    *   **Agent Type Hint:** `FrontendAgent`
+    *   **Inputs:** Sections 2 (frontend stack), `UserPreferenceService`, UI architecture doc.
+    *   **Input Files:** `["src/main/resources/templates/homepage.html","src/main/resources/META-INF/resources/assets/ts/mounts.ts","src/main/resources/META-INF/resources/assets/ts/gridstack-editor.ts"]`
+    *   **Target Files:** `["src/main/resources/templates/homepage.html","src/main/java/villagecompute/homepage/api/rest/HomepageResource.java","src/main/resources/META-INF/resources/assets/ts/gridstack-editor.ts","docs/ui-guides/homepage-layout.md"]`
+    *   **Deliverables:** Template, controller, React island, documentation for editing controls.
+    *   **Acceptance Criteria:** Anonymous + auth views render with correct default layout, edit mode toggles, data-props include preferences + flag states, tests cover SSR + React hydration.
+    *   **Dependencies:** `I2.T5`.
+    *   **Parallelizable:** Partial.
 
 <!-- anchor: task-i2-t7 -->
-- **Task 2.7:**
-  - **Task ID:** `I2.T7`
-  - **Description:** Produce Homepage QA & Telemetry plan describing unit/integration tests, accessibility audits, click-tracking validation, and feature flag cohort testing for personalization features.
-  - **Agent Type Hint:** `QAAgent`
-  - **Inputs:** Widget matrix, OpenAPI spec, mount architecture doc.
-  - **Input Files:** ["docs/ui-guides/widget_matrix.md", "api/openapi.yaml", "docs/ui-guides/ts_architecture.md"]
-  - **Target Files:** ["docs/ops/homepage_validation_plan.md"]
-  - **Deliverables:** Plan with test matrix, automation targets, manual exploratory guidelines, telemetry dashboards, and gating criteria for enabling widgets via feature flags.
-  - **Acceptance Criteria:** Document covers accessibility/performance/security checks, enumerates instrumentation requirements, and ties each test grouping to policies P2, P5, P7, P14.
-  - **Dependencies:** `I2.T5`
-  - **Parallelizable:** No
+*   **Task 2.7:**
+    *   **Task ID:** `I2.T7`
+    *   **Description:** Produce OpenAPI v3 draft covering auth, preferences, widget placeholders (news/weather/stocks stub), feature flags, rate limit introspection; share DTO definitions for frontend.
+        Integrate spec generation with Maven build and publish to `api/openapi` directory.
+    *   **Agent Type Hint:** `DocumentationAgent`
+    *   **Inputs:** Section 2 API contract style, tasks T2.1–T2.6 outputs.
+    *   **Input Files:** `["api/openapi/"]`
+    *   **Target Files:** `["api/openapi/v1.yaml","docs/api/openapi-notes.md"]`
+    *   **Deliverables:** OpenAPI file, generation script/README snippet.
+    *   **Acceptance Criteria:** Spec validates with `swagger-cli`, includes schemas for DTOs, referenced in README, CI fails on drift.
+    *   **Dependencies:** `I2.T1`–`I2.T6`.
+    *   **Parallelizable:** No.
 
-- **Iteration Workstreams & Owners:**
-  - Product/UX – handles widget backlog (I2.T1), consent flows (I2.T4), QA plan (I2.T7).
-  - Backend/API – delivers OpenAPI spec (I2.T2), migration notes (I2.T3), AI tagging spec (I2.T6).
-  - Frontend/Platform – builds mount scaffolding (I2.T5) and coordinates instrumentation guidelines.
+<!-- anchor: task-i2-t8 -->
+*   **Task 2.8:**
+    *   **Task ID:** `I2.T8`
+    *   **Description:** Implement admin role + permission import referencing `village-storefront` constants; seed `admin_roles` table, create impersonation guard rails, add `/admin/api/users/roles` endpoints.
+        Provide doc describing RBAC mapping and bootstrap steps for support/ops roles.
+    *   **Agent Type Hint:** `BackendAgent`
+    *   **Inputs:** Section F1 roles/permissions, Section 4 directives.
+    *   **Input Files:** `["migrations/","src/main/java/villagecompute/homepage/data/models/","src/main/java/villagecompute/homepage/api/rest/admin/"]`
+    *   **Target Files:** `["migrations/V6__admin_roles.sql","src/main/java/villagecompute/homepage/data/models/AdminRole.java","src/main/java/villagecompute/homepage/api/rest/admin/UserAdminResource.java","docs/ops/rbac.md"]`
+    *   **Deliverables:** Migration, entity, service/resource, RBAC doc.
+    *   **Acceptance Criteria:** Roles seeded, endpoints secured, impersonation audit log stub created, doc describes provisioning.
+    *   **Dependencies:** `I2.T1`.
+    *   **Parallelizable:** Partial.
 
-- **Dependency Mapping:** I1 diagrams inform widget architecture; ERD + job blueprint feed directly into I2.T2–I2.T6; onboarding overview ensures contributors know where to place outputs.
-
-- **Parallelization Guidance:** Product + backend flows (I2.T1/2/4/6) can run concurrently once intake is referenced; migration note (I2.T3) waits for spec finalization; QA plan (I2.T7) begins after mount architecture doc is stable.
-
-- **Risks & Mitigations:**
-  - *Spec creep:* Additional widgets may surface; mitigate by capturing stretch goals in backlog doc and keeping OpenAPI modular.
-  - *Consent confusion:* Users may misinterpret merge prompts; mitigate with copy reviews + legal sign-off embedded in Task I2.T4.
-  - *Data schema churn:* Changing preferences schema later is costly; mitigate with JSONB versioning plan (I2.T3) and migration playbook.
-  - *Telemetry gaps:* Without instrumentation, personalization success cannot be measured; mitigate with QA plan requiring instrumentation sign-off before release.
-
-- **Metrics & Validation Hooks:**
-  - OpenAPI validated via Spectral; diff recorded in repo to ensure downstream generators trust spec.
-  - TypeScript mount scaffolding compiled + linted; sample widget stub demonstrates data-component usage.
-  - Consent flow diagrams signed by legal/compliance and stored with revision history.
-
-- **Timeline & Milestones:**
-  - Week 1: Finalize widget matrix + OpenAPI draft (I2.T1, I2.T2).
-  - Week 2: Complete migration notes + consent flows (I2.T3, I2.T4).
-  - Week 3: Deliver mount scaffolding + AI tagging spec (I2.T5, I2.T6).
-  - Week 4: Publish QA/telemetry plan (I2.T7) and review overall readiness.
-
-- **Review & Sign-off Participants:** Product lead (widget requirements), Backend lead (OpenAPI + migrations), Compliance lead (consent flows + telemetry plan), Frontend lead (TS architecture).
-
-- **Hand-off Checklist:** Widget matrix + consent docs linked in README; OpenAPI tagged v1.0-draft; migration notes filed for I3 use; TypeScript scaffolding committed; QA plan added to ops docs.
-
-- **Open Questions to Carry Forward:**
-  - Determine if additional widgets (marketplace snippet, profile teaser) should join personalization scope or remain feature-flagged for later iterations.
-  - Confirm copy/localization strategy for consent modal across jurisdictions beyond US/EU.
-  - Decide on fallback behavior when AI budget halts tagging mid-cycle (visual indicator vs silent degrade) and capture in widget specs.
-  - Validate whether anonymous personalization should persist across device families or remain browser-only (impacts cookie policies).
-
-- **Iteration Exit Criteria:**
-  - Widget matrix, consent flows, and QA plan approved by stakeholders and referenced from README.
-  - OpenAPI v1 draft merged with validation reports, and migration note queued for I3 implementation tasks.
-  - TypeScript mount scaffolding + AI tagging spec documented, enabling engineering squads to start implementation.
-  - Telemetry + testing requirements baselined so feature flags can be enabled only when instrumentation is ready.
+<!-- anchor: task-i2-t9 -->
+*   **Task 2.9:**
+    *   **Task ID:** `I2.T9`
+    *   **Description:** Implement automated testing harness for personalization flows: create Quarkus tests covering OAuth callback, anonymous merge, preference CRUD, feature flag evaluation, rate limit enforcement; add Cypress/Playwright smoke covering homepage edit.
+        Update CI pipeline to run new suites and publish coverage metrics + artifacts.
+    *   **Agent Type Hint:** `QAAgent`
+    *   **Inputs:** Outputs of T2.1–T2.6, Section 4 quality gate.
+    *   **Input Files:** `["src/test/java/","package.json",".github/workflows/build.yml"]`
+    *   **Target Files:** `["src/test/java/villagecompute/homepage/AuthResourceTest.java","src/test/java/villagecompute/homepage/PreferencesResourceTest.java","tests/e2e/homepage.spec.ts","docs/ops/testing.md"]`
+    *   **Deliverables:** Unit/integration tests, e2e spec, doc updates, CI job snippet.
+    *   **Acceptance Criteria:** Coverage ≥80% for auth/preferences modules, e2e smoke runs in CI, rate limit tests assert 429 path, documentation updated.
+    *   **Dependencies:** All prior I2 tasks.
+    *   **Parallelizable:** No.
