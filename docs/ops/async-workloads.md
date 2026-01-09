@@ -37,7 +37,7 @@ All async workloads are enumerated in the `JobType` enum. Each type is permanent
 | Job Type | Queue | Cadence | Handler Class | Policy Notes |
 |----------|-------|---------|---------------|--------------|
 | `RSS_FEED_REFRESH` | DEFAULT | 15min-daily (configurable) | `RssFeedRefreshHandler` | — |
-| `WEATHER_REFRESH` | DEFAULT | 1 hour | `WeatherRefreshHandler` | — |
+| `WEATHER_REFRESH` | DEFAULT | 1 hour (forecast), 15 min (alerts) | `WeatherRefreshJobHandler` | Dual cadence: hourly forecast refresh + 15-min severe weather alerts (NWS only) |
 | `LISTING_EXPIRATION` | DEFAULT | Daily @ 2am UTC | `ListingExpirationHandler` | — |
 | `RANK_RECALCULATION` | DEFAULT | Hourly | `RankRecalculationHandler` | — |
 | `INBOUND_EMAIL` | DEFAULT | 1 minute | `InboundEmailHandler` | IMAP polling for marketplace relay |

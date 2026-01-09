@@ -62,7 +62,8 @@ public class AiTaggingScheduler {
      * opportunity to process.
      */
     @Scheduled(
-            cron = "0 0 * * * ?") // Every hour at minute 0 (Quarkus 6-part cron: second, minute, hour, day, month, day-of-week)
+            cron = "0 0 * * * ?") // Every hour at minute 0 (Quarkus 6-part cron: second, minute, hour, day, month,
+                                  // day-of-week)
     void scheduleAiTagging() {
         try {
             // Count untagged items
