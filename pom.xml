@@ -37,6 +37,7 @@
         <!-- Dependency Versions (not managed by Quarkus BOM) -->
         <quarkiverse-langchain4j.version>1.5.0</quarkiverse-langchain4j.version>
         <mybatis-migrations.version>3.3.11</mybatis-migrations.version>
+        <rome.version>2.1.0</rome.version>
 
         <!-- Node/NPM Versions for Frontend Build -->
         <node.version>v20.10.0</node.version>
@@ -194,6 +195,13 @@
             <groupId>org.mybatis</groupId>
             <artifactId>mybatis-migrations</artifactId>
             <version>${mybatis-migrations.version}</version>
+        </dependency>
+
+        <!-- Rome Tools RSS/Atom Parser -->
+        <dependency>
+            <groupId>com.rometools</groupId>
+            <artifactId>rome</artifactId>
+            <version>${rome.version}</version>
         </dependency>
 
         <!-- Testing -->

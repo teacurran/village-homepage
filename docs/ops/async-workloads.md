@@ -333,7 +333,163 @@ public class MyJobScheduler {
 
 ---
 
-## 10. Future Enhancements
+## 10. RSS Feed Refresh Job Details
+
+The `RSS_FEED_REFRESH` job is a critical component of the content aggregation pipeline, responsible for fetching, parsing, and storing news articles from configured RSS/Atom sources.
+
+### Job Payload Structure
+
+```json
+{
+  "source_id": "uuid-string",  // Optional - if null, refresh all due feeds
+  "force_refresh": false        // Optional - bypass interval check (default: false)
+}
+```
+
+**Payload Parameters:**
+- **`source_id`** (UUID, optional): Specific RSS source to refresh. If omitted, handler queries `RssSource.findDueForRefresh()` to process all sources due based on `last_fetched_at` and `refresh_interval_minutes`.
+- **`force_refresh`** (boolean, optional): Bypasses interval check to force immediate refresh. Used by admin dashboard for manual refresh operations.
+
+### Scheduler Behavior
+
+The `RssFeedRefreshScheduler` runs every **5 minutes** to ensure high-frequency feeds (15-minute intervals for breaking news) are refreshed promptly. The scheduler:
+1. Invokes handler with empty payload
+2. Handler queries `RssSource.findDueForRefresh()` to determine which sources are ready
+3. Processes each source independently (continues on individual failures)
+
+### Feed Refresh Intervals
+
+Per Policy P2 (Feed Governance), sources are configured with intervals based on content velocity:
+
+| Category | Interval | Examples |
+|----------|----------|----------|
+| Breaking News | 15 minutes | Reuters, BBC News, AP |
+| Tech News | 60 minutes | TechCrunch, Hacker News |
+| Analysis/Opinion | 360 minutes (6 hours) | Financial Times, Scientific American |
+| Sports/Entertainment | 30-120 minutes | ESPN, Variety |
+
+Intervals are enforced via database CHECK constraint (15-1440 minutes) and respected by `findDueForRefresh()` query.
+
+### Error Handling & Auto-Disable
+
+**5-Error Auto-Disable Policy:**
+- Each fetch failure increments `rss_sources.error_count`
+- After **5 consecutive errors**, source is automatically disabled (`is_active = false`)
+- Successful fetch resets `error_count` to 0 and clears `last_error_message`
+
+**Common Error Scenarios:**
+
+| Error Type | HTTP Status/Exception | Handler Action | Retry Behavior |
+|------------|----------------------|----------------|----------------|
+| Network timeout | `HttpTimeoutException` | Increment error_count, log warning | Retry via job retry mechanism |
+| HTTP 404/410 | Gone/Not Found | Increment error_count, log warning | Retry (may auto-disable after 5) |
+| HTTP 429 | Rate Limit Exceeded | Increment error_count, respect Retry-After header | Backoff and retry |
+| Invalid XML | `WireFeedInput` parse error | Increment error_count, log parse details | Retry (feed may recover) |
+| Missing fields | Title/URL null or blank | Skip item, log warning, continue with remaining entries | No retry (entry-level failure) |
+
+### Deduplication Strategy
+
+**Primary Deduplication:** RSS GUID (`item_guid` unique constraint)
+1. Handler calls `FeedItem.findByGuid(entry.getUri())` before creating item
+2. If GUID exists, skip item and increment `items_duplicate` counter
+3. If GUID missing, fallback to URL + published_at hash
+
+**Content Hash:** MD5 hash of title + description stored in `content_hash` for future similarity detection (not yet implemented in frontend).
+
+### OpenTelemetry Span Events
+
+RSS refresh jobs emit the following span events for debugging:
+
+| Event Name | Attributes | Description |
+|------------|------------|-------------|
+| `fetch.started` | `source_id`, `source_url` | HTTP request initiated |
+| `parse.completed` | `items_fetched` | Rome Tools parsing succeeded |
+| `dedupe.completed` | `new`, `duplicate` | Deduplication pass completed |
+| `entry.missing_fields` | `guid` | Entry skipped due to missing title/url |
+| `source.not_found` | `source_id` | Payload specified non-existent source |
+| `source.inactive` | `source_id` | Source disabled, refresh skipped |
+| `refresh.no_sources` | — | No sources due for refresh |
+| `refresh.completed` | `sources.success`, `sources.failure` | Batch refresh completed |
+
+### Micrometer Metrics
+
+**Counters:**
+- **`rss.fetch.items.total`** - Total feed items processed
+  - Tags: `source_id`, `status={new|duplicate}`
+- **`rss.fetch.errors.total`** - Fetch failures by error type
+  - Tags: `source_id`, `error_type={HttpTimeoutException|http_404|...}`
+
+**Timers:**
+- **`rss.fetch.duration`** - Fetch and parse duration
+  - Tags: `source_id`, `result={success|failure}`
+
+### Troubleshooting Guide
+
+**Symptom:** Source disabled after multiple errors
+- **Diagnosis:** Check `rss_sources.last_error_message` for details
+- **Resolution:**
+  1. Verify feed URL is still valid (may have moved or been removed)
+  2. Check if site is blocking user agent (some sites block Java HttpClient)
+  3. Re-enable via Admin API: `PATCH /admin/api/rss-sources/{id}` with `{"is_active": true, "error_count": 0}`
+
+**Symptom:** Duplicate items appearing in database
+- **Diagnosis:** Feed provider changed GUID format or doesn't provide stable GUIDs
+- **Resolution:**
+  1. Query `feed_items` for items with similar `content_hash` but different `item_guid`
+  2. If widespread, consider switching to content hash-based deduplication for that source
+  3. File bug report with feed provider if GUIDs are unstable
+
+**Symptom:** Job execution time >5 minutes (SLA breach)
+- **Diagnosis:** Large feed (>1000 entries) or slow parsing
+- **Resolution:**
+  1. Check Grafana: `histogram_quantile(0.95, rate(rss_fetch_duration_bucket{source_id="xyz"}[5m]))`
+  2. If parse time high, consider adding pagination or entry limit (not yet implemented)
+  3. If network time high, verify feed server performance
+
+**Symptom:** AI tagging not triggering for new items
+- **Diagnosis:** Items not marked with `ai_tagged = false`
+- **Resolution:**
+  1. Verify handler sets `item.aiTagged = false` on new items
+  2. Check `FeedItem.findUntagged()` returns items (should be picked up by I3.T3 AI tagging job)
+
+### Manual Operations
+
+**Force Refresh Specific Source:**
+```bash
+curl -X POST http://localhost:8080/admin/api/jobs/enqueue \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_type": "RSS_FEED_REFRESH",
+    "payload": {
+      "source_id": "uuid-of-source",
+      "force_refresh": true
+    }
+  }'
+```
+
+**Query Sources Due for Refresh:**
+```sql
+SELECT id, name, url, last_fetched_at, refresh_interval_minutes
+FROM rss_sources
+WHERE is_active = true
+  AND (last_fetched_at IS NULL
+       OR last_fetched_at + (refresh_interval_minutes || ' minutes')::interval < NOW())
+ORDER BY last_fetched_at NULLS FIRST;
+```
+
+**Reset Error Count for Disabled Source:**
+```sql
+UPDATE rss_sources
+SET error_count = 0,
+    last_error_message = NULL,
+    is_active = true,
+    updated_at = NOW()
+WHERE id = 'uuid-of-source';
+```
+
+---
+
+## 11. Future Enhancements
 
 ### Planned Improvements
 
@@ -359,7 +515,7 @@ public class MyJobScheduler {
 
 ---
 
-## 11. Policy Cross-References
+## 12. Policy Cross-References
 
 This document implements the following architectural policies:
 
@@ -367,6 +523,7 @@ This document implements the following architectural policies:
 - **P10:** AI tagging budget enforcement (Sections 2, 6, 8)
 - **P12:** SCREENSHOT queue concurrency limits (Sections 1, 4)
 - **P14:** Click tracking consent gating (Section 2)
+- **P2:** Feed Governance - RSS refresh intervals and error handling (Section 10)
 
 For full policy definitions, see `docs/diagrams/README.md` and `docs/diagrams/container.puml`.
 

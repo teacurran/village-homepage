@@ -188,9 +188,18 @@ public class RssSource extends PanacheEntityBase {
      * @return List of sources ready for refresh (used by DEFAULT queue job picker)
      */
     public static List<RssSource> findDueForRefresh() {
-        return find("#" + QUERY_FIND_DUE_FOR_REFRESH
-                + " WHERE is_active = true AND (last_fetched_at IS NULL OR last_fetched_at + (refresh_interval_minutes || ' minutes')::interval < NOW())")
-                .list();
+        // Fetch all active sources and filter in Java for database compatibility
+        // In production with PostgreSQL, this could be optimized with a native query using interval arithmetic
+        List<RssSource> activeSources = find("isActive = true").list();
+        Instant now = Instant.now();
+
+        return activeSources.stream().filter(source -> {
+            if (source.lastFetchedAt == null) {
+                return true; // Never fetched - due for refresh
+            }
+            Instant nextRefreshTime = source.lastFetchedAt.plusSeconds(source.refreshIntervalMinutes * 60L);
+            return nextRefreshTime.isBefore(now);
+        }).toList();
     }
 
     /**
