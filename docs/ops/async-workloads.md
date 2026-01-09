@@ -41,7 +41,7 @@ All async workloads are enumerated in the `JobType` enum. Each type is permanent
 | `LISTING_EXPIRATION` | DEFAULT | Daily @ 2am UTC | `ListingExpirationHandler` | — |
 | `RANK_RECALCULATION` | DEFAULT | Hourly | `RankRecalculationHandler` | — |
 | `INBOUND_EMAIL` | DEFAULT | 1 minute | `InboundEmailHandler` | IMAP polling for marketplace relay |
-| `STOCK_REFRESH` | HIGH | 5 minutes (9:30am-4pm ET) | `StockRefreshHandler` | Alpha Vantage API integration |
+| `STOCK_REFRESH` | HIGH | 5 min (market hours), 1hr (after hours), 6hr (weekends) | `StockRefreshJobHandler` | Alpha Vantage API: 25 req/day free tier, rate limit fallback serves stale cache, market hours: 9:30am-4pm ET Mon-Fri |
 | `MESSAGE_RELAY` | HIGH | On-demand | `MessageRelayHandler` | Marketplace inquiry relay with email masking |
 | `SOCIAL_REFRESH` | LOW | 30 minutes | `SocialRefreshHandler` | P5/P13: Secure token storage required |
 | `LINK_HEALTH_CHECK` | LOW | Weekly | `LinkHealthCheckHandler` | Detects dead links in Good Sites directory |
