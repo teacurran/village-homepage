@@ -10,6 +10,7 @@ import org.jboss.logging.Logger;
 import villagecompute.homepage.jobs.JobHandler;
 import villagecompute.homepage.jobs.JobQueue;
 import villagecompute.homepage.jobs.JobType;
+import villagecompute.homepage.observability.LoggingConfig;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -189,6 +190,11 @@ public class DelayedJobService {
                 .setAttribute("job.attempt", attempt).startSpan();
 
         try (Scope scope = span.makeCurrent()) {
+            // Populate MDC so structured logs (JSON) include trace, span, job, and queue metadata
+            LoggingConfig.enrichWithTraceContext();
+            LoggingConfig.setJobId(jobId);
+            LoggingConfig.setRequestOrigin("JobType." + jobType.name());
+
             // P12: Enforce concurrency limit for SCREENSHOT queue
             if (jobType.getQueue() == JobQueue.SCREENSHOT) {
                 LOG.debugf("Acquiring SCREENSHOT semaphore for job %d (available: %d)", (Object) jobId,
@@ -221,6 +227,7 @@ public class DelayedJobService {
                 LOG.debugf("Released SCREENSHOT semaphore for job %d (available: %d)", (Object) jobId,
                         (Object) screenshotConcurrency.availablePermits());
             }
+            LoggingConfig.clearMDC();
             span.end();
         }
     }

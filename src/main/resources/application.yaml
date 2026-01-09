@@ -1,9 +1,106 @@
 quarkus:
   application:
     name: village-homepage
+    version: ${project.version:dev}
   http:
     port: 8080
+
+  # Logging Configuration
   log:
     level: INFO
     console:
-      format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
+      # Enable structured JSON logging for production observability
+      json: true
+      json:
+        # Standard fields automatically included: timestamp, sequence, loggerClassName, loggerName, level, message, threadName, threadId
+        # Custom fields added via MDC enrichment (see LoggingEnricher)
+        additional-field:
+          service.name.value: village-homepage
+          service.version.value: ${quarkus.application.version}
+          environment.value: ${ENVIRONMENT:dev}
+
+    # Minimum log levels by category
+    category:
+      "villagecompute.homepage": DEBUG
+      "io.quarkus": INFO
+      "org.hibernate": WARN
+
+  # OpenTelemetry Configuration
+  otel:
+    # Service identification
+    resource:
+      attributes: "service.name=village-homepage,service.version=${quarkus.application.version},deployment.environment=${ENVIRONMENT:dev}"
+
+    # Tracing configuration
+    traces:
+      sampler: always_on
+      exporter: otlp
+
+    # OTLP exporter settings
+    exporter:
+      otlp:
+        # Dev profile uses local Jaeger (from docker-compose)
+        endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
+        protocol: http/protobuf
+        timeout: 10s
+        # Compress traces for network efficiency
+        compression: gzip
+
+    # Propagation format for distributed tracing
+    propagators: tracecontext,baggage
+
+    # SDK configuration
+    sdk:
+      disabled: false
+
+  # SmallRye Metrics Configuration
+  smallrye-metrics:
+    # Enable metrics endpoint at /q/metrics
+    enabled: true
+    # Expose detailed metrics for monitoring
+    path: /q/metrics
+    # Enable specific metric types
+    extensions:
+      enabled: true
+    # Tag all metrics with service metadata
+    tags: "service=village-homepage,environment=${ENVIRONMENT:dev}"
+
+# Profile-specific overrides
+"%dev":
+  quarkus:
+    log:
+      console:
+        # Use human-readable logs in dev mode (override JSON)
+        json: false
+        format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %X{trace_id} %X{user_id} %s%e%n"
+    otel:
+      exporter:
+        otlp:
+          # Local Jaeger from docker-compose
+          endpoint: http://localhost:4318
+
+"%test":
+  quarkus:
+    log:
+      level: WARN
+      console:
+        json: false
+    otel:
+      sdk:
+        # Disable telemetry in tests to avoid noise
+        disabled: true
+
+"%prod":
+  quarkus:
+    log:
+      console:
+        json: true
+      category:
+        "villagecompute.homepage": INFO
+    otel:
+      exporter:
+        otlp:
+          # Production collector endpoint (managed by ops team)
+          # Set via environment variable: OTEL_EXPORTER_OTLP_ENDPOINT
+          endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+          headers: ${OTEL_EXPORTER_OTLP_HEADERS:}
