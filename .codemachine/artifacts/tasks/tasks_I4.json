@@ -1,0 +1,162 @@
+[
+  {
+    "task_id": "I4.T1",
+    "iteration_id": "I4",
+    "iteration_goal": "Design the Good Sites directory architecture, voting/karma systems, screenshot workflows, and public profile templates so crews can implement curation, moderation, and profile publishing flows.",
+    "description": "Produce Good Sites category & submission spec describing category schema, slug strategy, moderation roles, karma thresholds, and site submission payloads referencing policies F13.1–F13.7.",
+    "agent_type_hint": "ProductDocumentationAgent",
+    "inputs": "Requirements (F13), ERD, feature flag playbook.",
+    "target_files": [
+      "docs/good-sites/category_submission_spec.md"
+    ],
+    "input_files": [
+      "CLAUDE.md",
+      "docs/architecture/data_model.puml",
+      "docs/ops/feature_flag_playbook.md"
+    ],
+    "deliverables": "Spec covering data fields, validation rules, duplicate detection, submission workflows, and ties to AI categorization + screenshot jobs.",
+    "acceptance_criteria": "Document enumerates workflows for trusted/untrusted users, reserved usernames, and moderation access control; includes diagrams for submission flow.",
+    "dependencies": [
+      "I1.T4"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T2",
+    "iteration_id": "I4",
+    "iteration_goal": "Design the Good Sites directory architecture, voting/karma systems, screenshot workflows, and public profile templates so crews can implement curation, moderation, and profile publishing flows.",
+    "description": "Author screenshot capture + metadata refresh blueprint for Good Sites: jvppeteer pool usage, queue selection (SCREENSHOT/BULK), version retention (Policy P4), WebP conversion, and fallback logic when capture fails.",
+    "agent_type_hint": "InfrastructureAgent",
+    "inputs": "Job blueprint, storage spec, Policy P4.",
+    "target_files": [
+      "docs/good-sites/screenshot_pipeline.md"
+    ],
+    "input_files": [
+      "docs/architecture/job_orchestration.md",
+      "docs/architecture/component_overview.mmd"
+    ],
+    "deliverables": "Blueprint with sequence diagrams, pool sizing recommendations, failure handling, R2 key patterns, and admin tooling for manual recapture.",
+    "acceptance_criteria": "Document references concurrency controls, retention policy, alerting, CLI commands for requeueing, and cross-links to Ops dashboards.",
+    "dependencies": [
+      "I1.T5"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T3",
+    "iteration_id": "I4",
+    "iteration_goal": "Design the Good Sites directory architecture, voting/karma systems, screenshot workflows, and public profile templates so crews can implement curation, moderation, and profile publishing flows.",
+    "description": "Define voting, karma, and moderation playbook for Good Sites (Policies F13.4–F13.7). Include scoring formula, karma thresholds (trusted/editor/moderator), moderation queue UI requirements, and flag resolution flow.",
+    "agent_type_hint": "OpsDocumentationAgent",
+    "inputs": "Category spec, AI tagging spec, rate limit doc.",
+    "target_files": [
+      "docs/good-sites/voting_moderation_playbook.md"
+    ],
+    "input_files": [
+      "docs/good-sites/category_submission_spec.md",
+      "docs/architecture/ai_tagging_widget_spec.md",
+      "docs/ops/rate_limit_playbook.md"
+    ],
+    "deliverables": "Playbook describing state transitions, auto-hide rules, karma adjustments, leaderboard tie-in, and analytics/reporting expectations.",
+    "acceptance_criteria": "Document ties metrics to `directory_votes`, `directory_flags`, includes SLA targets, and references GDPR retention for evaluation logs.",
+    "dependencies": [
+      "I4.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T4",
+    "iteration_id": "I4",
+    "iteration_goal": "Design the Good Sites directory architecture, voting/karma systems, screenshot workflows, and public profile templates so crews can implement curation, moderation, and profile publishing flows.",
+    "description": "Create profile template configuration spec covering `public_homepage`, `your_times`, `your_report`: layout grids, configurable blocks, curated article slots, color/theme tokens, SEO metadata, and privacy controls.",
+    "agent_type_hint": "UXDocumentationAgent",
+    "inputs": "Requirements F11, widget matrix, AI tagging spec.",
+    "target_files": [
+      "docs/profiles/template_spec.md"
+    ],
+    "input_files": [
+      "CLAUDE.md",
+      "docs/ui-guides/widget_matrix.md"
+    ],
+    "deliverables": "Template spec with diagrams, data schemas (template_config), slot definitions, validation rules, copy guidance, and accessibility notes.",
+    "acceptance_criteria": "Document details slot types, customization limits, feature flags, and references curated article data models.",
+    "dependencies": [
+      "I2.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T5",
+    "iteration_id": "I4",
+    "iteration_goal": "Design the Good Sites directory architecture, voting/karma systems, screenshot workflows, and public profile templates so crews can implement curation, moderation, and profile publishing flows.",
+    "description": "Define curated article pipeline spec for public profiles (`profile_curated_articles`): feed selection UI, manual link ingestion, AI metadata fetching, slot assignment, moderation guidelines, and audit logging.",
+    "agent_type_hint": "ProductDocumentationAgent",
+    "inputs": "Profile template spec, feed aggregation spec, AI tagging doc.",
+    "target_files": [
+      "docs/profiles/curation_pipeline.md"
+    ],
+    "input_files": [
+      "docs/profiles/template_spec.md",
+      "docs/architecture/ai_tagging_widget_spec.md",
+      "docs/architecture/data_model.puml"
+    ],
+    "deliverables": "Pipeline doc with flowcharts, DTO mappings, caching strategy, and instrumentation requirements.",
+    "acceptance_criteria": "Document explains curated article states, data retention, job triggers, and cross-links to click tracking + export flows.",
+    "dependencies": [
+      "I4.T4"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I4.T6",
+    "iteration_id": "I4",
+    "iteration_goal": "Design the Good Sites directory architecture, voting/karma systems, screenshot workflows, and public profile templates so crews can implement curation, moderation, and profile publishing flows.",
+    "description": "Draft SEO + analytics guide for Good Sites and profiles: meta tags, JSON-LD, sitemap entries, `/track/click` usage, profile view aggregation jobs, and admin dashboards for directory performance.",
+    "agent_type_hint": "SEOAgent",
+    "inputs": "Requirements F11.9, Section F14.5, click tracking spec.",
+    "target_files": [
+      "docs/good-sites/seo_analytics_guide.md"
+    ],
+    "input_files": [
+      "CLAUDE.md",
+      "docs/architecture/component_overview.mmd",
+      "docs/ops/homepage_validation_plan.md"
+    ],
+    "deliverables": "Guide describing meta tag templates, JSON-LD payloads, sitemap structure, analytics KPIs, and instrumentation tasks.",
+    "acceptance_criteria": "Document covers public profile pages, directory categories, profile directories, includes sample JSON-LD, and references click tracking retention policies.",
+    "dependencies": [
+      "I2.T7"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I4.T7",
+    "iteration_id": "I4",
+    "iteration_goal": "Design the Good Sites directory architecture, voting/karma systems, screenshot workflows, and public profile templates so crews can implement curation, moderation, and profile publishing flows.",
+    "description": "Produce job + background process matrix for Good Sites and profiles: screenshot refresh cadence, metadata refresh, link health checks, profile view aggregators, curated article expiration, and export/deletion hooks.",
+    "agent_type_hint": "InfrastructureAgent",
+    "inputs": "Job blueprint, screenshot spec, SEO guide.",
+    "target_files": [
+      "docs/good-sites/jobs_matrix.md"
+    ],
+    "input_files": [
+      "docs/architecture/job_orchestration.md",
+      "docs/good-sites/screenshot_pipeline.md",
+      "docs/good-sites/seo_analytics_guide.md"
+    ],
+    "deliverables": "Matrix describing queues, payload fields, retry logic, instrumentation, and KPI thresholds per job type.",
+    "acceptance_criteria": "Document lists every job from Good Sites/profiles requirements, references Policy P12, and integrates with AI tagging + screenshot budgets.",
+    "dependencies": [
+      "I4.T2",
+      "I4.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  }
+]

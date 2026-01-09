@@ -1,0 +1,173 @@
+[
+  {
+    "task_id": "I1.T1",
+    "iteration_id": "I1",
+    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
+    "description": "Consolidate the policy decisions (P1–P14) and feature requirements into a single Architecture Intake brief summarizing scope, assumptions, compliance mandates, stakeholder roles, and open questions. Produce a traceability matrix linking every policy to relevant domains (widgets, marketplace, Good Sites, profiles, analytics) plus callouts for required ADRs.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "CLAUDE.md policies, existing standards from sibling repos, blueprint foundation Section 6 assumptions.",
+    "target_files": [
+      "docs/architecture/architecture_intake.md"
+    ],
+    "input_files": [
+      "CLAUDE.md"
+    ],
+    "deliverables": "Markdown brief with executive summary, policy-to-domain matrix, risk register, assumption log, and stakeholder sign-off blocks.",
+    "acceptance_criteria": "Document references all P1–P14 items, differentiates hard vs soft requirements, lists unknowns requiring ADRs, highlights dependencies per Section 6, and is cross-linked from README + future tasks.",
+    "dependencies": [],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T2",
+    "iteration_id": "I1",
+    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
+    "description": "Establish repo scaffolding and build integration: ensure Maven `pom.xml` includes frontend plugin (Policy P8), TypeScript workspace, linting configs, esbuild entry points, and docker-compose stack for Postgres/PostGIS, Elasticsearch, Mailpit, MinIO, Jaeger. Document workflows for `./mvnw quarkus:dev`, `npm run watch`, docker-compose spin-up, and Sonar/lint hooks.",
+    "agent_type_hint": "SetupAgent",
+    "inputs": "Architecture intake, stack requirements, existing skeleton files.",
+    "target_files": [
+      "pom.xml",
+      "package.json",
+      "esbuild.config.js",
+      "tsconfig.json",
+      "docker-compose.yml",
+      "README.md"
+    ],
+    "input_files": [
+      "pom.xml",
+      "package.json",
+      "docker-compose.yml",
+      "README.md"
+    ],
+    "deliverables": "Updated build files, docs describing local dev workflow, `.editorconfig` additions aligning formatting, and verification script outputs appended to README.",
+    "acceptance_criteria": "Maven build succeeds with frontend plugin steps, esbuild entry points stubbed, TypeScript config established, docker-compose services defined with volumes + healthchecks, README instructions align with Section 2 stack, and lint/test stubs execute without failure.",
+    "dependencies": [
+      "I1.T1"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I1.T3",
+    "iteration_id": "I1",
+    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
+    "description": "Produce system component + container diagrams (Mermaid/PlantUML) capturing ExperienceShell, domain services, shared utilities, delayed job orchestrator, worker pools, and external providers (Stripe, Meta, Cloudflare R2, Postgres, Elasticsearch, k3s). Include flow annotations for policies (P2 AI budget, P4 screenshots, P7 feature flags, P12 screenshot pool) and queue responsibilities.",
+    "agent_type_hint": "DiagrammingAgent",
+    "inputs": "Architecture intake, repo scaffolding knowledge, requirements for services.",
+    "target_files": [
+      "docs/architecture/component_overview.mmd",
+      "docs/architecture/deployment_views.puml"
+    ],
+    "input_files": [
+      "docs/architecture/architecture_intake.md"
+    ],
+    "deliverables": "Two diagrams (component + container) with legends, policy annotations, and captions referencing anchors from Section 2.1.",
+    "acceptance_criteria": "Diagrams render without syntax errors, cover every major component listed in Section 2, highlight queue pods, label worker pods vs experience pods, and include callouts for external systems + security posture.",
+    "dependencies": [
+      "I1.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T4",
+    "iteration_id": "I1",
+    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
+    "description": "Author comprehensive data model ERD covering users, feeds, ai_usage_tracking, marketplace, directory, profiles, feature flags, delayed jobs, analytics tables, geo datasets, screenshot versions, and inbound emails. Document JSONB payload columns, indexes, relationships, and retention windows within diagram notes.",
+    "agent_type_hint": "DatabaseAgent",
+    "inputs": "Architecture intake, component diagram, requirements Section F10–F14.",
+    "target_files": [
+      "docs/architecture/data_model.puml"
+    ],
+    "input_files": [
+      "docs/architecture/architecture_intake.md",
+      "docs/architecture/component_overview.mmd"
+    ],
+    "deliverables": "PlantUML ERD file with grouped domains, legend for policy references, and exported PNG referenced from README + ops docs.",
+    "acceptance_criteria": "ERD depicts all tables enumerated in Section 2, includes JSONB columns, PostGIS indicators, partitioning callouts, screenshot retention notes, and cross-links to feature flag + click tracking tables.",
+    "dependencies": [
+      "I1.T3"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I1.T5",
+    "iteration_id": "I1",
+    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
+    "description": "Draft Job Orchestration Blueprint describing queue definitions, handler contracts, payload schema versioning, retry policies, instrumentation requirements, backlog alert thresholds, and manual override procedures aligning with Policies P12, P10, F9, and analytics rollups.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Component + container diagrams, requirements for jobs (Section F9, F13.13, F14.3, F14.8), ERD relationships.",
+    "target_files": [
+      "docs/architecture/job_orchestration.md"
+    ],
+    "input_files": [
+      "docs/architecture/deployment_views.puml",
+      "docs/architecture/component_overview.mmd",
+      "docs/architecture/data_model.puml"
+    ],
+    "deliverables": "Markdown blueprint with queue table, handler checklist, instrumentation guidelines, failure handling ladder, and references to AI budget + screenshot pool semantics.",
+    "acceptance_criteria": "Document lists DEFAULT/HIGH/LOW/BULK/SCREENSHOT queues, handler responsibilities, concurrency settings, idempotency rules, instrumentation hooks, alert triggers, and escalation process; reviewed with ops stakeholders.",
+    "dependencies": [
+      "I1.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T6",
+    "iteration_id": "I1",
+    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
+    "description": "Define Feature Flag & Rate Limit governance package: schema extensions, evaluation flow, consent handling, rollout dashboard requirements, analytics sampling, cohort hashing formula, violation thresholds, and log retention policy aligning with Policies P7 and P14.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Architecture intake, job blueprint (for evaluation logging), requirements for feature flags + rate limiting, ERD relationships.",
+    "target_files": [
+      "docs/ops/feature_flag_playbook.md",
+      "docs/ops/rate_limit_playbook.md"
+    ],
+    "input_files": [
+      "docs/architecture/architecture_intake.md",
+      "docs/architecture/job_orchestration.md",
+      "docs/architecture/data_model.puml"
+    ],
+    "deliverables": "Two Markdown playbooks describing schema fields, evaluation algorithm pseudo-code, consent fallback handling, analytics logging pipeline, violation handling, admin UI expectations, and future automation notes.",
+    "acceptance_criteria": "Documents map to Section 2 components, include hashing formula, consent fallback logic, rate tier table (anonymous/logged-in/trusted), alert triggers, cross-links to click tracking + analytics modules, and guidance for GDPR purge jobs.",
+    "dependencies": [
+      "I1.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I1.T7",
+    "iteration_id": "I1",
+    "iteration_goal": "Capture authoritative architecture artifacts, bootstrap build system + repo structure, and document queue/policy guardrails enabling downstream squads to work in parallel.",
+    "description": "Prepare README + onboarding supplement summarizing outputs from I1 (diagrams, ERD, job + flag playbooks) and establishing reference anchors for future iterations; include contribution guidelines (branching, ADR process, lint/test expectations, policy references) and architecture digest.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "All artifacts from I1 tasks.",
+    "target_files": [
+      "README.md",
+      "docs/ops/onboarding_overview.md"
+    ],
+    "input_files": [
+      "README.md",
+      "docs/architecture/architecture_intake.md",
+      "docs/architecture/component_overview.mmd",
+      "docs/architecture/data_model.puml",
+      "docs/architecture/job_orchestration.md",
+      "docs/ops/feature_flag_playbook.md",
+      "docs/ops/rate_limit_playbook.md"
+    ],
+    "deliverables": "Updated README referencing anchors, onboarding overview enumerating available diagrams/docs, link table to future iteration tasks, and checklist for verifying compliance references.",
+    "acceptance_criteria": "README includes quick links to sections 1–4 artifacts, describes iteration cadence, references docker-compose + build steps, highlights compliance obligations, and instructs contributors on ADR + feature flag requirements.",
+    "dependencies": [
+      "I1.T2",
+      "I1.T3",
+      "I1.T4",
+      "I1.T5",
+      "I1.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  }
+]

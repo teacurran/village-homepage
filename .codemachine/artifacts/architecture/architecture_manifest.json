@@ -1,0 +1,1276 @@
+{
+  "files": {
+    "01_Blueprint_Foundation.md": [
+      {
+        "key": "01-blueprint-foundation",
+        "line": 1,
+        "start_anchor": "<!-- anchor: 01-blueprint-foundation -->",
+        "description": "01_Blueprint_Foundation.md"
+      },
+      {
+        "key": "1-0-project-scale-directives",
+        "line": 4,
+        "start_anchor": "<!-- anchor: 1-0-project-scale-directives -->",
+        "description": "1.0 Project Scale & Directives for Architects**"
+      },
+      {
+        "key": "2-0-standard-kit",
+        "line": 13,
+        "start_anchor": "<!-- anchor: 2-0-standard-kit -->",
+        "description": "2.0 The \"Standard Kit\" (Mandatory Technology Stack)**"
+      },
+      {
+        "key": "3-0-rulebook",
+        "line": 26,
+        "start_anchor": "<!-- anchor: 3-0-rulebook -->",
+        "description": "3.0 The \"Rulebook\" (Cross-Cutting Concerns)**"
+      },
+      {
+        "key": "4-0-blueprint",
+        "line": 38,
+        "start_anchor": "<!-- anchor: 4-0-blueprint -->",
+        "description": "4.0 The \"Blueprint\" (Core Components & Boundaries)**"
+      },
+      {
+        "key": "5-0-contract",
+        "line": 67,
+        "start_anchor": "<!-- anchor: 5-0-contract -->",
+        "description": "5.0 The \"Contract\" (API & Data Definitions)**"
+      },
+      {
+        "key": "6-0-safety-net",
+        "line": 99,
+        "start_anchor": "<!-- anchor: 6-0-safety-net -->",
+        "description": "6.0 The \"Safety Net\" (Ambiguities & Assumptions)"
+      },
+      {
+        "key": "1-1-delivery-pillars",
+        "line": 121,
+        "start_anchor": "<!-- anchor: 1-1-delivery-pillars -->",
+        "description": "1.1 Delivery Pillars**"
+      },
+      {
+        "key": "1-2-risk-radar",
+        "line": 129,
+        "start_anchor": "<!-- anchor: 1-2-risk-radar -->",
+        "description": "1.2 Risk Radar**"
+      },
+      {
+        "key": "2-1-frontend-governance",
+        "line": 137,
+        "start_anchor": "<!-- anchor: 2-1-frontend-governance -->",
+        "description": "2.1 Frontend Governance**"
+      },
+      {
+        "key": "2-2-backend-build-testing",
+        "line": 146,
+        "start_anchor": "<!-- anchor: 2-2-backend-build-testing -->",
+        "description": "2.2 Backend Build & Testing Discipline**"
+      },
+      {
+        "key": "2-3-data-infra-baseline",
+        "line": 154,
+        "start_anchor": "<!-- anchor: 2-3-data-infra-baseline -->",
+        "description": "2.3 Data & Infrastructure Baseline**"
+      },
+      {
+        "key": "3-1-observability-implementation",
+        "line": 162,
+        "start_anchor": "<!-- anchor: 3-1-observability-implementation -->",
+        "description": "3.1 Observability Implementation Blueprint**"
+      },
+      {
+        "key": "3-2-security-hardening",
+        "line": 170,
+        "start_anchor": "<!-- anchor: 3-2-security-hardening -->",
+        "description": "3.2 Security Hardening Guidelines**"
+      },
+      {
+        "key": "3-3-data-lifecycle",
+        "line": 179,
+        "start_anchor": "<!-- anchor: 3-3-data-lifecycle -->",
+        "description": "3.3 Data Lifecycle & Retention Controls**"
+      },
+      {
+        "key": "3-4-async-playbook",
+        "line": 187,
+        "start_anchor": "<!-- anchor: 3-4-async-playbook -->",
+        "description": "3.4 Asynchronous Playbook**"
+      },
+      {
+        "key": "4-1-component-interactions",
+        "line": 195,
+        "start_anchor": "<!-- anchor: 4-1-component-interactions -->",
+        "description": "4.1 Component Interaction Matrix**"
+      },
+      {
+        "key": "4-2-async-workload-matrix",
+        "line": 206,
+        "start_anchor": "<!-- anchor: 4-2-async-workload-matrix -->",
+        "description": "4.2 Async Workload Matrix**"
+      },
+      {
+        "key": "4-3-deployment-matrix",
+        "line": 216,
+        "start_anchor": "<!-- anchor: 4-3-deployment-matrix -->",
+        "description": "4.3 Deployment & Environment Matrix**"
+      },
+      {
+        "key": "5-1-api-surface",
+        "line": 224,
+        "start_anchor": "<!-- anchor: 5-1-api-surface -->",
+        "description": "5.1 API Surface & Endpoint Families**"
+      },
+      {
+        "key": "5-2-dto-versioning",
+        "line": 233,
+        "start_anchor": "<!-- anchor: 5-2-dto-versioning -->",
+        "description": "5.2 DTO Versioning & Compatibility**"
+      },
+      {
+        "key": "5-3-data-validation",
+        "line": 241,
+        "start_anchor": "<!-- anchor: 5-3-data-validation -->",
+        "description": "5.3 Data Validation & Integrity Rules**"
+      },
+      {
+        "key": "6-1-ambiguity-mitigation",
+        "line": 250,
+        "start_anchor": "<!-- anchor: 6-1-ambiguity-mitigation -->",
+        "description": "6.1 Ambiguity Mitigation Playbook**"
+      },
+      {
+        "key": "6-2-assumption-review",
+        "line": 258,
+        "start_anchor": "<!-- anchor: 6-2-assumption-review -->",
+        "description": "6.2 Assumption Review Cadence**"
+      },
+      {
+        "key": "2-4-frontend-modularity",
+        "line": 266,
+        "start_anchor": "<!-- anchor: 2-4-frontend-modularity -->",
+        "description": "2.4 TypeScript Module Partitioning**"
+      },
+      {
+        "key": "3-5-rate-limiting",
+        "line": 275,
+        "start_anchor": "<!-- anchor: 3-5-rate-limiting -->",
+        "description": "3.5 Rate Limiting Implementation Details**"
+      },
+      {
+        "key": "4-4-data-flow-narratives",
+        "line": 283,
+        "start_anchor": "<!-- anchor: 4-4-data-flow-narratives -->",
+        "description": "4.4 Data Flow Narratives**"
+      },
+      {
+        "key": "5-4-reporting-entities",
+        "line": 292,
+        "start_anchor": "<!-- anchor: 5-4-reporting-entities -->",
+        "description": "5.4 Reporting & Analytics Entities**"
+      },
+      {
+        "key": "6-3-open-questions",
+        "line": 301,
+        "start_anchor": "<!-- anchor: 6-3-open-questions -->",
+        "description": "6.3 Outstanding Questions To Resolve**"
+      }
+    ],
+    "02_System_Structure_and_Data.md": [
+      {
+        "key": "system-architecture-blueprint",
+        "line": 1,
+        "start_anchor": "<!-- anchor: system-architecture-blueprint -->",
+        "description": "System Architecture Blueprint: Village Homepage"
+      },
+      {
+        "key": "1-introduction-goals",
+        "line": 8,
+        "start_anchor": "<!-- anchor: 1-introduction-goals -->",
+        "description": "1. Introduction & Goals"
+      },
+      {
+        "key": "2-architectural-drivers",
+        "line": 30,
+        "start_anchor": "<!-- anchor: 2-architectural-drivers -->",
+        "description": "2. Architectural Drivers"
+      },
+      {
+        "key": "3-proposed-architecture",
+        "line": 53,
+        "start_anchor": "<!-- anchor: 3-proposed-architecture -->",
+        "description": "3. Proposed Architecture (Structural View)"
+      },
+      {
+        "key": "structural-data-architect-output-guidelines",
+        "line": 1040,
+        "start_anchor": "<!-- anchor: structural-data-architect-output-guidelines -->",
+        "description": "Structural & Data Architect Output - `02_System_Structure_and_Data.md`"
+      }
+    ],
+    "03_Behavior_and_Communication.md": [
+      {
+        "key": "3-0-proposed-architecture",
+        "line": 1,
+        "start_anchor": "<!-- anchor: 3-0-proposed-architecture -->",
+        "description": "3. Proposed Architecture (Behavioral View)"
+      }
+    ],
+    "04_Operational_Architecture.md": [
+      {
+        "key": "3-0-operational-architecture",
+        "line": 1,
+        "start_anchor": "<!-- anchor: 3-0-operational-architecture -->",
+        "description": "3. Proposed Architecture (Operational View)"
+      },
+      {
+        "key": "3-1-environmental-baseline",
+        "line": 9,
+        "start_anchor": "<!-- anchor: 3-1-environmental-baseline -->",
+        "description": "3.1 Environmental Baseline"
+      },
+      {
+        "key": "3-1-1-platform-posture",
+        "line": 14,
+        "start_anchor": "<!-- anchor: 3-1-1-platform-posture -->",
+        "description": "3.1.1 Platform Posture"
+      },
+      {
+        "key": "3-1-2-configuration-management",
+        "line": 22,
+        "start_anchor": "<!-- anchor: 3-1-2-configuration-management -->",
+        "description": "3.1.2 Configuration Management"
+      },
+      {
+        "key": "3-1-3-networking-layout",
+        "line": 30,
+        "start_anchor": "<!-- anchor: 3-1-3-networking-layout -->",
+        "description": "3.1.3 Networking Layout"
+      },
+      {
+        "key": "3-2-runtime-workload-partitioning",
+        "line": 38,
+        "start_anchor": "<!-- anchor: 3-2-runtime-workload-partitioning -->",
+        "description": "3.2 Runtime Workload Partitioning"
+      },
+      {
+        "key": "3-2-1-experience-shell-pods",
+        "line": 43,
+        "start_anchor": "<!-- anchor: 3-2-1-experience-shell-pods -->",
+        "description": "3.2.1 Experience Shell Pods"
+      },
+      {
+        "key": "3-2-2-domain-worker-pods",
+        "line": 51,
+        "start_anchor": "<!-- anchor: 3-2-2-domain-worker-pods -->",
+        "description": "3.2.2 Domain Worker Pods"
+      },
+      {
+        "key": "3-2-3-integration-gateways",
+        "line": 59,
+        "start_anchor": "<!-- anchor: 3-2-3-integration-gateways -->",
+        "description": "3.2.3 Integration Gateways"
+      },
+      {
+        "key": "3-3-data-platform-operations",
+        "line": 67,
+        "start_anchor": "<!-- anchor: 3-3-data-platform-operations -->",
+        "description": "3.3 Data Platform Operations"
+      },
+      {
+        "key": "3-3-1-postgresql-governance",
+        "line": 71,
+        "start_anchor": "<!-- anchor: 3-3-1-postgresql-governance -->",
+        "description": "3.3.1 PostgreSQL Governance"
+      },
+      {
+        "key": "3-3-2-elasticsearch-stewardship",
+        "line": 79,
+        "start_anchor": "<!-- anchor: 3-3-2-elasticsearch-stewardship -->",
+        "description": "3.3.2 Elasticsearch Stewardship"
+      },
+      {
+        "key": "3-3-3-object-storage-operations",
+        "line": 87,
+        "start_anchor": "<!-- anchor: 3-3-3-object-storage-operations -->",
+        "description": "3.3.3 Object Storage Operations"
+      },
+      {
+        "key": "3-4-async-workload-orchestration",
+        "line": 95,
+        "start_anchor": "<!-- anchor: 3-4-async-workload-orchestration -->",
+        "description": "3.4 Asynchronous Workload Orchestration"
+      },
+      {
+        "key": "3-4-1-delayed-job-service",
+        "line": 99,
+        "start_anchor": "<!-- anchor: 3-4-1-delayed-job-service -->",
+        "description": "3.4.1 Delayed Job Service Implementation"
+      },
+      {
+        "key": "3-4-2-scheduling-and-throttling",
+        "line": 107,
+        "start_anchor": "<!-- anchor: 3-4-2-scheduling-and-throttling -->",
+        "description": "3.4.2 Scheduling and Throttling"
+      },
+      {
+        "key": "3-4-3-recovery-and-ops",
+        "line": 115,
+        "start_anchor": "<!-- anchor: 3-4-3-recovery-and-ops -->",
+        "description": "3.4.3 Recovery and Operational Controls"
+      },
+      {
+        "key": "3-5-external-integration-operations",
+        "line": 123,
+        "start_anchor": "<!-- anchor: 3-5-external-integration-operations -->",
+        "description": "3.5 External Integration Operations"
+      },
+      {
+        "key": "3-5-1-financial-integration",
+        "line": 127,
+        "start_anchor": "<!-- anchor: 3-5-1-financial-integration -->",
+        "description": "3.5.1 Financial Integration with Stripe"
+      },
+      {
+        "key": "3-5-2-intelligence-and-ai",
+        "line": 135,
+        "start_anchor": "<!-- anchor: 3-5-2-intelligence-and-ai -->",
+        "description": "3.5.2 Intelligence and AI Providers"
+      },
+      {
+        "key": "3-5-3-weather-social-market",
+        "line": 143,
+        "start_anchor": "<!-- anchor: 3-5-3-weather-social-market -->",
+        "description": "3.5.3 Weather, Social, and Market Data"
+      },
+      {
+        "key": "3-6-observability-telemetry",
+        "line": 151,
+        "start_anchor": "<!-- anchor: 3-6-observability-telemetry -->",
+        "description": "3.6 Observability & Telemetry"
+      },
+      {
+        "key": "3-6-1-logging",
+        "line": 155,
+        "start_anchor": "<!-- anchor: 3-6-1-logging -->",
+        "description": "3.6.1 Logging"
+      },
+      {
+        "key": "3-6-2-metrics",
+        "line": 163,
+        "start_anchor": "<!-- anchor: 3-6-2-metrics -->",
+        "description": "3.6.2 Metrics"
+      },
+      {
+        "key": "3-6-3-tracing",
+        "line": 170,
+        "start_anchor": "<!-- anchor: 3-6-3-tracing -->",
+        "description": "3.6.3 Tracing"
+      },
+      {
+        "key": "3-7-security-compliance-governance",
+        "line": 178,
+        "start_anchor": "<!-- anchor: 3-7-security-compliance-governance -->",
+        "description": "3.7 Security, Compliance, & Governance"
+      },
+      {
+        "key": "3-7-1-access-control",
+        "line": 182,
+        "start_anchor": "<!-- anchor: 3-7-1-access-control -->",
+        "description": "3.7.1 Access Control & Identity"
+      },
+      {
+        "key": "3-7-2-data-protection",
+        "line": 190,
+        "start_anchor": "<!-- anchor: 3-7-2-data-protection -->",
+        "description": "3.7.2 Data Protection & Compliance"
+      },
+      {
+        "key": "3-7-3-threat-model",
+        "line": 198,
+        "start_anchor": "<!-- anchor: 3-7-3-threat-model -->",
+        "description": "3.7.3 Threat Modeling & Hardening"
+      },
+      {
+        "key": "3-8-cross-cutting-concerns",
+        "line": 206,
+        "start_anchor": "<!-- anchor: 3-8-cross-cutting-concerns -->",
+        "description": "3.8 Cross-Cutting Concerns"
+      },
+      {
+        "key": "3-9-deployment-view",
+        "line": 245,
+        "start_anchor": "<!-- anchor: 3-9-deployment-view -->",
+        "description": "3.9 Deployment View"
+      },
+      {
+        "key": "3-9-1-target-environment",
+        "line": 249,
+        "start_anchor": "<!-- anchor: 3-9-1-target-environment -->",
+        "description": "3.9.1 Target Environment"
+      },
+      {
+        "key": "3-9-2-deployment-strategy",
+        "line": 255,
+        "start_anchor": "<!-- anchor: 3-9-2-deployment-strategy -->",
+        "description": "3.9.2 Deployment Strategy"
+      },
+      {
+        "key": "3-9-3-deployment-diagram",
+        "line": 263,
+        "start_anchor": "<!-- anchor: 3-9-3-deployment-diagram -->",
+        "description": "3.9.3 Deployment Diagram (PlantUML)"
+      },
+      {
+        "key": "3-10-operational-runbooks",
+        "line": 307,
+        "start_anchor": "<!-- anchor: 3-10-operational-runbooks -->",
+        "description": "3.10 Operational Runbooks & Procedures"
+      },
+      {
+        "key": "3-10-1-daily-ops-checklist",
+        "line": 312,
+        "start_anchor": "<!-- anchor: 3-10-1-daily-ops-checklist -->",
+        "description": "3.10.1 Daily Ops Checklist"
+      },
+      {
+        "key": "3-10-2-weekly-maintenance",
+        "line": 320,
+        "start_anchor": "<!-- anchor: 3-10-2-weekly-maintenance -->",
+        "description": "3.10.2 Weekly Maintenance"
+      },
+      {
+        "key": "3-10-3-incident-response",
+        "line": 328,
+        "start_anchor": "<!-- anchor: 3-10-3-incident-response -->",
+        "description": "3.10.3 Incident Response Flows"
+      },
+      {
+        "key": "3-11-capacity-and-cost",
+        "line": 336,
+        "start_anchor": "<!-- anchor: 3-11-capacity-and-cost -->",
+        "description": "3.11 Capacity & Cost Management"
+      },
+      {
+        "key": "3-11-1-compute-scaling",
+        "line": 340,
+        "start_anchor": "<!-- anchor: 3-11-1-compute-scaling -->",
+        "description": "3.11.1 Compute Scaling"
+      },
+      {
+        "key": "3-11-2-storage-forecasting",
+        "line": 348,
+        "start_anchor": "<!-- anchor: 3-11-2-storage-forecasting -->",
+        "description": "3.11.2 Storage Forecasting"
+      },
+      {
+        "key": "3-11-3-ai-budget-ops",
+        "line": 356,
+        "start_anchor": "<!-- anchor: 3-11-3-ai-budget-ops -->",
+        "description": "3.11.3 AI Budget Operations"
+      },
+      {
+        "key": "3-12-operational-dependencies",
+        "line": 364,
+        "start_anchor": "<!-- anchor: 3-12-operational-dependencies -->",
+        "description": "3.12 Operational Dependencies & Coordination"
+      },
+      {
+        "key": "3-12-1-inter-repo-alignment",
+        "line": 368,
+        "start_anchor": "<!-- anchor: 3-12-1-inter-repo-alignment -->",
+        "description": "3.12.1 Inter-Repo Alignment"
+      },
+      {
+        "key": "3-12-2-compliance-collaboration",
+        "line": 376,
+        "start_anchor": "<!-- anchor: 3-12-2-compliance-collaboration -->",
+        "description": "3.12.2 Compliance Collaboration"
+      },
+      {
+        "key": "3-12-3-runway-for-future",
+        "line": 384,
+        "start_anchor": "<!-- anchor: 3-12-3-runway-for-future -->",
+        "description": "3.12.3 Runway for Future Enhancements"
+      },
+      {
+        "key": "3-13-operational-tooling",
+        "line": 391,
+        "start_anchor": "<!-- anchor: 3-13-operational-tooling -->",
+        "description": "3.13 Operational Tooling & Automation"
+      },
+      {
+        "key": "3-13-1-gitops-pipeline",
+        "line": 395,
+        "start_anchor": "<!-- anchor: 3-13-1-gitops-pipeline -->",
+        "description": "3.13.1 GitOps Pipeline"
+      },
+      {
+        "key": "3-13-2-automation-scripts",
+        "line": 403,
+        "start_anchor": "<!-- anchor: 3-13-2-automation-scripts -->",
+        "description": "3.13.2 Automation Scripts"
+      },
+      {
+        "key": "3-13-3-testing-in-prod-guardrails",
+        "line": 411,
+        "start_anchor": "<!-- anchor: 3-13-3-testing-in-prod-guardrails -->",
+        "description": "3.13.3 Testing-in-Production Guardrails"
+      },
+      {
+        "key": "3-14-business-continuity",
+        "line": 419,
+        "start_anchor": "<!-- anchor: 3-14-business-continuity -->",
+        "description": "3.14 Business Continuity & Disaster Recovery"
+      },
+      {
+        "key": "3-14-1-backup-strategy",
+        "line": 423,
+        "start_anchor": "<!-- anchor: 3-14-1-backup-strategy -->",
+        "description": "3.14.1 Backup Strategy"
+      },
+      {
+        "key": "3-14-2-failover-runbooks",
+        "line": 431,
+        "start_anchor": "<!-- anchor: 3-14-2-failover-runbooks -->",
+        "description": "3.14.2 Failover Runbooks"
+      },
+      {
+        "key": "3-14-3-resilience-testing",
+        "line": 439,
+        "start_anchor": "<!-- anchor: 3-14-3-resilience-testing -->",
+        "description": "3.14.3 Resilience Testing"
+      },
+      {
+        "key": "3-15-operational-kpis",
+        "line": 447,
+        "start_anchor": "<!-- anchor: 3-15-operational-kpis -->",
+        "description": "3.15 Operational KPIs & Reporting"
+      },
+      {
+        "key": "3-15-1-service-health-kpis",
+        "line": 451,
+        "start_anchor": "<!-- anchor: 3-15-1-service-health-kpis -->",
+        "description": "3.15.1 Service Health KPIs"
+      },
+      {
+        "key": "3-15-2-compliance-kpis",
+        "line": 459,
+        "start_anchor": "<!-- anchor: 3-15-2-compliance-kpis -->",
+        "description": "3.15.2 Compliance KPIs"
+      },
+      {
+        "key": "3-15-3-operational-reporting",
+        "line": 467,
+        "start_anchor": "<!-- anchor: 3-15-3-operational-reporting -->",
+        "description": "3.15.3 Operational Reporting Cadence"
+      },
+      {
+        "key": "3-16-operational-data-lifecycle",
+        "line": 474,
+        "start_anchor": "<!-- anchor: 3-16-operational-data-lifecycle -->",
+        "description": "3.16 Operational Data Lifecycle Stewardship"
+      },
+      {
+        "key": "3-16-1-retention-schedules",
+        "line": 478,
+        "start_anchor": "<!-- anchor: 3-16-1-retention-schedules -->",
+        "description": "3.16.1 Retention Schedules"
+      },
+      {
+        "key": "3-16-2-data-quality",
+        "line": 486,
+        "start_anchor": "<!-- anchor: 3-16-2-data-quality -->",
+        "description": "3.16.2 Data Quality Monitoring"
+      },
+      {
+        "key": "3-17-ops-collaboration",
+        "line": 493,
+        "start_anchor": "<!-- anchor: 3-17-ops-collaboration -->",
+        "description": "3.17 Ops Collaboration & Knowledge Management"
+      },
+      {
+        "key": "3-17-1-knowledge-base",
+        "line": 497,
+        "start_anchor": "<!-- anchor: 3-17-1-knowledge-base -->",
+        "description": "3.17.1 Knowledge Base Practices"
+      }
+    ],
+    "05_Rationale_and_Future.md": [
+      {
+        "key": "4-0-design-rationale",
+        "line": 1,
+        "start_anchor": "<!-- anchor: 4-0-design-rationale -->",
+        "description": "4. Design Rationale & Trade-offs"
+      },
+      {
+        "key": "4-1-key-decisions",
+        "line": 6,
+        "start_anchor": "<!-- anchor: 4-1-key-decisions -->",
+        "description": "4.1 Key Decisions Summary"
+      },
+      {
+        "key": "4-2-alternatives",
+        "line": 29,
+        "start_anchor": "<!-- anchor: 4-2-alternatives -->",
+        "description": "4.2 Alternatives Considered"
+      },
+      {
+        "key": "4-3-risks",
+        "line": 46,
+        "start_anchor": "<!-- anchor: 4-3-risks -->",
+        "description": "4.3 Known Risks & Mitigation"
+      },
+      {
+        "key": "5-0-future-considerations",
+        "line": 69,
+        "start_anchor": "<!-- anchor: 5-0-future-considerations -->",
+        "description": "5. Future Considerations"
+      },
+      {
+        "key": "5-1-potential-evolution",
+        "line": 73,
+        "start_anchor": "<!-- anchor: 5-1-potential-evolution -->",
+        "description": "5.1 Potential Evolution"
+      },
+      {
+        "key": "5-2-deeper-dive",
+        "line": 86,
+        "start_anchor": "<!-- anchor: 5-2-deeper-dive -->",
+        "description": "5.2 Areas for Deeper Dive"
+      },
+      {
+        "key": "6-0-glossary",
+        "line": 99,
+        "start_anchor": "<!-- anchor: 6-0-glossary -->",
+        "description": "6. Glossary"
+      },
+      {
+        "key": "4-4-decision-impacts",
+        "line": 119,
+        "start_anchor": "<!-- anchor: 4-4-decision-impacts -->",
+        "description": "4.4 Decision Impact Narratives"
+      },
+      {
+        "key": "4-4-1-auth-merge",
+        "line": 123,
+        "start_anchor": "<!-- anchor: 4-4-1-auth-merge -->",
+        "description": "4.4.1 Anonymous Merge Compliance"
+      },
+      {
+        "key": "4-4-2-ai-budget-impact",
+        "line": 129,
+        "start_anchor": "<!-- anchor: 4-4-2-ai-budget-impact -->",
+        "description": "4.4.2 AI Budget Governance"
+      },
+      {
+        "key": "4-4-3-screenshot-lifecycle",
+        "line": 135,
+        "start_anchor": "<!-- anchor: 4-4-3-screenshot-lifecycle -->",
+        "description": "4.4.3 Screenshot Lifecycle Ownership"
+      },
+      {
+        "key": "4-5-traceability",
+        "line": 142,
+        "start_anchor": "<!-- anchor: 4-5-traceability -->",
+        "description": "4.5 Documentation & Traceability Strategy"
+      },
+      {
+        "key": "5-1a-potential-evolution-details",
+        "line": 149,
+        "start_anchor": "<!-- anchor: 5-1a-potential-evolution-details -->",
+        "description": "5.1.a Extended Evolution Notes"
+      },
+      {
+        "key": "5-1b-data-evolution",
+        "line": 157,
+        "start_anchor": "<!-- anchor: 5-1b-data-evolution -->",
+        "description": "5.1.b Data Evolution Considerations"
+      },
+      {
+        "key": "5-2a-deeper-dive-ops",
+        "line": 163,
+        "start_anchor": "<!-- anchor: 5-2a-deeper-dive-ops -->",
+        "description": "5.2.a Ops Deep-Dive Topics"
+      },
+      {
+        "key": "5-2b-deeper-dive-product",
+        "line": 171,
+        "start_anchor": "<!-- anchor: 5-2b-deeper-dive-product -->",
+        "description": "5.2.b Product Deep-Dive Topics"
+      },
+      {
+        "key": "6-1-extended-glossary",
+        "line": 179,
+        "start_anchor": "<!-- anchor: 6-1-extended-glossary -->",
+        "description": "6.1 Glossary Addendum"
+      },
+      {
+        "key": "5-3-future-metrics",
+        "line": 202,
+        "start_anchor": "<!-- anchor: 5-3-future-metrics -->",
+        "description": "5.3 Future Metrics & KPI Enhancements"
+      },
+      {
+        "key": "5-4-collaboration-roadmap",
+        "line": 210,
+        "start_anchor": "<!-- anchor: 5-4-collaboration-roadmap -->",
+        "description": "5.4 Cross-Team Collaboration Roadmap"
+      },
+      {
+        "key": "6-2-glossary-extended",
+        "line": 218,
+        "start_anchor": "<!-- anchor: 6-2-glossary-extended -->",
+        "description": "6.2 Additional Glossary Entries"
+      },
+      {
+        "key": "6-3-glossary-supplement",
+        "line": 241,
+        "start_anchor": "<!-- anchor: 6-3-glossary-supplement -->",
+        "description": "6.3 Glossary Supplement"
+      }
+    ],
+    "06_UI_UX_Architecture.md": [
+      {
+        "key": "uiux-architecture-title",
+        "line": 1,
+        "start_anchor": "<!-- anchor: uiux-architecture-title -->",
+        "description": "UI/UX Architecture: Village Homepage"
+      },
+      {
+        "key": "1-design-system-specification",
+        "line": 5,
+        "start_anchor": "<!-- anchor: 1-design-system-specification -->",
+        "description": "1. Design System Specification"
+      },
+      {
+        "key": "1-1-color-palette",
+        "line": 9,
+        "start_anchor": "<!-- anchor: 1-1-color-palette -->",
+        "description": "1.1 Color Palette"
+      },
+      {
+        "key": "1-1-1-brand-colors",
+        "line": 13,
+        "start_anchor": "<!-- anchor: 1-1-1-brand-colors -->",
+        "description": "1.1.1 Brand Colors"
+      },
+      {
+        "key": "1-1-2-semantic-colors",
+        "line": 28,
+        "start_anchor": "<!-- anchor: 1-1-2-semantic-colors -->",
+        "description": "1.1.2 Semantic Colors"
+      },
+      {
+        "key": "1-1-3-neutral-surfaces",
+        "line": 41,
+        "start_anchor": "<!-- anchor: 1-1-3-neutral-surfaces -->",
+        "description": "1.1.3 Neutral & Surface System"
+      },
+      {
+        "key": "1-1-4-data-viz-ramps",
+        "line": 50,
+        "start_anchor": "<!-- anchor: 1-1-4-data-viz-ramps -->",
+        "description": "1.1.4 Data Visualization Ramps"
+      },
+      {
+        "key": "1-1-5-theme-flags",
+        "line": 65,
+        "start_anchor": "<!-- anchor: 1-1-5-theme-flags -->",
+        "description": "1.1.5 Theme & Feature Flag Alignment"
+      },
+      {
+        "key": "1-2-typography",
+        "line": 72,
+        "start_anchor": "<!-- anchor: 1-2-typography -->",
+        "description": "1.2 Typography"
+      },
+      {
+        "key": "1-2-1-font-stack",
+        "line": 76,
+        "start_anchor": "<!-- anchor: 1-2-1-font-stack -->",
+        "description": "1.2.1 Font Stack & Loading Strategy"
+      },
+      {
+        "key": "1-2-2-type-scale",
+        "line": 84,
+        "start_anchor": "<!-- anchor: 1-2-2-type-scale -->",
+        "description": "1.2.2 Type Scale"
+      },
+      {
+        "key": "1-2-3-typography-usage",
+        "line": 101,
+        "start_anchor": "<!-- anchor: 1-2-3-typography-usage -->",
+        "description": "1.2.3 Usage Guidelines"
+      },
+      {
+        "key": "1-2-4-typography-localization",
+        "line": 109,
+        "start_anchor": "<!-- anchor: 1-2-4-typography-localization -->",
+        "description": "1.2.4 Localization & Numerics"
+      },
+      {
+        "key": "1-3-spacing-layout",
+        "line": 115,
+        "start_anchor": "<!-- anchor: 1-3-spacing-layout -->",
+        "description": "1.3 Spacing & Layout Grid"
+      },
+      {
+        "key": "1-3-1-spacing-scale",
+        "line": 119,
+        "start_anchor": "<!-- anchor: 1-3-1-spacing-scale -->",
+        "description": "1.3.1 Spacing Scale"
+      },
+      {
+        "key": "1-3-2-grid-system",
+        "line": 138,
+        "start_anchor": "<!-- anchor: 1-3-2-grid-system -->",
+        "description": "1.3.2 Grid Systems"
+      },
+      {
+        "key": "1-3-3-elevation",
+        "line": 146,
+        "start_anchor": "<!-- anchor: 1-3-3-elevation -->",
+        "description": "1.3.3 Elevation & Depth"
+      },
+      {
+        "key": "1-4-component-tokens",
+        "line": 153,
+        "start_anchor": "<!-- anchor: 1-4-component-tokens -->",
+        "description": "1.4 Component Tokens & Micro-Interactions"
+      },
+      {
+        "key": "1-4-1-radii",
+        "line": 157,
+        "start_anchor": "<!-- anchor: 1-4-1-radii -->",
+        "description": "1.4.1 Radius & Border Tokens"
+      },
+      {
+        "key": "1-4-2-shadow-motion",
+        "line": 168,
+        "start_anchor": "<!-- anchor: 1-4-2-shadow-motion -->",
+        "description": "1.4.2 Shadow & Motion Tokens"
+      },
+      {
+        "key": "1-4-3-iconography",
+        "line": 174,
+        "start_anchor": "<!-- anchor: 1-4-3-iconography -->",
+        "description": "1.4.3 Iconography & Illustration Guidelines"
+      },
+      {
+        "key": "1-4-4-data-density",
+        "line": 181,
+        "start_anchor": "<!-- anchor: 1-4-4-data-density -->",
+        "description": "1.4.4 Data Density & Mode Switching"
+      },
+      {
+        "key": "1-5-accessibility-visual",
+        "line": 187,
+        "start_anchor": "<!-- anchor: 1-5-accessibility-visual -->",
+        "description": "1.5 Accessibility-First Visual Treatments"
+      },
+      {
+        "key": "1-6-content-voice",
+        "line": 195,
+        "start_anchor": "<!-- anchor: 1-6-content-voice -->",
+        "description": "1.6 Content Voice & Messaging Tokens"
+      },
+      {
+        "key": "1-7-media-guidelines",
+        "line": 202,
+        "start_anchor": "<!-- anchor: 1-7-media-guidelines -->",
+        "description": "1.7 Media, Imagery & Screenshot Treatment"
+      },
+      {
+        "key": "1-8-illustration-guidelines",
+        "line": 209,
+        "start_anchor": "<!-- anchor: 1-8-illustration-guidelines -->",
+        "description": "1.8 Illustration & Avatar Treatment"
+      },
+      {
+        "key": "1-9-data-ink-ratio",
+        "line": 215,
+        "start_anchor": "<!-- anchor: 1-9-data-ink-ratio -->",
+        "description": "1.9 Data-Ink & Content Hierarchy Rules"
+      },
+      {
+        "key": "1-10-copywriting",
+        "line": 221,
+        "start_anchor": "<!-- anchor: 1-10-copywriting -->",
+        "description": "1.10 Copywriting Checklists"
+      },
+      {
+        "key": "2-component-architecture",
+        "line": 229,
+        "start_anchor": "<!-- anchor: 2-component-architecture -->",
+        "description": "2. Component Architecture"
+      },
+      {
+        "key": "2-1-architecture-overview",
+        "line": 233,
+        "start_anchor": "<!-- anchor: 2-1-architecture-overview -->",
+        "description": "2.1 Overview & Methodology"
+      },
+      {
+        "key": "2-2-atoms",
+        "line": 241,
+        "start_anchor": "<!-- anchor: 2-2-atoms -->",
+        "description": "2.2 Atom Inventory"
+      },
+      {
+        "key": "2-3-molecules",
+        "line": 283,
+        "start_anchor": "<!-- anchor: 2-3-molecules -->",
+        "description": "2.3 Molecule Library"
+      },
+      {
+        "key": "2-4-organisms",
+        "line": 319,
+        "start_anchor": "<!-- anchor: 2-4-organisms -->",
+        "description": "2.4 Organism Catalogue"
+      },
+      {
+        "key": "2-5-templates-layouts",
+        "line": 349,
+        "start_anchor": "<!-- anchor: 2-5-templates-layouts -->",
+        "description": "2.5 Templates & Layout Blueprints"
+      },
+      {
+        "key": "2-6-gridstack-integration",
+        "line": 358,
+        "start_anchor": "<!-- anchor: 2-6-gridstack-integration -->",
+        "description": "2.6 Gridstack Integration & Drag Handles"
+      },
+      {
+        "key": "2-7-react-mount-strategy",
+        "line": 365,
+        "start_anchor": "<!-- anchor: 2-7-react-mount-strategy -->",
+        "description": "2.7 React Mount Strategy & Data Contracts"
+      },
+      {
+        "key": "2-8-component-lifecycle",
+        "line": 372,
+        "start_anchor": "<!-- anchor: 2-8-component-lifecycle -->",
+        "description": "2.8 Component Lifecycle & State Machine Rules"
+      },
+      {
+        "key": "2-9-component-hierarchy-diagram",
+        "line": 378,
+        "start_anchor": "<!-- anchor: 2-9-component-hierarchy-diagram -->",
+        "description": "2.9 Component Hierarchy Diagram (PlantUML)"
+      },
+      {
+        "key": "2-10-component-accessibility",
+        "line": 433,
+        "start_anchor": "<!-- anchor: 2-10-component-accessibility -->",
+        "description": "2.10 Component Accessibility & Error Patterns"
+      },
+      {
+        "key": "3-application-structure",
+        "line": 439,
+        "start_anchor": "<!-- anchor: 3-application-structure -->",
+        "description": "3. Application Structure & User Flows"
+      },
+      {
+        "key": "3-1-route-definitions",
+        "line": 443,
+        "start_anchor": "<!-- anchor: 3-1-route-definitions -->",
+        "description": "3.1 Route Definitions"
+      },
+      {
+        "key": "3-2-page-templates",
+        "line": 478,
+        "start_anchor": "<!-- anchor: 3-2-page-templates -->",
+        "description": "3.2 Page Layout Blueprints"
+      },
+      {
+        "key": "3-3-user-journeys",
+        "line": 487,
+        "start_anchor": "<!-- anchor: 3-3-user-journeys -->",
+        "description": "3.3 Critical User Journeys Overview"
+      },
+      {
+        "key": "3-4-detailed-flows",
+        "line": 500,
+        "start_anchor": "<!-- anchor: 3-4-detailed-flows -->",
+        "description": "3.4 Detailed Flow Narratives"
+      },
+      {
+        "key": "3-5-user-flow-diagram",
+        "line": 551,
+        "start_anchor": "<!-- anchor: 3-5-user-flow-diagram -->",
+        "description": "3.5 Critical User Journeys (PlantUML)"
+      },
+      {
+        "key": "3-6-empty-error-states",
+        "line": 622,
+        "start_anchor": "<!-- anchor: 3-6-empty-error-states -->",
+        "description": "3.6 Empty & Error State Playbook"
+      },
+      {
+        "key": "3-7-multi-device-flows",
+        "line": 630,
+        "start_anchor": "<!-- anchor: 3-7-multi-device-flows -->",
+        "description": "3.7 Multi-Device Considerations"
+      },
+      {
+        "key": "4-cross-cutting",
+        "line": 636,
+        "start_anchor": "<!-- anchor: 4-cross-cutting -->",
+        "description": "4. Cross-Cutting Concerns"
+      },
+      {
+        "key": "4-1-state-management",
+        "line": 639,
+        "start_anchor": "<!-- anchor: 4-1-state-management -->",
+        "description": "4.1 State Management Strategy"
+      },
+      {
+        "key": "4-2-responsive-design",
+        "line": 647,
+        "start_anchor": "<!-- anchor: 4-2-responsive-design -->",
+        "description": "4.2 Responsive Design (Mobile-First)"
+      },
+      {
+        "key": "4-3-accessibility",
+        "line": 655,
+        "start_anchor": "<!-- anchor: 4-3-accessibility -->",
+        "description": "4.3 Accessibility (WCAG 2.1 AA)"
+      },
+      {
+        "key": "4-4-performance",
+        "line": 665,
+        "start_anchor": "<!-- anchor: 4-4-performance -->",
+        "description": "4.4 Performance & Optimization"
+      },
+      {
+        "key": "4-5-backend-integration",
+        "line": 674,
+        "start_anchor": "<!-- anchor: 4-5-backend-integration -->",
+        "description": "4.5 Backend Integration Patterns"
+      },
+      {
+        "key": "4-6-security-privacy",
+        "line": 682,
+        "start_anchor": "<!-- anchor: 4-6-security-privacy -->",
+        "description": "4.6 Security & Privacy UX Patterns"
+      },
+      {
+        "key": "4-7-observability",
+        "line": 690,
+        "start_anchor": "<!-- anchor: 4-7-observability -->",
+        "description": "4.7 Observability & Analytics Hooks"
+      },
+      {
+        "key": "4-8-content-governance",
+        "line": 697,
+        "start_anchor": "<!-- anchor: 4-8-content-governance -->",
+        "description": "4.8 Content Governance & Moderation Workflow UX"
+      },
+      {
+        "key": "4-9-consent",
+        "line": 705,
+        "start_anchor": "<!-- anchor: 4-9-consent -->",
+        "description": "4.9 Consent & Privacy Preference UX"
+      },
+      {
+        "key": "4-10-error-notifications",
+        "line": 711,
+        "start_anchor": "<!-- anchor: 4-10-error-notifications -->",
+        "description": "4.10 Error Message Framework"
+      },
+      {
+        "key": "5-tooling-dependencies",
+        "line": 718,
+        "start_anchor": "<!-- anchor: 5-tooling-dependencies -->",
+        "description": "5. Tooling & Dependencies"
+      },
+      {
+        "key": "5-1-core-deps",
+        "line": 721,
+        "start_anchor": "<!-- anchor: 5-1-core-deps -->",
+        "description": "5.1 Core Dependencies"
+      },
+      {
+        "key": "5-2-dev-tooling",
+        "line": 733,
+        "start_anchor": "<!-- anchor: 5-2-dev-tooling -->",
+        "description": "5.2 Development Tooling"
+      },
+      {
+        "key": "5-3-testing",
+        "line": 742,
+        "start_anchor": "<!-- anchor: 5-3-testing -->",
+        "description": "5.3 Testing Strategy"
+      },
+      {
+        "key": "5-4-collaboration",
+        "line": 751,
+        "start_anchor": "<!-- anchor: 5-4-collaboration -->",
+        "description": "5.4 Collaboration & Documentation"
+      },
+      {
+        "key": "5-5-deployment",
+        "line": 758,
+        "start_anchor": "<!-- anchor: 5-5-deployment -->",
+        "description": "5.5 Deployment & Monitoring Hooks"
+      },
+      {
+        "key": "6-extended-appendices",
+        "line": 766,
+        "start_anchor": "<!-- anchor: 6-extended-appendices -->",
+        "description": "6. Extended Reference Appendices"
+      },
+      {
+        "key": "6-1-widget-matrix",
+        "line": 770,
+        "start_anchor": "<!-- anchor: 6-1-widget-matrix -->",
+        "description": "6.1 Widget-Specific Interaction Matrix"
+      },
+      {
+        "key": "6-2-marketplace-state-table",
+        "line": 787,
+        "start_anchor": "<!-- anchor: 6-2-marketplace-state-table -->",
+        "description": "6.2 Marketplace State Table"
+      },
+      {
+        "key": "6-3-good-sites-behavior",
+        "line": 803,
+        "start_anchor": "<!-- anchor: 6-3-good-sites-behavior -->",
+        "description": "6.3 Good Sites Interaction & Karma Rules"
+      },
+      {
+        "key": "6-4-profile-template-details",
+        "line": 828,
+        "start_anchor": "<!-- anchor: 6-4-profile-template-details -->",
+        "description": "6.4 Profile Template Detail Guide"
+      },
+      {
+        "key": "6-5-accessibility-test-matrix",
+        "line": 839,
+        "start_anchor": "<!-- anchor: 6-5-accessibility-test-matrix -->",
+        "description": "6.5 Accessibility Test Matrix"
+      },
+      {
+        "key": "6-6-error-dictionary",
+        "line": 853,
+        "start_anchor": "<!-- anchor: 6-6-error-dictionary -->",
+        "description": "6.6 Error & Empty State Dictionary"
+      },
+      {
+        "key": "6-7-interaction-checklists",
+        "line": 869,
+        "start_anchor": "<!-- anchor: 6-7-interaction-checklists -->",
+        "description": "6.7 Interaction Design Checklists"
+      },
+      {
+        "key": "6-8-copy-matrix",
+        "line": 898,
+        "start_anchor": "<!-- anchor: 6-8-copy-matrix -->",
+        "description": "6.8 Copy Matrix for Key Modules"
+      },
+      {
+        "key": "6-9-analytics-dashboard-details",
+        "line": 913,
+        "start_anchor": "<!-- anchor: 6-9-analytics-dashboard-details -->",
+        "description": "6.9 Admin Analytics Dashboard Details"
+      },
+      {
+        "key": "6-10-job-ux",
+        "line": 922,
+        "start_anchor": "<!-- anchor: 6-10-job-ux -->",
+        "description": "6.10 Job Queue & Background Process UX"
+      },
+      {
+        "key": "6-11-data-export-ux",
+        "line": 930,
+        "start_anchor": "<!-- anchor: 6-11-data-export-ux -->",
+        "description": "6.11 Data Export & Deletion UX"
+      },
+      {
+        "key": "6-12-rate-limit-ui",
+        "line": 936,
+        "start_anchor": "<!-- anchor: 6-12-rate-limit-ui -->",
+        "description": "6.12 Rate Limit UX Artifacts"
+      },
+      {
+        "key": "6-13-onboarding",
+        "line": 943,
+        "start_anchor": "<!-- anchor: 6-13-onboarding -->",
+        "description": "6.13 Onboarding Experience Notes"
+      },
+      {
+        "key": "6-14-localization",
+        "line": 949,
+        "start_anchor": "<!-- anchor: 6-14-localization -->",
+        "description": "6.14 Localization & Internationalization Guidelines"
+      },
+      {
+        "key": "6-15-csp-embeds",
+        "line": 957,
+        "start_anchor": "<!-- anchor: 6-15-csp-embeds -->",
+        "description": "6.15 Embed & Content Security Policy Notes"
+      },
+      {
+        "key": "6-16-print-friendly",
+        "line": 964,
+        "start_anchor": "<!-- anchor: 6-16-print-friendly -->",
+        "description": "6.16 Print-Friendly Views"
+      },
+      {
+        "key": "6-17-mobile-gestures",
+        "line": 970,
+        "start_anchor": "<!-- anchor: 6-17-mobile-gestures -->",
+        "description": "6.17 Mobile Gesture Patterns"
+      },
+      {
+        "key": "6-18-notifications",
+        "line": 977,
+        "start_anchor": "<!-- anchor: 6-18-notifications -->",
+        "description": "6.18 Notification Strategy"
+      },
+      {
+        "key": "6-19-qa-handbook",
+        "line": 984,
+        "start_anchor": "<!-- anchor: 6-19-qa-handbook -->",
+        "description": "6.19 QA Handbook Snippets"
+      },
+      {
+        "key": "6-20-release-readiness",
+        "line": 994,
+        "start_anchor": "<!-- anchor: 6-20-release-readiness -->",
+        "description": "6.20 Release Readiness Checklist"
+      },
+      {
+        "key": "6-21-future-scaling",
+        "line": 1007,
+        "start_anchor": "<!-- anchor: 6-21-future-scaling -->",
+        "description": "6.21 Future Scaling Considerations"
+      },
+      {
+        "key": "6-22-design-assets",
+        "line": 1015,
+        "start_anchor": "<!-- anchor: 6-22-design-assets -->",
+        "description": "6.22 Design Asset Inventory"
+      },
+      {
+        "key": "6-23-figma-handoff",
+        "line": 1022,
+        "start_anchor": "<!-- anchor: 6-23-figma-handoff -->",
+        "description": "6.23 Figma Handoff Guidelines"
+      },
+      {
+        "key": "6-24-cross-team-sync",
+        "line": 1029,
+        "start_anchor": "<!-- anchor: 6-24-cross-team-sync -->",
+        "description": "6.24 Cross-Team Sync Rituals"
+      },
+      {
+        "key": "6-25-documentation-links",
+        "line": 1035,
+        "start_anchor": "<!-- anchor: 6-25-documentation-links -->",
+        "description": "6.25 Documentation Links & Storage"
+      }
+    ]
+  }
+}

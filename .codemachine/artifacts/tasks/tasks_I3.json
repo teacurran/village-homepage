@@ -1,0 +1,160 @@
+[
+  {
+    "task_id": "I3.T1",
+    "iteration_id": "I3",
+    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
+    "description": "Document marketplace taxonomy import strategy mapping the provided hierarchical list into `marketplace_categories`. Define slug rules, sorting, reserved keywords, seeding tooling, and integration with dr5hn geo dataset for location tags.",
+    "agent_type_hint": "DataArchitectureAgent",
+    "inputs": "Requirements F12.3, ERD, migration guidance.",
+    "target_files": [
+      "docs/marketplace/taxonomy_plan.md",
+      "migrations/notes/iteration3_taxonomy.md"
+    ],
+    "input_files": [
+      "CLAUDE.md",
+      "docs/architecture/data_model.puml"
+    ],
+    "deliverables": "Taxonomy plan + migration note describing parent-child structure, slug patterns, translation/internationalization considerations, and CLI/SQL seeding instructions.",
+    "acceptance_criteria": "Document lists full tree, numbering scheme, future expansion approach, and cross-links to UI/UX plan; migration note outlines idempotent seeding script with rollback steps.",
+    "dependencies": [
+      "I2.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I3.T2",
+    "iteration_id": "I3",
+    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
+    "description": "Produce PostGIS + Elasticsearch search specification detailing radius handling, bounding box approximations, sort orders, filters, caching, and instrumentation. Provide SQL/DSL examples and index requirements.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "ERD, architecture diagrams, policy P6/P11, requirements F12.2, F14.8.",
+    "target_files": [
+      "docs/marketplace/search_spec.md"
+    ],
+    "input_files": [
+      "docs/architecture/data_model.puml",
+      "docs/architecture/component_overview.mmd"
+    ],
+    "deliverables": "Spec with diagrams, sample queries, fallback strategy, and API contract alignment with `MarketplaceSearchType`.",
+    "acceptance_criteria": "Document covers radius options (5–250 miles), PostGIS indexes + queries, Elasticsearch analyzers, ranking weights, caching windows, and instrumentation plan tied to click tracking.",
+    "dependencies": [
+      "I3.T1"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I3.T3",
+    "iteration_id": "I3",
+    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
+    "description": "Extend OpenAPI + DTO definitions for marketplace listing CRUD, promotions, contact masked email flows, moderation actions, and refund endpoints. Capture validation rules, feature flag hooks, and error responses.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Existing OpenAPI, taxonomy plan, policy P3.",
+    "target_files": [
+      "api/openapi.yaml",
+      "docs/marketplace/listing_contract.md"
+    ],
+    "input_files": [
+      "api/openapi.yaml",
+      "docs/marketplace/taxonomy_plan.md",
+      "docs/ops/feature_flag_playbook.md"
+    ],
+    "deliverables": "Updated OpenAPI spec plus listing contract describing state machine (draft/pending/active/flagged/expired/sold), DTO fields, and samples.",
+    "acceptance_criteria": "Spec validated, new schemas added, endpoints documented with rate-limit headers, listing contract cross-references policies and queue usage for status transitions.",
+    "dependencies": [
+      "I3.T2"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I3.T4",
+    "iteration_id": "I3",
+    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
+    "description": "Design Stripe integration blueprint covering posting fees, promotion purchases, webhook lifecycle, refund triggers, chargeback handling, and evidence preservation per Policy P3. Include diagrams, metadata mapping, and alerting requirements.",
+    "agent_type_hint": "PaymentsAgent",
+    "inputs": "Requirements F12.8, Policy P3, ERD.",
+    "target_files": [
+      "docs/marketplace/payments_blueprint.md"
+    ],
+    "input_files": [
+      "CLAUDE.md",
+      "docs/architecture/data_model.puml"
+    ],
+    "deliverables": "Payment blueprint with flowcharts, metadata tables, webhook handler pseudo-code, failure recovery steps, and admin dashboard requirements.",
+    "acceptance_criteria": "Document references `payment_refunds`, `listing_promotions`, Stripe event names, budgets, sandbox/test plan, and compliance controls.",
+    "dependencies": [
+      "I3.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I3.T5",
+    "iteration_id": "I3",
+    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
+    "description": "Define listing image pipeline: upload limits, file validation, Cloudflare R2 key structure, thumbnail generation, BULK queue handler design, CDN invalidation, retention/cleanup when listings expire or are removed.",
+    "agent_type_hint": "StorageAgent",
+    "inputs": "StorageGateway spec, job blueprint, policy P4.",
+    "target_files": [
+      "docs/marketplace/image_pipeline.md"
+    ],
+    "input_files": [
+      "docs/architecture/job_orchestration.md",
+      "docs/architecture/component_overview.mmd"
+    ],
+    "deliverables": "Pipeline doc + PlantUML sequence showing upload→queue→processing→R2 storage→CDN; includes error handling + monitoring.",
+    "acceptance_criteria": "Document covers concurrency, timeouts, thumbnail/full-size specs, cleanup job frequency, and instrumentation for processing duration + failures.",
+    "dependencies": [
+      "I3.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I3.T6",
+    "iteration_id": "I3",
+    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
+    "description": "Draft moderation, flagging, and fraud detection playbook mapping Policy P3 heuristics. Outline AI scoring, manual queues, thresholds, notification templates, and integration with rate limit + feature flag audits.",
+    "agent_type_hint": "OpsDocumentationAgent",
+    "inputs": "Requirements F12.9, AI tagging spec, policy table.",
+    "target_files": [
+      "docs/marketplace/moderation_playbook.md"
+    ],
+    "input_files": [
+      "CLAUDE.md",
+      "docs/architecture/ai_tagging_widget_spec.md"
+    ],
+    "deliverables": "Playbook describing submission review states, flag categories, automated actions, SLA targets, and reporting metrics.",
+    "acceptance_criteria": "Document ties heuristics to data points, defines auto-hide thresholds, describes manual override process, and references audit logging + delayed job usage.",
+    "dependencies": [
+      "I3.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I3.T7",
+    "iteration_id": "I3",
+    "iteration_goal": "Define marketplace data models, search flows, payments, moderation, communications, and background processing so engineering teams can implement listings, promotions, and masked messaging with confidence.",
+    "description": "Specify masked email relay + inbound processing architecture referencing Policy F14.3: email address schema, masked tokens, Mailpit dev setup, inbound queue handler, spam filtering, rate limiting, logging, and analytics.",
+    "agent_type_hint": "IntegrationAgent",
+    "inputs": "Requirements F12.6, job blueprint, rate limit plan.",
+    "target_files": [
+      "docs/marketplace/messaging_spec.md"
+    ],
+    "input_files": [
+      "docs/architecture/job_orchestration.md",
+      "docs/ops/rate_limit_playbook.md",
+      "docs/architecture/data_model.puml"
+    ],
+    "deliverables": "Messaging spec with flow diagrams, payload schemas, email templates, inbound parsing rules, and monitoring checklist.",
+    "acceptance_criteria": "Document details masked address format, inbound job scheduling, spam filter heuristics, user notifications, and retention for `marketplace_messages` + `inbound_emails`.",
+    "dependencies": [
+      "I3.T3"
+    ],
+    "parallelizable": true,
+    "done": false
+  }
+]

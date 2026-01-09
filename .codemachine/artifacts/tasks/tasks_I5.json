@@ -1,0 +1,169 @@
+[
+  {
+    "task_id": "I5.T1",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
+    "description": "Draft Analytics Dashboard specification for the admin portal covering click stats, AI usage, job health, rate limits, and marketplace/directory KPIs. Detail REST endpoints, filter behavior, caching, and AntV visualization choices.",
+    "agent_type_hint": "ProductDocumentationAgent",
+    "inputs": "Click tracking schema, AI budget requirements, rate limit playbook.",
+    "target_files": [
+      "docs/analytics/admin_dashboard_spec.md"
+    ],
+    "input_files": [
+      "docs/ops/homepage_validation_plan.md",
+      "docs/architecture/job_orchestration.md",
+      "docs/ops/feature_flag_playbook.md"
+    ],
+    "deliverables": "Spec listing charts/tables, KPI formulas, data sources, sample payloads, and UX wireframes.",
+    "acceptance_criteria": "Document details overview, per-category, top items, traffic sources, job health, and AI budget panels referencing policy IDs + thresholds.",
+    "dependencies": [
+      "I2.T7",
+      "I3.T6",
+      "I4.T6"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T2",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
+    "description": "Define click tracking rollup + retention automation (partitions, SQL, schedules, monitoring, export API) supporting dashboard requirements and compliance retention windows.",
+    "agent_type_hint": "DataArchitectureAgent",
+    "inputs": "ERD, job blueprint, analytics spec.",
+    "target_files": [
+      "docs/analytics/click_rollup_plan.md"
+    ],
+    "input_files": [
+      "docs/architecture/data_model.puml",
+      "docs/analytics/admin_dashboard_spec.md",
+      "docs/architecture/job_orchestration.md"
+    ],
+    "deliverables": "Plan covering raw partitions, rollup jobs, retention enforcement, export interface, troubleshooting steps, and validation queries.",
+    "acceptance_criteria": "Document references `link_clicks`, `click_stats_daily`, `click_stats_daily_items`, includes SQL, cron schedules, alert thresholds, and testing checklists.",
+    "dependencies": [
+      "I5.T1"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T3",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
+    "description": "Produce AI budget monitoring + enforcement runbook expanding Policies P2/P10 with instrumentation, alerting, throttling scripts, override approvals, and monthly reset tasks.",
+    "agent_type_hint": "OpsDocumentationAgent",
+    "inputs": "AiUsageTracking schema, job blueprint, analytics spec.",
+    "target_files": [
+      "docs/ops/ai_budget_runbook.md"
+    ],
+    "input_files": [
+      "docs/architecture/job_orchestration.md",
+      "docs/ops/ai_budget_monitoring.md"
+    ],
+    "deliverables": "Runbook covering dashboards, alert channels (75/90/100%), throttle actions (batch reduction, queue pause, hard stop), override logging, and compliance reporting.",
+    "acceptance_criteria": "Document lists automation scripts, CLI examples, escalation contacts, and integration with feature flag toggles + release plan.",
+    "dependencies": [
+      "I5.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T4",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
+    "description": "Finalize GDPR/CCPA export + deletion workflow referencing Policies P1/P14: endpoints, delayed job payloads, R2 bundle storage, notification templates, consent record updates, and audit trails.",
+    "agent_type_hint": "ComplianceAgent",
+    "inputs": "Consent flows, storage blueprint, jobs matrix.",
+    "target_files": [
+      "docs/ops/compliance_export_plan.md"
+    ],
+    "input_files": [
+      "docs/ui-guides/consent_flows.mmd",
+      "docs/architecture/job_orchestration.md",
+      "docs/good-sites/jobs_matrix.md"
+    ],
+    "deliverables": "Workflow doc with diagrams, DTO schemas, retention schedule, manual review steps, and SLA tracking.",
+    "acceptance_criteria": "Document covers export packaging, deletion cascade, purge confirmation, legal approvals, and integration with click tracking + feature flag evaluation purge jobs.",
+    "dependencies": [
+      "I4.T7"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T5",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
+    "description": "Author CI/CD + release runbook describing pipeline stages, promotion flow (dev→beta→prod), feature flag rollout strategy, smoke/regression tests, rollback procedures, and communication plan (beta announcements, incident updates).",
+    "agent_type_hint": "InfrastructureAgent",
+    "inputs": "Build tooling docs, QA plan, feature flag playbook.",
+    "target_files": [
+      "docs/ops/release_runbook.md"
+    ],
+    "input_files": [
+      "README.md",
+      "docs/ops/homepage_validation_plan.md",
+      "docs/ops/feature_flag_playbook.md"
+    ],
+    "deliverables": "Runbook with pipeline diagrams, gate criteria, checklists, on-call expectations, and message templates.",
+    "acceptance_criteria": "Document references Jib/TypeScript builds, sonar/lint/test gating, feature flag toggles, rollback commands, and go/no-go rules tied to dashboards.",
+    "dependencies": [
+      "I2.T5",
+      "I2.T7"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T6",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
+    "description": "Expand observability + incident response plan covering logging schema, metrics catalog, tracing coverage, alert thresholds, on-call rotation, and incident workflow mapping.",
+    "agent_type_hint": "SREAgent",
+    "inputs": "Job blueprint, analytics spec, payments blueprint.",
+    "target_files": [
+      "docs/ops/observability_plan.md"
+    ],
+    "input_files": [
+      "docs/architecture/job_orchestration.md",
+      "docs/analytics/admin_dashboard_spec.md",
+      "docs/marketplace/payments_blueprint.md"
+    ],
+    "deliverables": "Plan mapping metrics/logs/traces to dashboards, severity thresholds, escalation chain, and runbook cross-references.",
+    "acceptance_criteria": "Document lists metrics per subsystem (homepage, marketplace, Good Sites, profiles, AI tagging, payments), defines severity levels, alert channels, and detection→response SLAs.",
+    "dependencies": [
+      "I5.T1",
+      "I5.T2"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T7",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize analytics dashboards, click tracking rollups, AI budget controls, compliance/export tooling, observability pipelines, and release procedures so implementation teams can execute confidently.",
+    "description": "Compile final integration checklist + plan manifest updates referencing all artifacts, verifying README + onboarding anchors, capturing residual risks, and preparing implementation backlog references.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "All iteration outputs, release runbook, compliance plan.",
+    "target_files": [
+      "docs/ops/integration_checklist.md",
+      "README.md"
+    ],
+    "input_files": [
+      "README.md",
+      "docs/analytics/admin_dashboard_spec.md",
+      "docs/ops/release_runbook.md",
+      "docs/ops/compliance_export_plan.md"
+    ],
+    "deliverables": "Checklist linking to every doc, policy mapping table, open ADR placeholders, README updates, and manifest instructions.",
+    "acceptance_criteria": "Checklist confirms artifacts exist, anchors recorded for plan_manifest, risks logged with owners, and backlog epics noted.",
+    "dependencies": [
+      "I5.T1",
+      "I5.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  }
+]
