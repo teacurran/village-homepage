@@ -759,6 +759,9 @@ stripe.api-key: ${STRIPE_SECRET_KEY}
 
 - **Line Coverage:** 80% minimum (enforced by JaCoCo)
 - **Branch Coverage:** 80% minimum (enforced by JaCoCo)
+- **Quality Gate:** Build fails if coverage drops below 80%
+- **Modules Covered:** Auth/preferences modules maintain ≥80% coverage
+- **Rate Limit Tests:** All 429 HTTP responses verified in test suite
 
 ### Running Tests
 
@@ -769,12 +772,68 @@ stripe.api-key: ${STRIPE_SECRET_KEY}
 # Unit + integration tests
 ./mvnw verify
 
+# Run specific test class
+./mvnw test -Dtest=RateLimitServiceTest
+
 # Generate coverage report
 ./mvnw test jacoco:report
 open target/site/jacoco/index.html
+
+# Run with coverage enforcement (fail if <80%)
+./mvnw verify jacoco:check
 ```
 
+### Test Categories
+
+#### Unit Tests
+- **RateLimitServiceTest**: Rate limiting logic, sliding window, tier differentiation
+- **AccountMergeServiceTest**: Anonymous-to-authenticated merge, consent recording
+- **AuthIdentityServiceTest**: Anonymous cookies, bootstrap guard, role management
+- **UserPreferenceServiceTest**: Preference CRUD, validation, schema migration
+- **FeatureFlagServiceTest**: Feature flag evaluation, cohort hashing, analytics opt-out
+
+#### Integration Tests
+- **RateLimitFilterTest**: Database configuration, config CRUD operations
+- **HomepageResourceTest**: SSR output, gridstack attributes, React mount points
+
+#### E2E Tests (Future)
+E2E tests with Playwright are planned for iteration I3 to test:
+- Homepage edit mode functionality
+- Widget drag-and-drop operations
+- Anonymous vs authenticated user flows
+
 ### Writing Tests
+
+#### Unit Test Example (Quarkus)
+
+```java
+@QuarkusTest
+@QuarkusTestResource(H2TestResource.class)
+public class RateLimitServiceTest {
+
+    @Inject
+    RateLimitService rateLimitService;
+
+    @Test
+    void testCheckLimit_ExceedsLimit_DeniesRequest() {
+        // Exhaust the limit
+        for (int i = 0; i < 5; i++) {
+            rateLimitService.checkLimit(null, "127.0.0.1", "test_action",
+                RateLimitService.Tier.ANONYMOUS, "/test");
+        }
+
+        // 6th request should be denied (429 path)
+        RateLimitService.RateLimitResult result = rateLimitService.checkLimit(
+            null, "127.0.0.1", "test_action", RateLimitService.Tier.ANONYMOUS, "/test"
+        );
+
+        assertFalse(result.allowed());
+        assertEquals(0, result.remaining());
+    }
+}
+```
+
+#### REST Integration Test Example
 
 ```java
 @QuarkusTest
@@ -790,6 +849,25 @@ public class UserResourceTest {
     }
 }
 ```
+
+### Test Database
+
+Tests use H2 in-memory database configured via `H2TestResource.class`:
+- PostgreSQL compatibility mode enabled
+- No external database dependencies required
+- Fast test execution (~2-3 seconds per test class)
+- Automatic cleanup between tests
+
+### CI/CD Test Execution
+
+Tests run automatically in CI pipeline (`.github/workflows/build.yml`):
+
+1. **Unit Test Gate** (Stage 8): Maven Surefire, parallel execution
+2. **Integration Test Gate** (Stage 9): Maven Failsafe, test containers
+3. **Coverage Gate** (Stage 10): JaCoCo report generation and threshold check
+4. **Quality Gate** (Stage 11): SonarCloud scan (planned)
+
+**Artifacts:** Test reports and coverage data uploaded to GitHub Actions artifacts with 30-day retention.
 
 ---
 
