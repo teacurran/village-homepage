@@ -168,7 +168,7 @@ public class FeedItem extends PanacheEntityBase {
      * @return List of untagged feed items
      */
     public static List<FeedItem> findUntagged() {
-        return find("#" + QUERY_FIND_UNTAGGED + " WHERE ai_tagged = false").list();
+        return find("aiTagged = false").list();
     }
 
     /**

@@ -145,6 +145,18 @@ villagecompute:
         max-requests: ${BOOTSTRAP_MAX_REQUESTS:5}
         window-seconds: ${BOOTSTRAP_WINDOW_SECONDS:3600}
 
+  # LangChain4j AI Integration (Policy P2/P10)
+  langchain4j:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat-model:
+        model-name: claude-sonnet-4-20250514
+        temperature: 0.3
+        max-tokens: 2000
+        timeout: 30s
+      log-requests: ${AI_LOG_REQUESTS:false}
+      log-responses: ${AI_LOG_RESPONSES:false}
+
 # Profile-specific overrides
 "%dev":
   quarkus:

@@ -47,7 +47,7 @@ All async workloads are enumerated in the `JobType` enum. Each type is permanent
 | `LINK_HEALTH_CHECK` | LOW | Weekly | `LinkHealthCheckHandler` | Detects dead links in Good Sites directory |
 | `SITEMAP_GENERATION` | LOW | Daily @ 3am UTC | `SitemapGenerationHandler` | SEO sitemap XML generation |
 | `CLICK_ROLLUP` | LOW | Hourly | `ClickRollupHandler` | P14: Consent-gated, 90-day retention |
-| `AI_TAGGING` | BULK | On-demand (batch) | `AiTaggingHandler` | P10: Check $500/month budget ceiling before execution |
+| `AI_TAGGING` | BULK | Hourly (scheduled) | `AiTaggingJobHandler` | P2/P10: $500/month budget ceiling with automatic throttling (see Section 13) |
 | `IMAGE_PROCESSING` | BULK | On-demand (triggered by upload) | `ImageProcessingHandler` | Resize/optimize marketplace listing images |
 | `SCREENSHOT_CAPTURE` | SCREENSHOT | On-demand (triggered by site submission) | `ScreenshotCaptureHandler` | P12: Dedicated worker pool, semaphore-limited to 3 concurrent jobs |
 
@@ -486,6 +486,229 @@ SET error_count = 0,
     updated_at = NOW()
 WHERE id = 'uuid-of-source';
 ```
+
+---
+
+## 13. AI Tagging Job Details
+
+The `AI_TAGGING` job uses Anthropic Claude Sonnet 4 via LangChain4j to extract topics, sentiment, and categories from RSS feed items. This job is subject to strict budget enforcement per P2/P10 policies.
+
+### Job Payload Structure
+
+```json
+{
+  "trigger": "scheduled",      // Optional - "scheduled" or "manual"
+  "untagged_count": 150        // Optional - number of untagged items (informational)
+}
+```
+
+**Payload Parameters:**
+- **`trigger`** (string, optional): Source of the job (scheduled vs. manual admin trigger). Used for telemetry.
+- **`untagged_count`** (integer, optional): Snapshot of untagged item count at enqueue time. For logging/metrics only.
+
+### Scheduler Behavior
+
+The `AiTaggingScheduler` runs **every hour** (top of the hour) to check for untagged feed items:
+1. Queries `FeedItem.count("ai_tagged = false")`
+2. If count > 0, enqueues AI_TAGGING job
+3. Handler processes items in batches based on budget state
+
+### Budget Enforcement States
+
+The handler checks budget status before and during processing, with four enforcement levels:
+
+| State | Budget Used | Batch Size | Behavior |
+|-------|-------------|------------|----------|
+| **NORMAL** | < 75% | 20 items | Full-speed processing |
+| **REDUCE** | 75-90% | 10 items | Reduced batch sizes to conserve budget |
+| **QUEUE** | 90-100% | 0 items | Skip processing, defer to next hour |
+| **HARD_STOP** | ≥ 100% | 0 items | Stop all processing until next monthly cycle |
+
+**Budget Tracking:**
+- Monthly budget: $500 (50,000 cents)
+- Cost per article: ~$0.006 (estimated)
+- Capacity: ~83,000 articles/month
+- Budget resets automatically on 1st of each month
+
+**Email Alerts:**
+- 75% threshold: INFO alert to `ops@villagecompute.com`
+- 90% threshold: WARNING alert
+- 100% threshold: CRITICAL alert
+
+### Processing Flow
+
+1. **Budget Check:** Handler calls `AiTaggingBudgetService.getCurrentBudgetAction()`
+2. **Early Exit:** If QUEUE or HARD_STOP, skip processing and log warning
+3. **Query Untagged:** Fetch items via `FeedItem.findUntagged()` (returns `ai_tagged = false`)
+4. **Batch Processing:** Partition items based on budget action batch size
+5. **Tag Generation:** For each item, call `AiTaggingService.tagArticle(title, description, content)`
+6. **Persistence:** Store tags via `FeedItem.updateAiTags(item, tags)`
+7. **Cost Tracking:** Record token usage and cost in `ai_usage_tracking` table
+8. **Mid-Batch Check:** Re-check budget between batches to handle budget exhaustion
+
+### Tag Structure
+
+Each feed item receives an `AiTagsType` record stored as JSONB in `feed_items.ai_tags`:
+
+```json
+{
+  "topics": ["AI", "Machine Learning", "Technology"],
+  "sentiment": "positive",
+  "categories": ["Technology", "Science"],
+  "confidence": 0.85
+}
+```
+
+**Fields:**
+- **topics** (string[]): 3-5 extracted keywords/topics
+- **sentiment** (string): "positive", "negative", "neutral", or "mixed"
+- **categories** (string[]): 1-3 categories from predefined list (Technology, Business, Science, Health, Politics, Entertainment, Sports, World, etc.)
+- **confidence** (float): 0.0-1.0 quality score for tagging accuracy
+
+### Error Handling
+
+**Individual Item Failures:**
+- Handler catches exceptions per item and continues with batch
+- Failed items remain untagged (`ai_tagged = false`) for retry in next hour
+- Metrics track success/failure counts separately
+
+**Common Error Scenarios:**
+
+| Error Type | Handler Action | Retry Behavior |
+|------------|----------------|----------------|
+| Invalid JSON response | Log warning, skip item | Retry next hour |
+| API timeout (>30s) | Log error, skip item | Retry next hour |
+| API rate limiting | Increment batch delay | Retry via job retry mechanism |
+| Budget exhausted mid-batch | Stop processing, log warning | Resume next hour (budget permitting) |
+
+### OpenTelemetry Span Events
+
+AI tagging jobs emit the following span events:
+
+| Event Name | Attributes | Description |
+|------------|------------|-------------|
+| `budget_check` | `budget_action`, `percent_used` | Budget status evaluated |
+| `budget_throttle` | `budget_action` | Processing skipped due to budget |
+| `budget_exhausted_mid_batch` | `tagged_count`, `total_count` | Budget exhausted during batch |
+| `item.tagged` | `item_id`, `topics`, `sentiment`, `categories` | Individual item tagged successfully |
+| `item.failed` | `item_id`, `error` | Individual item tagging failed |
+
+### Micrometer Metrics
+
+**Counters:**
+- **`ai.tagging.items.total`** - Items processed by status
+  - Tags: `status={success|failure}`
+- **`ai.tagging.tokens.total`** - Token consumption
+  - Tags: `type={input|output}`
+- **`ai.tagging.cost.cents`** - Estimated cost in cents
+- **`ai.tagging.budget.throttles`** - Number of throttle events
+
+**Gauges:**
+- **`ai.budget.percent_used`** - Current month budget percentage (0-100+)
+
+### Admin Monitoring
+
+**View Current Budget Status:**
+```bash
+curl -H "Authorization: Bearer $ADMIN_TOKEN" \
+  https://homepage.villagecompute.com/admin/api/ai-usage
+```
+
+**View Historical Usage (last 12 months):**
+```bash
+curl -H "Authorization: Bearer $ADMIN_TOKEN" \
+  https://homepage.villagecompute.com/admin/api/ai-usage/history?months=12
+```
+
+**Adjust Budget Limit:**
+```bash
+curl -X PATCH \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"budgetLimitCents": 75000}' \
+  https://homepage.villagecompute.com/admin/api/ai-usage/2025-01/budget
+```
+
+### Troubleshooting Guide
+
+**Symptom:** Tags not being generated despite job running
+- **Diagnosis:** Check budget action via admin API
+- **Resolution:** If QUEUE or HARD_STOP, either wait for next month or increase budget limit
+
+**Symptom:** High tag failure rate
+- **Diagnosis:** Check logs for "Failed to parse Claude response"
+- **Resolution:** Review `AiTaggingService.buildPrompt()` for clarity, consider adjusting temperature or max_tokens
+
+**Symptom:** Budget exhausted mid-month
+- **Diagnosis:** Check `ai_usage_tracking` table for unexpected token usage spikes
+- **Resolution:** Investigate feed sources for spam or long-form content, adjust `MAX_CONTENT_LENGTH` if needed
+
+**Symptom:** Low confidence scores (<0.5)
+- **Diagnosis:** Review sample tagged items in database
+- **Resolution:** May indicate unclear content, poor prompts, or need for model fine-tuning
+
+### Manual Operations
+
+**Trigger AI Tagging Immediately:**
+```bash
+curl -X POST http://localhost:8080/admin/api/jobs/enqueue \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_type": "AI_TAGGING",
+    "payload": {
+      "trigger": "manual"
+    }
+  }'
+```
+
+**Query Untagged Items:**
+```sql
+SELECT COUNT(*) FROM feed_items WHERE ai_tagged = false;
+```
+
+**Reset Budget for Current Month (emergency):**
+```sql
+UPDATE ai_usage_tracking
+SET estimated_cost_cents = 0,
+    total_requests = 0,
+    total_tokens_input = 0,
+    total_tokens_output = 0,
+    updated_at = NOW()
+WHERE month = DATE_TRUNC('month', CURRENT_DATE)
+  AND provider = 'anthropic';
+```
+
+**Check Tag Distribution:**
+```sql
+SELECT
+  jsonb_array_elements_text(ai_tags->'categories') AS category,
+  COUNT(*) AS count
+FROM feed_items
+WHERE ai_tagged = true AND ai_tags IS NOT NULL
+GROUP BY category
+ORDER BY count DESC;
+```
+
+### Performance Characteristics
+
+**Typical Execution Times:**
+- Single article tagging: 2-5 seconds (Claude API latency)
+- 20-item batch (NORMAL mode): 40-100 seconds
+- 10-item batch (REDUCE mode): 20-50 seconds
+- Budget check overhead: <100ms
+
+**Token Usage Estimates:**
+- Average article: 1000 input tokens, 200 output tokens
+- Cost per article: ~$0.006
+- Hourly capacity (NORMAL mode): ~240 articles (12 batches × 20 items)
+
+**Database Impact:**
+- 1 SELECT per item (deduplication check)
+- 1 UPDATE per item (tag persistence)
+- 1 INSERT/UPDATE on `ai_usage_tracking` per batch
+- Typical query time: <50ms per item
+
+For comprehensive budget management procedures, see **`docs/ops/ai-budget-management.md`** runbook.
 
 ---
 
