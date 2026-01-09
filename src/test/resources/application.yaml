@@ -1,0 +1,30 @@
+villagecompute:
+  auth:
+    cookie:
+      name: vu_anon_id
+      secure: true
+      http-only: true
+      same-site: Lax
+      max-age: 31536000
+    bootstrap:
+      token: test-bootstrap-token
+      admin-exists: false
+    jwt:
+      secret: unit-test-signing-secret
+      issuer: test-suite
+      audience: village-homepage-test
+      expiration-minutes: 30
+    rate-limit:
+      bootstrap:
+        max-requests: 5
+        window-seconds: 3600
+      login:
+        max-requests: 20
+        window-seconds: 60
+
+quarkus:
+  log:
+    level: WARN
+  otel:
+    sdk:
+      disabled: true

@@ -34,7 +34,6 @@ quarkus:
     # Tracing configuration
     traces:
       sampler: always_on
-      exporter: otlp
 
     # OTLP exporter settings
     exporter:
@@ -53,17 +52,89 @@ quarkus:
     sdk:
       disabled: false
 
-  # SmallRye Metrics Configuration
-  smallrye-metrics:
-    # Enable metrics endpoint at /q/metrics
-    enabled: true
-    # Expose detailed metrics for monitoring
-    path: /q/metrics
-    # Enable specific metric types
-    extensions:
-      enabled: true
-    # Tag all metrics with service metadata
-    tags: "service=village-homepage,environment=${ENVIRONMENT:dev}"
+  # OIDC Multi-Tenant Configuration (Policy P1, P9, F1)
+  # Supports Google, Facebook, and Apple OAuth providers
+  oidc:
+    tenant-enabled: true
+    authentication:
+      # Callback endpoint consumed by AuthIdentityService bootstrap flow
+      redirect-path: /api/auth/callback
+    google:
+      auth-server-url: https://accounts.google.com
+      client-id: ${GOOGLE_CLIENT_ID:}
+      credentials:
+        secret: ${GOOGLE_CLIENT_SECRET:}
+      application-type: web-app
+      authentication:
+        scopes: openid,email,profile
+      token:
+        refresh-expired: true
+        refresh-token-time-skew: 5s
+      token-state-manager:
+        encryption-secret: ${OIDC_STATE_SECRET:local-dev-oidc-state-secret}
+
+    facebook:
+      auth-server-url: https://www.facebook.com
+      client-id: ${FACEBOOK_APP_ID:}
+      credentials:
+        secret: ${FACEBOOK_APP_SECRET:}
+      application-type: web-app
+      authentication:
+        scopes: email,public_profile
+      token:
+        refresh-expired: true
+        refresh-token-time-skew: 5s
+      token-state-manager:
+        encryption-secret: ${OIDC_STATE_SECRET:local-dev-oidc-state-secret}
+
+    apple:
+      auth-server-url: https://appleid.apple.com
+      client-id: ${APPLE_CLIENT_ID:}
+      credentials:
+        secret: ${APPLE_CLIENT_SECRET:}
+      application-type: web-app
+      authentication:
+        scopes: email,name
+      token:
+        refresh-expired: true
+        refresh-token-time-skew: 5s
+      token-state-manager:
+        encryption-secret: ${OIDC_STATE_SECRET:local-dev-oidc-state-secret}
+
+# VillageCompute Authentication Configuration (Policy P1, P9)
+villagecompute:
+  auth:
+    # Anonymous cookie settings (Policy P9)
+    cookie:
+      name: vu_anon_id
+      max-age: 31536000  # 1 year in seconds
+      secure: ${COOKIE_SECURE:true}
+      http-only: true
+      same-site: Lax
+      # Domain for production subdomain sharing (optional, defaults to current host)
+      domain: ${COOKIE_DOMAIN:}
+
+    # Bootstrap superuser token (Policy P1)
+    # One-time use token for first admin creation
+    # Stored in Kubernetes secret: homepage-bootstrap-credentials
+    bootstrap:
+      token: ${BOOTSTRAP_TOKEN:}
+      admin-exists: ${BOOTSTRAP_ADMIN_EXISTS:false}
+
+    # JWT session signing (Policy P9)
+    jwt:
+      issuer: ${JWT_ISSUER:https://homepage.villagecompute.com}
+      audience: village-homepage
+      secret: ${JWT_SESSION_SECRET:local-dev-secret-change-me}
+      expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+
+    rate-limit:
+      login:
+        max-requests: ${AUTH_LOGIN_MAX_REQUESTS:20}
+        window-seconds: ${AUTH_LOGIN_WINDOW_SECONDS:60}
+      bootstrap:
+        max-requests: ${BOOTSTRAP_MAX_REQUESTS:5}
+        window-seconds: ${BOOTSTRAP_WINDOW_SECONDS:3600}
 
 # Profile-specific overrides
 "%dev":
@@ -78,6 +149,12 @@ quarkus:
         otlp:
           # Local Jaeger from docker-compose
           endpoint: http://localhost:4318
+    # OIDC dev overrides - disable secure cookies for HTTP
+  # Development cookie settings (HTTP-compatible)
+  villagecompute:
+    auth:
+      cookie:
+        secure: false
 
 "%test":
   quarkus:

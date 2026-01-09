@@ -734,8 +734,13 @@ quarkus.s3.aws.credentials.static-provider.access-key-id: ${R2_ACCESS_KEY}
 quarkus.s3.aws.credentials.static-provider.secret-access-key: ${R2_SECRET_KEY}
 
 # OAuth (Google, Facebook, Apple)
-quarkus.oidc.google.client-id: ${GOOGLE_CLIENT_ID}
-quarkus.oidc.google.client-secret: ${GOOGLE_CLIENT_SECRET}
+quarkus.oidc.tenant-enabled: true
+quarkus.oidc."google".client-id: ${GOOGLE_CLIENT_ID}
+quarkus.oidc."google".credentials.secret: ${GOOGLE_CLIENT_SECRET}
+quarkus.oidc."facebook".client-id: ${FACEBOOK_APP_ID}
+quarkus.oidc."facebook".credentials.secret: ${FACEBOOK_APP_SECRET}
+quarkus.oidc."apple".client-id: ${APPLE_CLIENT_ID}
+quarkus.oidc."apple".credentials.secret: ${APPLE_CLIENT_SECRET}
 
 # AI (LangChain4j + Anthropic)
 quarkus.langchain4j.anthropic.api-key: ${ANTHROPIC_API_KEY}

@@ -155,22 +155,84 @@ Village Homepage supports **three OAuth providers** via Quarkus OIDC:
 
 **Configuration Mapping (`.env` → Quarkus):**
 
+Multi-tenant OIDC configuration lives in `src/main/resources/application.yaml`. Populate the following environment
+variables:
+
 ```properties
 # Google OAuth
-QUARKUS_OIDC_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-QUARKUS_OIDC_GOOGLE_CREDENTIALS_SECRET=${GOOGLE_CLIENT_SECRET}
-QUARKUS_OIDC_GOOGLE_AUTH_SERVER_URL=https://accounts.google.com
+GOOGLE_CLIENT_ID=<google-client-id>
+GOOGLE_CLIENT_SECRET=<google-client-secret>
 
 # Facebook OAuth
-QUARKUS_OIDC_FACEBOOK_CLIENT_ID=${FACEBOOK_APP_ID}
-QUARKUS_OIDC_FACEBOOK_CREDENTIALS_SECRET=${FACEBOOK_APP_SECRET}
-QUARKUS_OIDC_FACEBOOK_AUTH_SERVER_URL=https://www.facebook.com
+FACEBOOK_APP_ID=<facebook-app-id>
+FACEBOOK_APP_SECRET=<facebook-app-secret>
 
 # Apple Sign-In
-QUARKUS_OIDC_APPLE_CLIENT_ID=${APPLE_CLIENT_ID}
-QUARKUS_OIDC_APPLE_CREDENTIALS_SECRET=${APPLE_PRIVATE_KEY_PATH}
-QUARKUS_OIDC_APPLE_AUTH_SERVER_URL=https://appleid.apple.com
+APPLE_CLIENT_ID=<apple-client-id>
+APPLE_CLIENT_SECRET=<apple-client-secret>
+
+# Cookie flags (Policy P9)
+COOKIE_SECURE=true               # Set false only in local dev
+COOKIE_DOMAIN=.villagecompute.com
+
+# Bootstrap & JWT
+BOOTSTRAP_TOKEN=<64-hex-token>
+JWT_SESSION_SECRET=<strong-hs256-secret>
+OIDC_STATE_SECRET=<32-byte-cookie-encryption-secret>
+
+# Optional rate limits (defaults already enforce P1/P14)
+BOOTSTRAP_MAX_REQUESTS=5
+BOOTSTRAP_WINDOW_SECONDS=3600
+AUTH_LOGIN_MAX_REQUESTS=20
+AUTH_LOGIN_WINDOW_SECONDS=60
 ```
+
+**YAML Configuration Reference:**
+
+```yaml
+quarkus:
+  oidc:
+    tenant-enabled: true
+    authentication:
+      redirect-path: /api/auth/callback
+    google:
+      auth-server-url: https://accounts.google.com
+      client-id: ${GOOGLE_CLIENT_ID}
+      credentials:
+        secret: ${GOOGLE_CLIENT_SECRET}
+      authentication:
+        scopes: openid,email,profile
+    facebook:
+      auth-server-url: https://www.facebook.com
+      client-id: ${FACEBOOK_APP_ID}
+      credentials:
+        secret: ${FACEBOOK_APP_SECRET}
+      authentication:
+        scopes: email,public_profile
+    apple:
+      auth-server-url: https://appleid.apple.com
+      client-id: ${APPLE_CLIENT_ID}
+      credentials:
+        secret: ${APPLE_CLIENT_SECRET}
+      authentication:
+        scopes: email,name
+
+villagecompute:
+  auth:
+    cookie:
+      name: vu_anon_id
+      secure: ${COOKIE_SECURE:true}
+    bootstrap:
+      token: ${BOOTSTRAP_TOKEN:}
+    jwt:
+      secret: ${JWT_SESSION_SECRET:local-dev-secret-change-me}
+```
+
+**Login Endpoint Routing:**
+
+- `GET /api/auth/login/{provider}` redirects (302) to Quarkus' internal `/q/oidc/login?tenant=<provider>` endpoint after
+  passing rate limits enforced by `AuthIdentityService`/`RateLimitService`.
+- The optional `?bootstrap=true` query flag keeps bootstrap context during OAuth flows.
 
 **Security Guardrails:**
 
@@ -205,15 +267,39 @@ Set-Cookie: vu_anon_id=<UUID>;
 | `SameSite` | `Lax` | `Lax` | CSRF protection, allows OAuth redirects |
 | `Domain` | (unset) | `.villagecompute.com` | Subdomain sharing |
 
-**Implementation (Quarkus Configuration):**
+**Implementation:**
 
-```properties
-# Cookie security (see .env.example)
-ANONYMOUS_COOKIE_NAME=vu_anon_id
-ANONYMOUS_COOKIE_MAX_AGE=31536000
-COOKIE_SECURE=true  # Set to false in development
-COOKIE_HTTP_ONLY=true
-COOKIE_SAME_SITE=Lax
+Anonymous cookie settings are configured in `src/main/resources/application.yaml`:
+
+```yaml
+villagecompute:
+  auth:
+    cookie:
+      name: vu_anon_id
+      max-age: 31536000  # 1 year in seconds
+      secure: ${COOKIE_SECURE:true}
+      http-only: true
+      same-site: Lax
+      domain: ${COOKIE_DOMAIN:}
+```
+
+**Service Implementation:**
+
+The `AuthIdentityService` handles cookie generation with proper security attributes:
+
+```java
+// Issue anonymous cookie (POST /api/auth/anonymous)
+NewCookie cookie = authService.issueAnonymousCookie();
+// Returns cookie with HttpOnly, Secure, SameSite=Lax attributes per Policy P9
+```
+
+**REST Endpoint:**
+
+```bash
+# Issue anonymous cookie
+curl -X POST http://localhost:8080/api/auth/anonymous
+
+# Response includes Set-Cookie header with vu_anon_id
 ```
 
 **Privacy Compliance (P1, P14):**
@@ -299,25 +385,52 @@ kubectl logs -f deployment/homepage --namespace=village-homepage | grep "JWT"
 
 3. **Access Bootstrap URL (One-Time Use):**
    ```
-   https://homepage.villagecompute.com/admin/bootstrap?token=<bootstrap-token>
+   https://homepage.villagecompute.com/api/auth/bootstrap?token=<bootstrap-token>
    ```
 
 4. **Create Superuser Account:**
-   - Form prompts for email, password, and OAuth provider linking
-   - Account created with `super_admin` role
+   - Bootstrap page displays OAuth provider links (Google, Facebook, Apple)
+   - User clicks provider link to authenticate via `GET /api/auth/login/{provider}?bootstrap=true`
+   - After the OAuth callback completes, POST to `/api/auth/bootstrap` with token + email + provider metadata:
+     ```bash
+     curl -X POST https://homepage.villagecompute.com/api/auth/bootstrap \
+       -H 'Content-Type: application/json' \
+       -d '{
+             "token":"<bootstrap-token>",
+             "email":"founder@villagecompute.com",
+             "provider":"google",
+             "providerUserId":"google-oauth-subject"
+           }'
+     ```
+   - Endpoint returns JSON containing the signed JWT session and expiration timestamp.
 
 5. **Token Invalidation:**
-   - Token automatically deleted from Kubernetes secret after first use
-   - Subsequent access attempts return 404
+   - Token automatically invalidated after first use (admin existence check)
+   - Subsequent access attempts return 403 Forbidden
 
 **Security Constraints:**
 
 - ✅ Token must be exactly 64 hex characters (32 bytes)
-- ✅ URL expires after first successful use
-- ✅ Rate limited to 5 attempts per IP per hour
-- ✅ Audit log entry created on success/failure
+- ✅ URL expires after first successful use (403 when admin exists)
+- ✅ Rate limited to 5 attempts per IP per hour (via `RateLimitService`)
+- ⏳ Audit log entry created on success/failure (TODO: pending Task I2.T2)
 - ❌ Token cannot be reused after superuser creation
 - ❌ No default admin accounts (violates VillageCompute standards)
+
+**Implementation Status (Task I2.T1):**
+
+✅ **Completed:**
+- Multi-tenant OIDC configuration (Google, Facebook, Apple) via `quarkus.oidc.<provider>`
+- `/api/auth/login/{provider}` redirects into Quarkus `/q/oidc/login?tenant=...` with rate limiting + logging
+- `AuthIdentityService` issues secure `vu_anon_id` cookies and enforces bootstrap guard (403 after first admin)
+- JWT session token minted during bootstrap completion using HS256 secret from `JWT_SESSION_SECRET`
+- `RateLimitService` enforces sliding windows for login + bootstrap (no longer stubbed) with violation logging
+- Dev/test configuration + Quarkus tests validating cookie + bootstrap guard
+
+⏳ **Pending (Task I2.T2):**
+- Panache-backed admin existence checks instead of in-memory flag
+- OAuth provider callback handling + account merge logic
+- Persistent audit log + Kubernetes secret invalidation after bootstrap
 
 ---
 
