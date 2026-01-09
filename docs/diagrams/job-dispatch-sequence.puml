@@ -1,0 +1,136 @@
+@startuml job-dispatch-sequence
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "SF Pro Display"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+title Async Job Dispatch Sequence\n(Policy P7 Orchestration, P12 SCREENSHOT Concurrency)
+
+actor "Client" as Client
+participant "Business\nLogic" as Logic
+database "PostgreSQL\ndelayed_jobs" as DB
+participant "Quarkus\nScheduler" as Scheduler
+participant "DelayedJobService" as Service
+participant "JobHandler\n(CDI Bean)" as Handler
+participant "SCREENSHOT\nSemaphore" as Semaphore
+participant "OpenTelemetry" as Otel
+
+== Job Enqueue ==
+Client -> Logic: Trigger async operation\n(e.g., submit Good Sites link)
+Logic -> Service: enqueue(JobType, payload)
+note right of Service
+  Future: serialize payload as JSONB
+  Set priority from queue enum
+  Calculate scheduled_at if delayed
+end note
+Service -> DB: INSERT delayed_jobs\n(queue, priority, payload, scheduled_at)
+DB --> Service: Return job_id
+Service --> Logic: job_id
+Logic --> Client: 202 Accepted\n{"jobId": 42}
+
+== Worker Polling (per Queue Family) ==
+Scheduler -> Service: @Scheduled poll(JobQueue.HIGH)\nevery 5 seconds
+note right of Scheduler
+  Five separate @Scheduled methods:
+  - pollHigh() every 5s
+  - pollDefault() every 10s
+  - pollScreenshot() every 10s
+  - pollLow() every 30s
+  - pollBulk() every 60s
+end note
+
+Service -> DB: SELECT * FROM delayed_jobs\nWHERE queue = 'HIGH'\n  AND scheduled_at <= NOW()\n  AND locked_at IS NULL\nORDER BY priority, created_at\nLIMIT 20 FOR UPDATE SKIP LOCKED
+
+alt Jobs Available
+    DB --> Service: [DelayedJob entities]
+
+    loop For each unlocked job
+        Service -> DB: UPDATE locked_at = NOW(),\n       locked_by = 'worker-pod-abc123'
+
+        Service -> Otel: Start span("job.execute")\nattributes: job.id, job.type, job.queue, job.attempt
+        Otel --> Service: Span context
+
+        alt Job is SCREENSHOT type (Policy P12)
+            Service -> Semaphore: tryAcquire(timeout=5s)
+            alt Semaphore acquired (≤3 concurrent)
+                Semaphore --> Service: Permit granted
+            else Pool exhausted
+                Semaphore --> Service: Acquisition failed
+                Service -> DB: UPDATE locked_at = NULL\n(release for next poll)
+                note right of Service
+                  Job remains in ready state.
+                  Will be retried in next poll cycle.
+                end note
+            end
+        end
+
+        Service -> Handler: execute(jobId, payload)
+        note right of Handler
+          Handler examples:
+          - RssFeedRefreshHandler
+          - ScreenshotCaptureHandler
+          - AiTaggingHandler (checks P10 budget)
+        end note
+
+        alt Execution Successful
+            Handler --> Service: void (no exception)
+            Service -> DB: DELETE FROM delayed_jobs\nWHERE id = job_id
+            Service -> Otel: span.addEvent("job.completed")
+
+        else Execution Failed
+            Handler --> Service: throw Exception
+            Service -> Service: Calculate backoff delay\ndelay = (2^attempt) * 30s * jitter[0.75-1.25]
+
+            alt Attempts < max_attempts (default 5)
+                Service -> DB: UPDATE attempts = attempts + 1,\n       scheduled_at = NOW() + backoff_delay,\n       last_error = exception.message,\n       locked_at = NULL
+                Service -> Otel: span.recordException()\nspan.addEvent("job.retry_scheduled")
+                note right of Service
+                  Exponential backoff with jitter prevents
+                  thundering herd on infrastructure failures.
+                end note
+
+            else Max attempts exceeded
+                Service -> DB: UPDATE state = 'FAILED',\n       locked_at = NULL
+                Service -> Otel: span.recordException()\nspan.addEvent("job.exhausted")
+                Service -> Service: triggerEscalation(jobId)
+                note right of Service
+                  Escalation paths (see async-workloads.md):
+                  - HIGH queue: PagerDuty alert
+                  - BULK queue: Daily digest email
+                  - Others: Slack notification
+                end note
+            end
+        end
+
+        alt Job is SCREENSHOT type (Policy P12)
+            Service -> Semaphore: release()
+            note right of Service
+              Frees semaphore permit for next job.
+              Available slots exposed via
+              getAvailableScreenshotSlots() for monitoring.
+            end note
+        end
+
+        Service -> Otel: span.end()
+    end
+
+else No Jobs Ready
+    DB --> Service: Empty result set
+    note right of Service
+      Worker sleeps until next poll interval.
+      Poll cadence varies by queue priority.
+    end note
+end
+
+== Monitoring & Observability ==
+Otel -> "Monitoring\nDashboard": Export spans/metrics
+note right of Otel
+  OpenTelemetry metrics:
+  - job.execution.duration (histogram)
+  - job.queue.backlog (gauge per queue)
+  - job.retry.count (counter)
+  - screenshot.concurrency.utilization (gauge, P12)
+end note
+
+@enduml

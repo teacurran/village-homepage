@@ -86,6 +86,29 @@ This directory contains PlantUML diagrams documenting the Village Homepage syste
 
 **Reference:** Derived from container.puml services and Section 2 data model requirements; supports MyBatis migration implementation in I1.
 
+### Job Dispatch Sequence Diagram (`job-dispatch-sequence.puml`)
+
+**Purpose:** Illustrates the async job lifecycle from enqueue to completion/retry, including distributed locking, retry backoff, and policy enforcement.
+
+**Key Elements:**
+- **Job Enqueue Flow:** Client triggers operation → business logic enqueues job with JSONB payload → database INSERT
+- **Worker Polling:** Quarkus `@Scheduled` methods poll each queue family at different cadences (5s-60s)
+- **Distributed Locking:** `SELECT ... FOR UPDATE SKIP LOCKED` ensures lock-free coordination across pods
+- **Retry Logic:** Exponential backoff with jitter (2^attempt × 30s × [0.75-1.25])
+- **P12 Enforcement:** SCREENSHOT queue semaphore acquisition (3 concurrent workers max)
+- **Telemetry:** OpenTelemetry span attributes (job.id, job.type, job.queue, job.attempt)
+- **Escalation:** PagerDuty/Slack/Email notifications when max attempts exceeded
+
+**Companion Document:**
+- **[Async Workload Strategy](../ops/async-workloads.md):** Comprehensive documentation of queue strategy, retry policies, concurrency controls, escalation paths, and handler implementation guide
+
+**Policy References:**
+- **P7:** Unified job orchestration framework
+- **P10:** AI tagging budget enforcement ($500/month ceiling)
+- **P12:** SCREENSHOT queue concurrency limits (semaphore-based)
+
+**Reference:** Implements job dispatch strategy from container.puml Worker Pod specification; supports DelayedJobService implementation in I1.
+
 ## Rendering
 
 ### Online Viewers
@@ -107,11 +130,13 @@ apt install plantuml   # Ubuntu/Debian
 plantuml docs/diagrams/context.puml
 plantuml docs/diagrams/container.puml
 plantuml docs/diagrams/erd.puml
+plantuml docs/diagrams/job-dispatch-sequence.puml
 
 # Generate SVG
 plantuml -tsvg docs/diagrams/context.puml
 plantuml -tsvg docs/diagrams/container.puml
 plantuml -tsvg docs/diagrams/erd.puml
+plantuml -tsvg docs/diagrams/job-dispatch-sequence.puml
 ```
 
 ## Validation Checklist
@@ -139,6 +164,18 @@ plantuml -tsvg docs/diagrams/erd.puml
 - [x] Relationships (foreign keys) connect domain entities
 - [x] Future expansion placeholders (i18n, geo_regions) included
 - [x] Companion erd-guide.md with comprehensive explanations
+
+### Job Dispatch Sequence Diagram
+- [x] PlantUML syntax valid with sequence diagram notation
+- [x] Job enqueue flow documented (client → logic → database)
+- [x] Worker polling strategy illustrated (per-queue cadence)
+- [x] Distributed locking via FOR UPDATE SKIP LOCKED shown
+- [x] Retry logic with exponential backoff + jitter explained
+- [x] P12 SCREENSHOT semaphore acquisition flow detailed
+- [x] OpenTelemetry span attributes documented
+- [x] Escalation paths for failed jobs (PagerDuty/Slack/Email)
+- [x] Companion async-workloads.md operational guide
+- [x] Cross-references to JobQueue/JobType/JobHandler/DelayedJobService code
 
 ## Maintenance
 
