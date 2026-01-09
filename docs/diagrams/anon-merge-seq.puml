@@ -1,0 +1,229 @@
+@startuml anon-merge-seq
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "SF Pro Display"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+title Anonymous-to-Authenticated Account Merge Sequence\n(Policy P1 GDPR/CCPA Compliance, Policy P9 Anonymous Cookie Security)
+
+actor "User" as User
+participant "Browser" as Browser
+participant "Auth REST\nEndpoint" as AuthAPI
+participant "OAuth\nProvider" as OAuth
+participant "AuthIdentityService" as AuthService
+participant "AccountMergeService" as MergeService
+database "PostgreSQL\nusers, account_merge_audit" as DB
+participant "DelayedJobService" as JobService
+
+== Anonymous Session Establishment ==
+User -> Browser: Visit homepage
+Browser -> AuthAPI: GET /
+note right of AuthAPI
+  No vu_anon_id cookie present
+end note
+AuthAPI -> AuthService: issueAnonymousCookie()
+AuthService -> DB: INSERT INTO users\n(is_anonymous=TRUE)
+DB --> AuthService: Return anonymous_user_id
+AuthService --> AuthAPI: NewCookie(vu_anon_id=<uuid>)
+AuthAPI --> Browser: 200 OK\nSet-Cookie: vu_anon_id=<uuid>;\n  Secure; HttpOnly; SameSite=Lax; Max-Age=31536000
+Browser --> User: Show default homepage
+
+== Anonymous User Activity ==
+User -> Browser: Customize layout,\nsubscribe to topics
+Browser -> AuthAPI: POST /api/preferences
+note right of Browser
+  Cookie: vu_anon_id=<uuid>
+end note
+AuthAPI -> DB: UPDATE users\nSET preferences = {layout, topics}\nWHERE id = <anon_uuid>
+DB --> AuthAPI: Updated
+AuthAPI --> Browser: 200 OK
+Browser --> User: Preferences saved
+
+== OAuth Login Initiation ==
+User -> Browser: Click "Sign in with Google"
+Browser -> AuthAPI: GET /api/auth/login/google
+note right of AuthAPI
+  Cookie: vu_anon_id=<anon_uuid>
+end note
+AuthAPI -> AuthService: checkLoginRateLimit("google", ip_address)
+AuthService --> AuthAPI: Rate limit OK
+AuthAPI -> AuthService: buildLoginRedirectUri("google")
+AuthService --> AuthAPI: /q/oidc/login?tenant=google
+AuthAPI --> Browser: 302 Redirect\nLocation: /q/oidc/login?tenant=google
+Browser -> OAuth: OAuth authorization flow
+OAuth --> Browser: 302 Redirect with auth code
+Browser -> AuthAPI: GET /q/oidc/callback?code=<code>
+note right of AuthAPI
+  Quarkus OIDC handles OAuth callback,
+  validates token, extracts profile data
+end note
+
+== User Creation & Merge Detection ==
+AuthAPI -> DB: SELECT * FROM users\nWHERE oauth_provider='google'\n  AND oauth_id=<provider_user_id>
+alt User exists
+    DB --> AuthAPI: Existing authenticated user
+else New user
+    AuthAPI -> DB: INSERT INTO users\n(email, oauth_provider, oauth_id,\n is_anonymous=FALSE)
+    DB --> AuthAPI: Return authenticated_user_id
+end
+
+AuthAPI -> MergeService: detectMergeOpportunity(\n  anonymousUserId=<anon_uuid>,\n  authenticatedUserId=<auth_uuid>)
+note right of MergeService
+  Checks:
+  1. Anonymous user exists and is_anonymous=TRUE
+  2. Anonymous user has preferences data
+  3. No existing merge audit for this pair
+end note
+MergeService -> DB: SELECT * FROM users\nWHERE id=<anon_uuid>\n  AND is_anonymous=TRUE\n  AND preferences IS NOT NULL
+DB --> MergeService: Anonymous user with data
+MergeService -> DB: SELECT * FROM account_merge_audit\nWHERE anonymous_user_id=<anon_uuid>\n  AND authenticated_user_id=<auth_uuid>
+DB --> MergeService: No existing merge
+MergeService --> AuthAPI: Merge opportunity detected
+AuthAPI --> Browser: 200 OK with merge prompt flag\n{"mergePending": true, "authUserId": "<auth_uuid>"}
+
+== Consent Modal (Frontend) ==
+Browser --> User: Show consent modal:\n"Merge your anonymous session into your account?\n✓ Keep your layout and preferences\n✗ Decline (start fresh)"
+User -> Browser: Click "Merge" button
+
+== Consent Recording ==
+Browser -> AuthAPI: POST /api/auth/merge-consent
+note right of Browser
+  Body: {
+    "anonymousUserId": "<anon_uuid>",
+    "authenticatedUserId": "<auth_uuid>",
+    "consentGiven": true
+  }
+  Headers:
+    Cookie: vu_anon_id=<anon_uuid>
+    X-Forwarded-For: <ip_address>
+    User-Agent: <browser_ua>
+end note
+AuthAPI -> MergeService: recordConsent(\n  anonymousUserId, authenticatedUserId,\n  consentGiven=TRUE, ipAddress, userAgent)
+note right of MergeService
+  Policy P1: Record consent with
+  - Timestamp (now)
+  - IP address
+  - User agent
+  - Policy version ("1.0")
+  - Calculate purge_after = now + 90 days
+end note
+MergeService -> DB: INSERT INTO account_merge_audit\n(anonymous_user_id, authenticated_user_id,\n merged_data_summary={status: "pending_merge"},\n consent_given=TRUE, consent_timestamp=NOW(),\n consent_policy_version="1.0",\n ip_address=<ip>, user_agent=<ua>,\n purge_after=NOW() + INTERVAL '90 days')
+DB --> MergeService: Audit record created
+MergeService --> AuthAPI: MergeConsentResult(auditId, consentGiven=TRUE)
+AuthAPI --> Browser: 200 OK\n{"auditId": "<audit_uuid>", "status": "consent_recorded"}
+
+== Merge Execution ==
+Browser -> AuthAPI: POST /api/auth/execute-merge
+note right of Browser
+  Body: {"auditId": "<audit_uuid>"}
+end note
+AuthAPI -> MergeService: executeMerge(auditId)
+MergeService -> DB: SELECT * FROM account_merge_audit\nWHERE id=<audit_uuid>\n  AND consent_given=TRUE
+DB --> MergeService: Audit record with consent
+MergeService -> DB: SELECT * FROM users\nWHERE id=<anon_uuid>
+DB --> MergeService: Anonymous user
+MergeService -> DB: SELECT * FROM users\nWHERE id=<auth_uuid>
+DB --> MergeService: Authenticated user
+
+note right of MergeService
+  Merge logic:
+  1. Copy anonymous preferences to authenticated user
+  2. Authenticated user's existing preferences take precedence
+  3. Build data summary: {
+       preferences_merged: [keys],
+       original_preferences_keys: [keys],
+       final_preferences_keys: [keys],
+       merge_timestamp: ISO8601
+     }
+end note
+
+MergeService -> DB: BEGIN TRANSACTION
+MergeService -> DB: UPDATE users\nSET preferences = merge(anon.preferences, auth.preferences),\n    updated_at = NOW()\nWHERE id=<auth_uuid>
+MergeService -> DB: UPDATE account_merge_audit\nSET merged_data_summary = <full_summary>\nWHERE id=<audit_uuid>
+MergeService -> DB: UPDATE users\nSET deleted_at = NOW(),\n    updated_at = NOW()\nWHERE id=<anon_uuid>
+note right of MergeService
+  Policy P1: Soft-delete anonymous user
+  Record remains in database for 90 days
+  for compliance audits and data export requests
+end note
+MergeService -> DB: COMMIT
+DB --> MergeService: Transaction committed
+
+== Cleanup Job Scheduling ==
+MergeService -> JobService: enqueue(\n  JobType.ACCOUNT_MERGE_CLEANUP,\n  {audit_id: <audit_uuid>,\n   anonymous_user_id: <anon_uuid>,\n   purge_after: <timestamp>})
+JobService -> DB: INSERT INTO delayed_jobs\n(job_type='ACCOUNT_MERGE_CLEANUP',\n queue='DEFAULT',\n scheduled_at=<purge_after>,\n payload=<json>)
+DB --> JobService: Job enqueued
+JobService --> MergeService: job_id
+MergeService --> AuthAPI: MergeExecutionResult(\n  success=TRUE,\n  mergedDataSummary,\n  purgeAfter=<timestamp>)
+AuthAPI --> Browser: 200 OK\n{"status": "merged", "purgeAfter": "<iso8601>"}
+Browser --> User: "Merge successful!\nYour preferences have been saved."
+
+== Scheduled Cleanup (90 Days Later) ==
+... 90 days pass ...
+
+participant "Quarkus\nScheduler" as Scheduler
+participant "AccountMerge\nCleanupJobHandler" as CleanupHandler
+
+Scheduler -> JobService: @Scheduled poll(JobQueue.DEFAULT)\nDaily at 4am UTC
+JobService -> DB: SELECT * FROM delayed_jobs\nWHERE job_type='ACCOUNT_MERGE_CLEANUP'\n  AND scheduled_at <= NOW()\n  AND locked_at IS NULL
+DB --> JobService: [cleanup jobs ready]
+JobService -> CleanupHandler: execute(jobId, payload)
+CleanupHandler -> DB: SELECT * FROM account_merge_audit\nWHERE purge_after <= NOW()
+DB --> CleanupHandler: [audit records ready for purge]
+
+loop For each audit record
+    CleanupHandler -> DB: SELECT * FROM users\nWHERE id=<anon_uuid>
+    DB --> CleanupHandler: Soft-deleted anonymous user
+    note right of CleanupHandler
+      Validation:
+      - User must be soft-deleted (deleted_at IS NOT NULL)
+      - User must be anonymous (is_anonymous=TRUE)
+    end note
+    CleanupHandler -> DB: BEGIN TRANSACTION
+    CleanupHandler -> DB: DELETE FROM users\nWHERE id=<anon_uuid>
+    note right of CleanupHandler
+      Policy P1: Hard-delete after 90-day retention
+      This permanently removes PII from the database
+    end note
+    CleanupHandler -> DB: DELETE FROM account_merge_audit\nWHERE id=<audit_uuid>
+    CleanupHandler -> DB: COMMIT
+    DB --> CleanupHandler: Purge completed
+end
+
+CleanupHandler --> JobService: Cleanup completed
+JobService -> DB: DELETE FROM delayed_jobs\nWHERE id=<job_id>
+JobService --> Scheduler: Job finished
+
+note right of CleanupHandler
+  OpenTelemetry metrics:
+  - account_merge.cleanup.records_purged (counter)
+  - account_merge.cleanup.duration (histogram)
+  Logs include trace_id, audit_id, anonymous_user_id
+  for compliance audits
+end note
+
+== Opt-Out Path (Alternative Flow) ==
+User -> Browser: Click "Decline" button\nin consent modal
+Browser -> AuthAPI: POST /api/auth/merge-consent
+note right of Browser
+  Body: {
+    "anonymousUserId": "<anon_uuid>",
+    "authenticatedUserId": "<auth_uuid>",
+    "consentGiven": false
+  }
+end note
+AuthAPI -> MergeService: recordConsent(\n  anonymousUserId, authenticatedUserId,\n  consentGiven=FALSE, ipAddress, userAgent)
+MergeService -> DB: INSERT INTO account_merge_audit\n(consent_given=FALSE,\n merged_data_summary={status: "declined"})
+DB --> MergeService: Audit record created
+note right of MergeService
+  No merge executed.
+  Anonymous user remains separate.
+  Audit log kept for compliance (consent was requested).
+  Anonymous user will be purged per normal retention policy.
+end note
+MergeService --> AuthAPI: MergeConsentResult(auditId, consentGiven=FALSE)
+AuthAPI --> Browser: 200 OK\n{"status": "declined"}
+Browser --> User: "Starting fresh with your new account."
+
+@enduml

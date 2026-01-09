@@ -68,6 +68,17 @@ public enum JobType {
      */
     INBOUND_EMAIL(JobQueue.DEFAULT, "Inbound email parsing (1 minute)"),
 
+    /**
+     * Purges soft-deleted anonymous user records after 90-day retention period.
+     * <p>
+     * <b>Cadence:</b> Daily at 4am UTC
+     * <p>
+     * <b>Handler:</b> AccountMergeCleanupJobHandler
+     * <p>
+     * <b>Policy P1:</b> GDPR/CCPA compliance - hard-deletes anonymous accounts merged into authenticated accounts
+     */
+    ACCOUNT_MERGE_CLEANUP(JobQueue.DEFAULT, "Account merge cleanup (daily, P1 enforced)"),
+
     // ========== HIGH QUEUE ==========
 
     /**
