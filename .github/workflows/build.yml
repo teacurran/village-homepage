@@ -1,0 +1,223 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: '21'
+  NODE_VERSION: '20.10.0'
+  MAVEN_CLI_OPTS: '-B --no-transfer-progress'
+
+jobs:
+  build-and-test:
+    name: Build, Test, and Quality Gates
+    runs-on: ubuntu-latest
+
+    steps:
+      # ================================
+      # 1. Checkout Code
+      # ================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for SonarCloud analysis
+
+      # ================================
+      # 2. Setup Java
+      # ================================
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # ================================
+      # 3. Setup Node.js (for npm caching)
+      # ================================
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # ================================
+      # 4. Plan Compliance Verification (Section 4)
+      # ================================
+      - name: Verify plan manifests (Section 4)
+        run: |
+          node .codemachine/scripts/extract_tasks.js
+          if ! git diff --quiet -- .codemachine/artifacts/tasks; then
+            echo "::error::Plan artifacts drifted from .codemachine/artifacts/plan. Run 'node .codemachine/scripts/extract_tasks.js' locally and commit the updates (Section 4 compliance)."
+            git --no-pager diff -- .codemachine/artifacts/tasks
+            exit 1
+          fi
+
+      # ================================
+      # 5. Cache Maven Dependencies
+      # ================================
+      - name: Cache Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # ================================
+      # 6. Cache Node Installation
+      # ================================
+      - name: Cache Node installation (frontend-maven-plugin)
+        uses: actions/cache@v4
+        with:
+          path: target/node
+          key: ${{ runner.os }}-node-${{ hashFiles('pom.xml') }}-${{ env.NODE_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # ================================
+      # 7. Install Dependencies
+      # ================================
+      - name: Install dependencies
+        run: node tools/install.cjs
+
+      # ================================
+      # 8. Code Formatting Check (Spotless)
+      # ================================
+      - name: Check code formatting (Spotless)
+        run: ./mvnw spotless:check ${{ env.MAVEN_CLI_OPTS }}
+
+      # ================================
+      # 9. Frontend Lint Check
+      # ================================
+      - name: Lint TypeScript/React code
+        run: npm run lint
+
+      # ================================
+      # 10. Frontend Type Check
+      # ================================
+      - name: Type check TypeScript code
+        run: npm run typecheck
+
+      # ================================
+      # 11. Build Frontend Assets
+      # ================================
+      - name: Build frontend assets
+        run: npm run build
+
+      # ================================
+      # 12. Run Unit and Integration Tests
+      # ================================
+      - name: Run tests with coverage
+        run: ./mvnw verify -DskipITs=false ${{ env.MAVEN_CLI_OPTS }}
+        env:
+          # Quarkus test configuration
+          QUARKUS_TEST_NATIVE_IMAGE_PROFILE: test
+          # Disable services that require external connections in CI
+          QUARKUS_LANGCHAIN4J_ANTHROPIC_ENABLED: false
+
+      # ================================
+      # 13. Generate JaCoCo Coverage Report
+      # ================================
+      - name: Generate coverage report
+        run: ./mvnw jacoco:report ${{ env.MAVEN_CLI_OPTS }}
+
+      # ================================
+      # 14. Upload Coverage to Codecov (Optional)
+      # ================================
+      # Uncomment when Codecov is configured
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     files: ./target/site/jacoco/jacoco.xml
+      #     flags: unittests
+      #     name: codecov-umbrella
+      #     fail_ci_if_error: true
+
+      # ================================
+      # 15. SonarCloud Scan
+      # ================================
+      # Uncomment and configure when SonarCloud credentials are available
+      # - name: SonarCloud Scan
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   run: |
+      #     ./mvnw sonar:sonar ${{ env.MAVEN_CLI_OPTS }} \
+      #       -Dsonar.projectKey=VillageCompute_village-homepage \
+      #       -Dsonar.organization=villagecompute \
+      #       -Dsonar.host.url=https://sonarcloud.io \
+      #       -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+      #       -Dsonar.qualitygate.wait=true
+
+      # ================================
+      # 16. Build Container Image (Jib)
+      # ================================
+      - name: Build container image (Jib - no push)
+        run: ./mvnw package jib:dockerBuild -DskipTests ${{ env.MAVEN_CLI_OPTS }}
+        # Note: This builds to the local Docker daemon for validation
+        # To push to a registry, configure credentials and use jib:build with registry settings
+
+      # ================================
+      # 17. Upload Test Results
+      # ================================
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+            target/site/jacoco/
+
+      # ================================
+      # 18. Upload Build Artifacts
+      # ================================
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            target/*.jar
+            target/site/jacoco/jacoco.xml
+
+  # ================================
+  # Container Registry Push (Optional - Manual/Scheduled)
+  # ================================
+  # Uncomment when registry credentials are configured
+  # push-container:
+  #   name: Push Container to Registry
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-test
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Set up JDK 21
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         java-version: ${{ env.JAVA_VERSION }}
+  #         distribution: 'temurin'
+  #         cache: 'maven'
+  #
+  #     - name: Log in to Container Registry
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #
+  #     - name: Build and push container image
+  #       run: |
+  #         ./mvnw package jib:build ${{ env.MAVEN_CLI_OPTS }} \
+  #           -DskipTests \
+  #           -Djib.to.image=ghcr.io/villagecompute/village-homepage:${{ github.sha }} \
+  #           -Djib.to.tags=latest

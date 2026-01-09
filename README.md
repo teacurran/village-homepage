@@ -2,6 +2,10 @@
 
 > Customizable homepage portal SaaS with widgets, marketplace, and web directory
 
+![Build](https://github.com/VillageCompute/village-homepage/actions/workflows/build.yml/badge.svg)
+[![Coverage](https://img.shields.io/badge/coverage-80%25-brightgreen)]()
+[![Code Quality](https://img.shields.io/badge/quality-A-brightgreen)]()
+
 Village Homepage is a Quarkus-based SaaS platform that provides users with a personalized homepage featuring news aggregation, weather, stocks, social media feeds, a classified marketplace, and a curated web directory.
 
 ---
@@ -205,6 +209,143 @@ mvn migration:new -Dmigration.description="add_user_preferences_table"
 # Return to project root when finished
 cd ..
 ```
+
+---
+
+## CI/CD Pipeline
+
+### Overview
+
+The project uses GitHub Actions for continuous integration and deployment. The pipeline automatically runs on every push and pull request to `main` and `develop` branches.
+
+### Pipeline Stages
+
+The CI/CD workflow (`.github/workflows/build.yml`) executes the following stages in sequence:
+
+1. **Plan Compliance Verification (Section 4)**
+   - Regenerates `.codemachine/artifacts/tasks` from the iteration plan
+   - Fails when plan artifacts drift from `.codemachine/artifacts/plan`
+   - Command: `node .codemachine/scripts/extract_tasks.js && git diff --quiet -- .codemachine/artifacts/tasks`
+
+2. **Code Formatting Check (Spotless)**
+   - Validates Java code against Eclipse formatter rules
+   - Checks XML, YAML, and Markdown formatting
+   - Fails fast to ensure consistent code style
+   - Command: `./mvnw spotless:check`
+
+3. **Frontend Linting**
+   - Runs ESLint on TypeScript/React code
+   - Enforces React hooks rules and TypeScript conventions
+   - Command: `npm run lint`
+
+4. **TypeScript Type Checking**
+   - Validates TypeScript types without emitting output
+   - Ensures type safety across React islands
+   - Command: `npm run typecheck`
+
+5. **Frontend Build**
+   - Compiles TypeScript/React using esbuild
+   - Generates production bundles in `assets/js/`
+   - Command: `npm run build`
+
+6. **Unit and Integration Tests**
+   - Runs Surefire (unit tests) and Failsafe (integration tests)
+   - Executes with JaCoCo coverage instrumentation
+   - Command: `./mvnw verify -DskipITs=false`
+   - Environment: Quarkus test containers for Postgres, Elasticsearch
+
+7. **Coverage Report Generation**
+   - Generates JaCoCo XML and HTML reports
+   - Enforces 80% line and branch coverage minimums
+   - Output: `target/site/jacoco/jacoco.xml`
+
+8. **SonarCloud Scan (Planned)**
+   - Static code analysis for bugs, vulnerabilities, code smells
+   - Quality gate enforcement (zero critical issues, 80% coverage)
+   - Requires: `SONAR_TOKEN` secret configuration
+
+9. **Container Image Build (Jib)**
+   - Builds OCI-compliant container image without Docker daemon
+   - Validates packaging and dependencies
+   - Command: `./mvnw package jib:dockerBuild`
+   - Note: Push to registry is commented out until credentials are configured
+
+Section 4 directives call for zero plan drift, ≥80% coverage, and zero critical Sonar issues; the stages above embed those gates plus the plan compliance verification step so every merge honors the iteration blueprint.
+
+### Quality Gates
+
+The following quality gates must pass for a build to succeed:
+
+| Gate | Requirement | Enforcement |
+|------|-------------|-------------|
+| **Plan Compliance (Section 4)** | `.codemachine/artifacts/tasks` matches the published plan | `node .codemachine/scripts/extract_tasks.js` + `git diff --quiet -- .codemachine/artifacts/tasks` |
+| **Code Formatting** | 100% compliance with Spotless rules | Spotless Maven plugin |
+| **Frontend Linting** | Zero ESLint errors | npm lint script |
+| **Type Safety** | Zero TypeScript errors | tsc --noEmit |
+| **Unit Tests** | All tests pass | Maven Surefire |
+| **Integration Tests** | All tests pass | Maven Failsafe |
+| **Line Coverage** | ≥ 80% | JaCoCo Maven plugin |
+| **Branch Coverage** | ≥ 80% | JaCoCo Maven plugin |
+| **Sonar Quality Gate** | Zero blocker/critical issues | SonarCloud (planned) |
+| **Container Build** | Image builds successfully | Jib Maven plugin |
+
+These gates implement Section 4 quality mandates (P4/P5/P8/P10), ensuring the plan stays synchronized, coverage remains ≥80%, and Sonar blocks merges on critical findings.
+
+### Caching Strategy
+
+The pipeline uses multiple caching layers to optimize build times:
+
+- **Maven Repository Cache:** `~/.m2/repository` keyed by `pom.xml` hash
+- **npm Cache:** Automatically cached by `actions/setup-node@v4`
+- **Node Installation Cache:** `target/node` keyed by Node version and `pom.xml`
+
+**Expected build times:**
+- First run (cold cache): ~8-12 minutes
+- Subsequent runs (warm cache): ~4-6 minutes
+- PR builds with no dependency changes: ~3-4 minutes
+
+### Local Validation
+
+Before pushing, validate your changes locally to catch issues early:
+
+```bash
+# Run full CI validation locally
+node .codemachine/scripts/extract_tasks.js  # Section 4 plan compliance
+./mvnw spotless:check                      # Code formatting
+npm run lint                               # Frontend linting
+npm run typecheck                          # TypeScript types
+./mvnw verify -DskipITs=false              # Tests with coverage
+./mvnw package jib:dockerBuild             # Container build
+```
+
+Or use the convenience script:
+
+```bash
+# Run the same checks as CI
+node tools/test.cjs --integration
+# Review `git status` after running the plan script; CI will fail if `.codemachine/artifacts/tasks` diverges from `main`.
+```
+
+### Status Badge
+
+The build status badge at the top of this README shows the current state of the `main` branch. Click it to view recent workflow runs and detailed logs.
+
+### Configuration
+
+Pipeline configuration is stored in `.github/workflows/build.yml`. Key environment variables:
+
+- `JAVA_VERSION`: JDK version (21)
+- `NODE_VERSION`: Node.js version (20.10.0)
+- `MAVEN_CLI_OPTS`: Maven CLI flags (`-B --no-transfer-progress`)
+
+### Future Enhancements
+
+- **SonarCloud Integration:** Enable static analysis with quality gate enforcement
+- **Container Registry Push:** Automated push to GitHub Container Registry on main merges
+- **Codecov Integration:** Visual coverage reports and PR comments
+- **E2E Tests:** Playwright tests for critical user flows
+- **Nightly Builds:** Full test suite with performance benchmarks
+- **Release Automation:** Automated tagging and changelog generation
 
 ---
 

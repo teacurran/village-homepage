@@ -100,7 +100,7 @@
       "I1.T5"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T7",
@@ -119,7 +119,7 @@
       "I1.T6"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T8",
