@@ -60,6 +60,15 @@ public enum JobType {
     LISTING_REMINDER(JobQueue.DEFAULT, "Listing reminder (daily)"),
 
     /**
+     * Expires old featured listing promotions past their 7-day duration.
+     * <p>
+     * <b>Cadence:</b> Daily at 3am UTC
+     * <p>
+     * <b>Handler:</b> PromotionExpirationJobHandler
+     */
+    PROMOTION_EXPIRATION(JobQueue.DEFAULT, "Promotion expiration (daily)"),
+
+    /**
      * Recalculates Good Sites ranking scores based on votes and category position.
      * <p>
      * <b>Cadence:</b> Every 1 hour

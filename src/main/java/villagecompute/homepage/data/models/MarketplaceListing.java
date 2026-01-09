@@ -182,6 +182,10 @@ public class MarketplaceListing extends PanacheEntityBase {
     public Instant lastBumpedAt;
 
     @Column(
+            name = "payment_intent_id")
+    public String paymentIntentId;
+
+    @Column(
             name = "reminder_sent",
             nullable = false)
     public boolean reminderSent;

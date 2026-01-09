@@ -159,6 +159,12 @@ villagecompute:
         max-requests: ${BOOTSTRAP_MAX_REQUESTS:5}
         window-seconds: ${BOOTSTRAP_WINDOW_SECONDS:3600}
 
+  # Stripe Payment Integration (Policy P3, Feature F12.8)
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:sk_test_CHANGE_ME}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_CHANGE_ME}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_CHANGE_ME}
+
   # LangChain4j AI Integration (Policy P2/P10)
   langchain4j:
     anthropic:

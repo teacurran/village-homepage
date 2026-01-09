@@ -290,4 +290,72 @@ public class ObservabilityMetrics {
 
         counter.increment();
     }
+
+    /**
+     * Increments the payment intent created counter.
+     *
+     * <p>
+     * Called by PaymentService when a Stripe Payment Intent is created.
+     *
+     * @param paymentType
+     *            payment type: "posting_fee" or "promotion_featured" or "promotion_bump"
+     */
+    public void incrementPaymentIntentCreated(String paymentType) {
+        Counter.builder("homepage_payments_intents_created_total")
+                .description("Total Payment Intents created via Stripe").tag("type", paymentType).register(registry)
+                .increment();
+    }
+
+    /**
+     * Increments the payment succeeded counter.
+     *
+     * <p>
+     * Called by PaymentService when a payment_intent.succeeded webhook is processed.
+     *
+     * @param paymentType
+     *            payment type
+     */
+    public void incrementPaymentSucceeded(String paymentType) {
+        Counter.builder("homepage_payments_succeeded_total").description("Total successful payments")
+                .tag("type", paymentType).register(registry).increment();
+    }
+
+    /**
+     * Increments the payment failed counter.
+     *
+     * <p>
+     * Called by PaymentService when a payment_intent.payment_failed webhook is processed.
+     *
+     * @param paymentType
+     *            payment type
+     */
+    public void incrementPaymentFailed(String paymentType) {
+        Counter.builder("homepage_payments_failed_total").description("Total failed payments").tag("type", paymentType)
+                .register(registry).increment();
+    }
+
+    /**
+     * Increments the refund processed counter.
+     *
+     * <p>
+     * Called by PaymentService when a refund is successfully processed via Stripe.
+     */
+    public void incrementRefundProcessed() {
+        Counter.builder("homepage_refunds_processed_total").description("Total refunds processed via Stripe")
+                .register(registry).increment();
+    }
+
+    /**
+     * Increments the webhook received counter.
+     *
+     * <p>
+     * Called by StripeWebhookResource when a webhook event is received.
+     *
+     * @param eventType
+     *            Stripe event type (e.g., "payment_intent.succeeded")
+     */
+    public void incrementWebhookReceived(String eventType) {
+        Counter.builder("homepage_webhooks_received_total").description("Total Stripe webhook events received")
+                .tag("event_type", eventType).register(registry).increment();
+    }
 }
