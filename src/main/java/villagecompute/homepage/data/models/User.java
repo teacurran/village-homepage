@@ -37,6 +37,9 @@ import java.util.UUID;
  * <li>{@code is_anonymous} (BOOLEAN) - Anonymous vs authenticated flag</li>
  * <li>{@code directory_karma} (INT) - Good Sites voting karma</li>
  * <li>{@code directory_trust_level} (TEXT) - Trust level: untrusted, trusted, moderator</li>
+ * <li>{@code admin_role} (TEXT) - Admin role: super_admin, support, ops, read_only (null for non-admin)</li>
+ * <li>{@code admin_role_granted_by} (UUID) - User ID who granted the admin role</li>
+ * <li>{@code admin_role_granted_at} (TIMESTAMPTZ) - When admin role was granted</li>
  * <li>{@code analytics_consent} (BOOLEAN) - Consent for analytics tracking (Policy P14)</li>
  * <li>{@code last_active_at} (TIMESTAMPTZ) - Last activity timestamp</li>
  * <li>{@code created_at} (TIMESTAMPTZ) - Record creation timestamp</li>
@@ -53,9 +56,16 @@ public class User extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(User.class);
 
+    // Roles mirror village-storefront constants per Foundation Blueprint Section 3.7.1
+    public static final String ROLE_SUPER_ADMIN = "super_admin";
+    public static final String ROLE_SUPPORT = "support";
+    public static final String ROLE_OPS = "ops";
+    public static final String ROLE_READ_ONLY = "read_only";
+
     public static final String QUERY_FIND_BY_EMAIL = "User.findByEmail";
     public static final String QUERY_FIND_BY_OAUTH = "User.findByOAuth";
     public static final String QUERY_FIND_PENDING_PURGE = "User.findPendingPurge";
+    public static final String QUERY_FIND_ADMINS = "User.findAdmins";
 
     @Id
     @GeneratedValue
@@ -102,6 +112,18 @@ public class User extends PanacheEntityBase {
             name = "directory_trust_level",
             nullable = false)
     public String directoryTrustLevel;
+
+    @Column(
+            name = "admin_role")
+    public String adminRole;
+
+    @Column(
+            name = "admin_role_granted_by")
+    public UUID adminRoleGrantedBy;
+
+    @Column(
+            name = "admin_role_granted_at")
+    public Instant adminRoleGrantedAt;
 
     @Column(
             name = "analytics_consent",
@@ -170,6 +192,29 @@ public class User extends PanacheEntityBase {
      */
     public static java.util.List<User> findPendingPurge() {
         return find("#" + QUERY_FIND_PENDING_PURGE + " WHERE deleted_at IS NOT NULL AND deleted_at < NOW()").list();
+    }
+
+    /**
+     * Finds all users with admin roles.
+     *
+     * @return list of users with admin roles (super_admin, support, ops, read_only)
+     */
+    public static java.util.List<User> findAdmins() {
+        return find("#" + QUERY_FIND_ADMINS + " WHERE admin_role IS NOT NULL AND deleted_at IS NULL").list();
+    }
+
+    /**
+     * Finds all users with a specific admin role.
+     *
+     * @param role
+     *            the admin role to filter by (super_admin, support, ops, read_only)
+     * @return list of users with the specified admin role
+     */
+    public static java.util.List<User> findByAdminRole(String role) {
+        if (role == null || role.isBlank()) {
+            return java.util.List.of();
+        }
+        return find("admin_role = ?1 AND deleted_at IS NULL", role).list();
     }
 
     /**
@@ -293,5 +338,61 @@ public class User extends PanacheEntityBase {
     public UserSnapshot toSnapshot() {
         return new UserSnapshot(this.id, this.email, this.oauthProvider, this.displayName, this.isAnonymous,
                 this.preferences != null ? this.preferences.keySet() : java.util.Set.of(), this.updatedAt);
+    }
+
+    /**
+     * Checks if this user has any admin role.
+     *
+     * @return true if user has an admin role, false otherwise
+     */
+    public boolean isAdmin() {
+        return this.adminRole != null && !this.adminRole.isBlank();
+    }
+
+    /**
+     * Checks if this user has the super_admin role.
+     *
+     * @return true if user is a super admin, false otherwise
+     */
+    public boolean isSuperAdmin() {
+        return ROLE_SUPER_ADMIN.equals(this.adminRole);
+    }
+
+    /**
+     * Checks if this user has the support role.
+     *
+     * @return true if user is a support admin, false otherwise
+     */
+    public boolean isSupport() {
+        return ROLE_SUPPORT.equals(this.adminRole);
+    }
+
+    /**
+     * Checks if this user has the ops role.
+     *
+     * @return true if user is an ops admin, false otherwise
+     */
+    public boolean isOps() {
+        return ROLE_OPS.equals(this.adminRole);
+    }
+
+    /**
+     * Checks if this user has the read_only role.
+     *
+     * @return true if user is a read-only admin, false otherwise
+     */
+    public boolean isReadOnly() {
+        return ROLE_READ_ONLY.equals(this.adminRole);
+    }
+
+    /**
+     * Checks if this user has a specific admin role.
+     *
+     * @param role
+     *            the role to check (super_admin, support, ops, read_only)
+     * @return true if user has the specified role, false otherwise
+     */
+    public boolean hasRole(String role) {
+        return role != null && role.equals(this.adminRole);
     }
 }

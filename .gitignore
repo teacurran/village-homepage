@@ -3,6 +3,7 @@
 .codemachine/memory
 .codemachine/prompts
 .codemachine/agents
+.codemachine/artifacts
 .codemachine/template.json
 
 # Maven build artifacts

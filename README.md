@@ -706,6 +706,7 @@ village-homepage/
 - **Good Sites Directory:** Curated web directory with voting, screenshots, and AI categorization
 - **Public Profiles:** Shareable homepage templates with SEO optimization
 - **OAuth Authentication:** Google, Facebook, Apple sign-in with anonymous account merging
+- **Admin RBAC:** Four-tier role system (super_admin, support, ops, read_only) with audit logging and impersonation tracking - see [RBAC Documentation](docs/ops/rbac.md)
 - **AI-Powered:** Content tagging, categorization, and recommendations via LangChain4j
 - **Delayed Job System:** Background processing for feed refresh, AI tasks, screenshots, and email relay
 

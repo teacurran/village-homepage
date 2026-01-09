@@ -7,6 +7,7 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -15,6 +16,8 @@ import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.UriInfo;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
+import villagecompute.homepage.data.models.ImpersonationAudit;
+import villagecompute.homepage.data.models.User;
 import villagecompute.homepage.observability.LoggingConfig;
 
 import javax.crypto.Mac;
@@ -27,6 +30,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -227,7 +231,8 @@ public class AuthIdentityService {
     }
 
     /**
-     * Finalizes bootstrap flow by minting a JWT session token and marking the superuser as provisioned.
+     * Finalizes bootstrap flow by creating the first super admin user, minting a JWT session token, and marking the
+     * superuser as provisioned.
      */
     public BootstrapSession createSuperuser(String email, String provider, String providerUserId) {
         Objects.requireNonNull(email, "email is required");
@@ -249,14 +254,22 @@ public class AuthIdentityService {
                 throw new IllegalStateException("Superuser already provisioned");
             }
 
-            String subject = UUID.randomUUID().toString();
+            // Create the first super admin user in database
+            User superuser = User.createAuthenticated(email, normalizedProvider, providerUserId, "Super Admin", null);
+            superuser.adminRole = User.ROLE_SUPER_ADMIN;
+            superuser.adminRoleGrantedAt = Instant.now();
+            // adminRoleGrantedBy is null for bootstrap user (self-granted)
+            QuarkusTransaction.requiringNew().run(() -> superuser.persist());
+
+            String subject = superuser.id.toString();
             Instant issuedAt = Instant.now();
             Instant expiresAt = issuedAt.plus(jwtExpirationMinutes, ChronoUnit.MINUTES);
             String jwt = generateJwt(subject, email, normalizedProvider, issuedAt, expiresAt);
 
-            LOG.infof("Bootstrap superuser created for %s via %s", email, normalizedProvider);
-            span.addEvent("superuser.created", Attributes.of(AttributeKey.stringKey("email"), email,
-                    AttributeKey.stringKey("provider"), normalizedProvider));
+            LOG.infof("Bootstrap superuser created for %s via %s with id=%s", email, normalizedProvider, superuser.id);
+            span.addEvent("superuser.created",
+                    Attributes.of(AttributeKey.stringKey("email"), email, AttributeKey.stringKey("provider"),
+                            normalizedProvider, AttributeKey.stringKey("user_id"), superuser.id.toString()));
             return new BootstrapSession(jwt, expiresAt, email, normalizedProvider);
         } finally {
             LoggingConfig.clearMDC();
@@ -326,6 +339,202 @@ public class AuthIdentityService {
             case "none" -> NewCookie.SameSite.NONE;
             default -> NewCookie.SameSite.LAX;
         };
+    }
+
+    /**
+     * Assigns an admin role to a user.
+     *
+     * @param userId
+     *            the user to assign the role to
+     * @param role
+     *            the role to assign (super_admin, support, ops, read_only)
+     * @param grantedBy
+     *            the user ID who is granting the role
+     * @throws IllegalArgumentException
+     *             if user not found or role is invalid
+     */
+    public void assignRole(UUID userId, String role, UUID grantedBy) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(role, "role is required");
+        Objects.requireNonNull(grantedBy, "grantedBy is required");
+
+        // Validate role
+        if (!Set.of(User.ROLE_SUPER_ADMIN, User.ROLE_SUPPORT, User.ROLE_OPS, User.ROLE_READ_ONLY).contains(role)) {
+            throw new IllegalArgumentException("Invalid role: " + role);
+        }
+
+        QuarkusTransaction.requiringNew().run(() -> {
+            User user = User.findById(userId);
+            if (user == null || user.deletedAt != null) {
+                throw new IllegalArgumentException("User not found: " + userId);
+            }
+
+            user.adminRole = role;
+            user.adminRoleGrantedBy = grantedBy;
+            user.adminRoleGrantedAt = Instant.now();
+            user.updatedAt = Instant.now();
+            user.persist();
+
+            LOG.infof("Assigned role %s to user %s by %s", role, userId, grantedBy);
+        });
+    }
+
+    /**
+     * Revokes admin role from a user.
+     *
+     * @param userId
+     *            the user to revoke the role from
+     * @param revokedBy
+     *            the user ID who is revoking the role
+     * @throws IllegalArgumentException
+     *             if user not found
+     */
+    public void revokeRole(UUID userId, UUID revokedBy) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(revokedBy, "revokedBy is required");
+
+        QuarkusTransaction.requiringNew().run(() -> {
+            User user = User.findById(userId);
+            if (user == null || user.deletedAt != null) {
+                throw new IllegalArgumentException("User not found: " + userId);
+            }
+
+            String previousRole = user.adminRole;
+            user.adminRole = null;
+            user.adminRoleGrantedBy = null;
+            user.adminRoleGrantedAt = null;
+            user.updatedAt = Instant.now();
+            user.persist();
+
+            LOG.infof("Revoked role %s from user %s by %s", previousRole, userId, revokedBy);
+        });
+    }
+
+    /**
+     * Gets the admin role for a user.
+     *
+     * @param userId
+     *            the user ID
+     * @return Optional containing the role if user exists and has an admin role
+     */
+    public Optional<String> getUserRole(UUID userId) {
+        if (userId == null) {
+            return Optional.empty();
+        }
+
+        User user = User.findById(userId);
+        if (user == null || user.deletedAt != null) {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(user.adminRole);
+    }
+
+    /**
+     * Checks if a user has a specific admin role.
+     *
+     * @param userId
+     *            the user ID
+     * @param role
+     *            the role to check
+     * @return true if user has the specified role, false otherwise
+     */
+    public boolean hasRole(UUID userId, String role) {
+        if (userId == null || role == null) {
+            return false;
+        }
+
+        User user = User.findById(userId);
+        if (user == null || user.deletedAt != null) {
+            return false;
+        }
+
+        return role.equals(user.adminRole);
+    }
+
+    /**
+     * Starts an impersonation session and logs it to the audit table.
+     *
+     * @param impersonatorId
+     *            the user ID performing the impersonation (must have admin role)
+     * @param targetUserId
+     *            the user ID being impersonated
+     * @param ipAddress
+     *            IP address of the impersonator
+     * @param userAgent
+     *            user agent string of the impersonator
+     * @return the created impersonation audit entry
+     * @throws IllegalArgumentException
+     *             if impersonator is not an admin or target user not found
+     */
+    public ImpersonationAudit startImpersonation(UUID impersonatorId, UUID targetUserId, String ipAddress,
+            String userAgent) {
+        Objects.requireNonNull(impersonatorId, "impersonatorId is required");
+        Objects.requireNonNull(targetUserId, "targetUserId is required");
+
+        // Validate impersonator has admin role
+        User impersonator = User.findById(impersonatorId);
+        if (impersonator == null || !impersonator.isAdmin()) {
+            throw new IllegalArgumentException("Impersonator must have an admin role. User: " + impersonatorId);
+        }
+
+        // Validate target user exists
+        User target = User.findById(targetUserId);
+        if (target == null || target.deletedAt != null) {
+            throw new IllegalArgumentException("Target user not found: " + targetUserId);
+        }
+
+        // Check for existing active session
+        Optional<ImpersonationAudit> existingSession = ImpersonationAudit.findActiveSession(impersonatorId,
+                targetUserId);
+        if (existingSession.isPresent()) {
+            LOG.warnf("Active impersonation session already exists: %s", existingSession.get().id);
+            return existingSession.get();
+        }
+
+        return ImpersonationAudit.startSession(impersonatorId, targetUserId, ipAddress, userAgent);
+    }
+
+    /**
+     * Ends an impersonation session.
+     *
+     * @param impersonatorId
+     *            the user ID performing the impersonation
+     * @param targetUserId
+     *            the user ID being impersonated
+     * @throws IllegalArgumentException
+     *             if no active session found
+     */
+    public void endImpersonation(UUID impersonatorId, UUID targetUserId) {
+        Objects.requireNonNull(impersonatorId, "impersonatorId is required");
+        Objects.requireNonNull(targetUserId, "targetUserId is required");
+
+        Optional<ImpersonationAudit> activeSession = ImpersonationAudit.findActiveSession(impersonatorId, targetUserId);
+        if (activeSession.isEmpty()) {
+            throw new IllegalArgumentException("No active impersonation session found for impersonator="
+                    + impersonatorId + ", target=" + targetUserId);
+        }
+
+        activeSession.get().endSession();
+    }
+
+    /**
+     * Gets the impersonation history for a user (either as impersonator or target).
+     *
+     * @param userId
+     *            the user ID
+     * @param asImpersonator
+     *            if true, get sessions where user was the impersonator; if false, where user was the target
+     * @return list of impersonation audit entries
+     */
+    public List<ImpersonationAudit> getImpersonationHistory(UUID userId, boolean asImpersonator) {
+        Objects.requireNonNull(userId, "userId is required");
+
+        if (asImpersonator) {
+            return ImpersonationAudit.findByImpersonator(userId);
+        } else {
+            return ImpersonationAudit.findByTarget(userId);
+        }
     }
 
     public enum BootstrapValidationResult {
