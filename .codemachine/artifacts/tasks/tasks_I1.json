@@ -12,7 +12,7 @@
     "acceptance_criteria": "Builds pass with `./mvnw quarkus:dev`, CI compiles with Java 21, plugin checks succeed, ADR merged with sign-off, no dependency conflicts.",
     "dependencies": [],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T2",

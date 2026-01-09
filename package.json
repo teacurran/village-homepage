@@ -1,0 +1,13 @@
+{
+  "name": "village-homepage",
+  "version": "1.0.0",
+  "description": "Village Homepage frontend assets",
+  "scripts": {
+    "build": "echo 'Frontend build placeholder - TypeScript build will be implemented in subsequent tasks'",
+    "watch": "echo 'Frontend watch mode placeholder'"
+  },
+  "keywords": [],
+  "author": "VillageCompute",
+  "license": "UNLICENSED",
+  "private": true
+}

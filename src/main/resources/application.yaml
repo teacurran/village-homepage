@@ -1,0 +1,9 @@
+quarkus:
+  application:
+    name: village-homepage
+  http:
+    port: 8080
+  log:
+    level: INFO
+    console:
+      format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
