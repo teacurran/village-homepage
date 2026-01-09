@@ -37,3 +37,15 @@ quarkus:
       driver: org.h2.Driver
     devservices:
       enabled: false
+
+  # Disable OIDC security for integration tests
+  oidc:
+    enabled: false
+  security:
+    auth:
+      enabled-in-dev-mode: false
+    jpa:
+      enabled: false
+
+alphavantage:
+  api-key: test-api-key
