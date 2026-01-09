@@ -61,7 +61,8 @@ public class StockRefreshScheduler {
      * jobs with market hours scheduler).
      */
     @Scheduled(
-            cron = "0 0 * * * 1-5")
+            cron = "0 0 * * * ?",
+            identity = "after-hours-refresh")
     void scheduleAfterHoursRefresh() {
         if (!stockService.isMarketOpen()) {
             LOG.debug("After hours on weekday, enqueuing stock refresh job");
@@ -78,7 +79,8 @@ public class StockRefreshScheduler {
      * Stock prices don't change on weekends, so we refresh infrequently to keep cache warm for Monday morning.
      */
     @Scheduled(
-            cron = "0 0/6 * * * 0,6")
+            cron = "0 0/6 * * * ?",
+            identity = "weekend-refresh")
     void scheduleWeekendRefresh() {
         LOG.debug("Weekend refresh, enqueuing stock refresh job");
         jobService.enqueue(JobType.STOCK_REFRESH, Map.of());

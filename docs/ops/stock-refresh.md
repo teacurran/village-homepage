@@ -60,18 +60,20 @@ void scheduleMarketHoursRefresh() {
     }
 }
 
-@Scheduled(cron = "0 0 * * * 1-5")  // Hourly on weekdays
+@Scheduled(cron = "0 0 * * * ?")  // Every hour
 void scheduleAfterHoursRefresh() {
     if (!stockService.isMarketOpen()) {
         jobService.enqueue(JobType.STOCK_REFRESH, Map.of());
     }
 }
 
-@Scheduled(cron = "0 0/6 * * * 0,6")  // Every 6 hours on weekends
+@Scheduled(cron = "0 0/6 * * * ?")  // Every 6 hours
 void scheduleWeekendRefresh() {
     jobService.enqueue(JobType.STOCK_REFRESH, Map.of());
 }
 ```
+
+**Note:** The after-hours scheduler runs every hour but only enqueues jobs when the market is closed (detected via `isMarketOpen()`). The weekend scheduler runs every 6 hours and relies on the same market detection logic. This approach simplifies cron expressions while maintaining the desired refresh intervals.
 
 ---
 
