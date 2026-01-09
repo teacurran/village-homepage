@@ -8,11 +8,15 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
+import villagecompute.homepage.data.models.WeatherCache;
 import villagecompute.homepage.jobs.JobQueue;
 import villagecompute.homepage.services.DelayedJobService;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -30,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <li><b>Gauges:</b> {@code homepage_jobs_depth{queue}} - Delayed job backlog per queue family</li>
  * <li><b>Gauges:</b> {@code homepage_screenshot_slots_available} - Available screenshot worker permits (P12)</li>
  * <li><b>Gauges:</b> {@code homepage_ai_budget_consumed_percent} - AI tagging budget utilization (0-100)</li>
+ * <li><b>Gauges:</b> {@code homepage_weather_cache_staleness_minutes} - Age of oldest weather cache entry in
+ * minutes</li>
  * <li><b>Timers:</b> Feed ingestion latency (future - requires feed service integration)</li>
  * <li><b>Counters:</b> AI tag batches processed (future - requires AI service integration)</li>
  * <li><b>Histograms:</b> Screenshot capture duration (future - requires screenshot service integration)</li>
@@ -133,6 +139,11 @@ public class ObservabilityMetrics {
                 .register(registry);
         LOG.debug("Registered gauge: homepage_ai_budget_consumed_percent");
 
+        // Register weather cache staleness gauge (I3.T9 content services monitoring)
+        Gauge.builder("homepage_weather_cache_staleness_minutes", this, m -> getWeatherCacheStalenessMinutes())
+                .description("Age of oldest weather cache entry in minutes (alert at >90 min)").register(registry);
+        LOG.debug("Registered gauge: homepage_weather_cache_staleness_minutes");
+
         LOG.infof("Observability metrics registration complete. Access metrics at /q/metrics");
     }
 
@@ -180,6 +191,41 @@ public class ObservabilityMetrics {
         // Mock value for initial deployment
         double consumedCents = aiTaggingBudgetConsumedCents.get();
         return (consumedCents / (aiMonthlyBudgetDollars * 100.0)) * 100.0;
+    }
+
+    /**
+     * Returns the age of the oldest weather cache entry in minutes.
+     *
+     * <p>
+     * Used to monitor weather cache staleness and trigger alerts when data becomes too outdated. Per I3.T9 acceptance
+     * criteria, alerts should fire when staleness exceeds 90 minutes.
+     *
+     * <p>
+     * <b>Implementation:</b> Queries WeatherCache to find the minimum fetchedAt timestamp and calculates the age in
+     * minutes from the current time.
+     *
+     * <p>
+     * <b>Alerting:</b> Ops teams should configure alerts to trigger when this metric exceeds 90 minutes.
+     *
+     * @return staleness in minutes (0.0 if no cache entries exist)
+     */
+    private double getWeatherCacheStalenessMinutes() {
+        try {
+            // Find oldest cache entry by fetchedAt timestamp
+            Optional<WeatherCache> oldestEntry = WeatherCache.find("ORDER BY fetchedAt ASC").firstResultOptional();
+
+            if (oldestEntry.isEmpty()) {
+                return 0.0; // No cache entries exist
+            }
+
+            // Calculate age in minutes
+            Duration age = Duration.between(oldestEntry.get().fetchedAt, Instant.now());
+            return age.toMinutes();
+        } catch (Exception e) {
+            // Return 0 on query errors to avoid breaking metrics collection
+            LOG.warnf(e, "Failed to calculate weather cache staleness, returning 0");
+            return 0.0;
+        }
     }
 
     /**

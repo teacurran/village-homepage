@@ -335,16 +335,135 @@ homepage_ai_budget_consumed_percent > 90
 }
 ```
 
-### 4.3 Future Metrics (Roadmap)
+### 4.3 Content Services Metrics (I3)
+
+The following metrics track content aggregation services implemented in Iteration I3:
+
+#### RSS Feed Metrics
+
+| Metric Name | Type | Labels | Description |
+|-------------|------|--------|-------------|
+| `rss_fetch_items_total` | Counter | `source_id`, `status` (new/duplicate) | Total feed items fetched |
+| `rss_fetch_duration` | Timer | `source_id`, `result` (success/failure) | Feed fetch duration |
+| `rss_fetch_errors_total` | Counter | `source_id`, `error_type` | Feed fetch errors |
+
+**Example Queries:**
+```promql
+# Feed ingestion throughput (new items/sec)
+rate(rss_fetch_items_total{status="new"}[5m])
+
+# Feed error rate
+sum(rate(rss_fetch_errors_total[5m])) / sum(rate(rss_fetch_duration_count[5m]))
+
+# Feed latency (p95)
+histogram_quantile(0.95, rate(rss_fetch_duration_bucket[5m]))
+```
+
+#### AI Tagging Metrics
+
+| Metric Name | Type | Labels | Description |
+|-------------|------|--------|-------------|
+| `ai_tagging_items_total` | Counter | `status` (success/failure) | Items processed by AI tagging |
+| `ai_tagging_budget_throttles` | Counter | (none) | Requests throttled due to budget |
+| `homepage_ai_budget_consumed_percent` | Gauge | `budget_ceiling_dollars` | Budget consumption 0-100% |
+
+**Example Queries:**
+```promql
+# AI tagging success rate
+rate(ai_tagging_items_total{status="success"}[5m]) / rate(ai_tagging_items_total[5m])
+
+# Budget throttles in last hour
+sum(increase(ai_tagging_budget_throttles[1h]))
+```
+
+#### Weather Service Metrics
+
+| Metric Name | Type | Labels | Description |
+|-------------|------|--------|-------------|
+| `weather_cache_hits` | Counter | (none) | Weather cache hits |
+| `weather_cache_misses` | Counter | (none) | Weather cache misses |
+| `homepage_weather_cache_staleness_minutes` | Gauge | (none) | Age of oldest cache entry |
+
+**Example Queries:**
+```promql
+# Cache hit rate
+rate(weather_cache_hits[5m]) / (rate(weather_cache_hits[5m]) + rate(weather_cache_misses[5m]))
+
+# Alert on stale cache
+homepage_weather_cache_staleness_minutes > 90
+```
+
+#### Stock Market Metrics
+
+| Metric Name | Type | Labels | Description |
+|-------------|------|--------|-------------|
+| `stock_cache_hits` | Counter | (none) | Stock cache hits |
+| `stock_cache_misses` | Counter | (none) | Stock cache misses |
+| `stock_rate_limit_exceeded` | Counter | (none) | Alpha Vantage rate limit hits |
+| `stock_fetch_total` | Counter | `symbol`, `status` (success/rate_limited/error) | Stock fetch outcomes |
+| `stock_api_duration` | Timer | (none) | Alpha Vantage API latency |
+
+**Example Queries:**
+```promql
+# Rate limit hits per second
+sum(rate(stock_fetch_total{status="rate_limited"}[5m]))
+
+# API latency (p95)
+histogram_quantile(0.95, rate(stock_api_duration_bucket[5m]))
+```
+
+#### Social Integration Metrics
+
+| Metric Name | Type | Labels | Description |
+|-------------|------|--------|-------------|
+| `social_feed_requests` | Counter | `platform`, `status` (disconnected/fresh/stale) | Social feed request outcomes |
+| `social_api_duration` | Timer | (none) | Meta API response time |
+| `social_api_failures` | Counter | `platform` | API call failures |
+| `social_feed_errors` | Counter | (none) | Feed processing errors |
+
+**Example Queries:**
+```promql
+# Failure rate by platform
+sum(rate(social_api_failures[5m])) by (platform)
+
+# Fresh vs stale vs disconnected
+sum(rate(social_feed_requests[5m])) by (status)
+```
+
+#### Storage Gateway Metrics
+
+| Metric Name | Type | Labels | Description |
+|-------------|------|--------|-------------|
+| `storage_uploads_total` | Counter | `bucket`, `status` (success/failure) | Upload operations |
+| `storage_bytes_uploaded` | Counter | `bucket` | Bytes uploaded |
+| `storage_upload_duration` | Timer | `bucket` | Upload latency |
+| `storage_downloads_total` | Counter | `bucket`, `status` | Download operations |
+| `storage_bytes_downloaded` | Counter | `bucket` | Bytes downloaded |
+| `storage_download_duration` | Timer | `bucket` | Download latency |
+| `storage_signed_urls_total` | Counter | `bucket` | Signed URL generations |
+| `storage_deletes_total` | Counter | `bucket`, `status` | Delete operations |
+
+**Example Queries:**
+```promql
+# Upload error rate
+sum(rate(storage_uploads_total{status="failure"}[5m])) / sum(rate(storage_uploads_total[5m]))
+
+# Upload latency (p95)
+histogram_quantile(0.95, rate(storage_upload_duration_bucket[5m]))
+
+# Bytes uploaded (last hour) by bucket
+sum(increase(storage_bytes_uploaded[1h])) by (bucket)
+```
+
+### 4.4 Future Metrics (Roadmap)
 
 The following metrics will be added in subsequent iterations:
 
 | Metric Name | Type | Description | Iteration |
 |-------------|------|-------------|-----------|
-| `homepage_feed_ingestion_seconds` | Timer | Feed refresh latency per source | I2 |
-| `homepage_ai_tag_batches_total` | Counter | AI tagging batches processed | I3 |
 | `homepage_screenshot_capture_seconds` | Histogram | Screenshot capture duration | I4 |
-| `homepage_rate_limit_violations_total` | Meter | Rate-limit violations by bucket | I5 |
+| `homepage_marketplace_listing_views` | Counter | Marketplace listing view count | I4 |
+| `homepage_directory_submission_total` | Counter | Good Sites directory submissions | I4 |
 
 ---
 
@@ -423,6 +542,106 @@ The following alerts **must** be configured in production Prometheus Alertmanage
     description: "Failed logins: {{ $value }}/sec. Check provider status (Google/Facebook/Apple)."
     runbook_url: "https://wiki.villagecompute.com/runbooks/oidc-failures"
 ```
+
+#### Content Services Alerts (I3)
+
+The following alerts monitor content aggregation services. Full alert definitions available in `docs/ops/alerts/content-services.yaml`.
+
+**AI Budget Monitoring:**
+```yaml
+- alert: AIBudgetWarning
+  expr: homepage_ai_budget_consumed_percent > 75
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    summary: "AI tagging budget at 75%"
+    runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#ai-budget"
+
+- alert: AIBudgetCritical
+  expr: homepage_ai_budget_consumed_percent > 90
+  for: 5m
+  labels:
+    severity: critical
+  annotations:
+    summary: "AI tagging budget at 90% (critical threshold)"
+    runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#ai-budget"
+
+- alert: AIBudgetExceeded
+  expr: homepage_ai_budget_consumed_percent >= 100
+  for: 1m
+  labels:
+    severity: critical
+    pagerduty: "true"
+  annotations:
+    summary: "AI tagging budget exceeded - HARD STOP"
+    runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#ai-budget"
+```
+
+**Feed Backlog:**
+```yaml
+- alert: FeedBacklog
+  expr: sum(homepage_jobs_depth{queue="DEFAULT"}) > 500
+  for: 10m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Feed refresh queue backlog exceeds 500"
+    runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#feed-backlog"
+```
+
+**Weather Cache Staleness:**
+```yaml
+- alert: WeatherCacheTooStale
+  expr: homepage_weather_cache_staleness_minutes > 90
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Weather cache staleness exceeds 90 minutes"
+    runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#weather-stale"
+```
+
+**Stock Rate Limiting:**
+```yaml
+- alert: StockRateLimitExceeded
+  expr: sum(rate(stock_fetch_total{status="rate_limited"}[5m])) > 0.1
+  for: 10m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Stock API rate limit being hit"
+    runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#stock-rate-limit"
+```
+
+**Social Refresh Failures:**
+```yaml
+- alert: SocialRefreshFailures
+  expr: sum(rate(social_api_failures[5m])) by (platform) > 0.1
+  for: 10m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Social feed refresh failures on {{ $labels.platform }}"
+    runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#social-failures"
+```
+
+**Storage Gateway Errors:**
+```yaml
+- alert: StorageGatewayErrors
+  expr: sum(rate(storage_uploads_total{status="failure"}[5m])) / sum(rate(storage_uploads_total[5m])) > 0.05
+  for: 10m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Storage gateway upload error rate exceeds 5%"
+    runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#storage-errors"
+```
+
+**See Also:**
+- Full alert definitions: `docs/ops/alerts/content-services.yaml`
+- Troubleshooting procedures: `docs/ops/runbooks/content-monitoring.md`
+- Content services dashboard: `docs/ops/dashboards/content-services.json`
 
 ### 5.2 Alert Routing
 
@@ -591,8 +810,221 @@ curl -v http://localhost:8080/api/widgets
 
 ---
 
+## 11. Content Services Monitoring (I3.T9)
+
+This section documents monitoring implementation for content aggregation services delivered in Iteration I3.
+
+### 11.1 RSS Feed Ingestion Metrics
+
+**Metrics Implemented:**
+
+- `rss_fetch_items_total{source_id, status}` (Counter) - Items fetched per source, tagged by status (new/duplicate)
+- `rss_fetch_duration{source_id, result}` (Timer) - Feed fetch latency, tagged by result (success/failure)
+- `rss_fetch_errors_total{source_id, error_type}` (Counter) - Fetch errors grouped by type (network/parse/timeout)
+
+**Dashboard Panels:**
+- Feed Ingestion Throughput: `rate(rss_fetch_items_total{status="new"}[5m])`
+- Feed Error Rate by Type: `sum(rate(rss_fetch_errors_total[5m])) by (error_type)`
+- Feed Fetch Duration (p95): `histogram_quantile(0.95, rate(rss_fetch_duration_bucket[5m]))`
+
+**Alerts:**
+- `FeedBacklog`: Triggers when DEFAULT queue depth exceeds 500 for 10 minutes
+- `FeedErrorRateHigh`: Triggers when error rate exceeds 10% for 15 minutes
+- `FeedFetchLatencyHigh`: Triggers when p95 latency exceeds 30 seconds for 10 minutes
+
+**Implemented in:** `RssFeedRefreshJobHandler.java`
+
+### 11.2 AI Budget Tracking
+
+**Metrics Implemented:**
+
+- `homepage_ai_budget_consumed_percent` (Gauge) - Monthly AI budget consumption percentage (0-100)
+- `ai_tagging_items_total{status}` (Counter) - Items tagged, tagged by status (success/failure)
+- `ai_tagging_budget_throttles` (Counter) - Number of requests throttled due to budget constraints
+
+**Dashboard Panels:**
+- AI Budget Consumption (gauge with thresholds at 75%/90%/100%)
+- AI Tagging Success Rate: `rate(ai_tagging_items_total{status="success"}[5m]) / rate(ai_tagging_items_total[5m])`
+- Budget Throttles: `sum(increase(ai_tagging_budget_throttles[1h]))`
+
+**Alerts:**
+- `AIBudgetWarning`: 75% consumption (warning, 5min delay)
+- `AIBudgetCritical`: 90% consumption (critical, 5min delay)
+- `AIBudgetExceeded`: 100% consumption (critical, 1min delay, pages on-call)
+
+**Budget State Transitions:**
+- 0-75%: NORMAL (full batch processing)
+- 75-80%: REDUCE (smaller batches, slower throughput)
+- 80-90%: REDUCE (continued)
+- 90-100%: QUEUE (new jobs queued for next month)
+- ≥100%: HARD_STOP (all tagging halted)
+
+**Implemented in:** `ObservabilityMetrics.java`, `AiTaggingJobHandler.java`
+
+### 11.3 Weather Service Monitoring
+
+**Metrics Implemented:**
+
+- `homepage_weather_cache_staleness_minutes` (Gauge) - Age of oldest weather cache entry in minutes
+- `weather_cache_hits` (Counter) - Weather cache hits
+- `weather_cache_misses` (Counter) - Weather cache misses (triggers API call)
+
+**Dashboard Panels:**
+- Weather Cache Staleness: `homepage_weather_cache_staleness_minutes` with alert line at 90 minutes
+- Weather Cache Hit Rate: `rate(weather_cache_hits[5m]) / (rate(weather_cache_hits[5m]) + rate(weather_cache_misses[5m]))`
+
+**Alerts:**
+- `WeatherCacheTooStale`: Triggers when staleness exceeds 90 minutes for 5 minutes
+- `WeatherCacheHitRateLow`: Info alert when hit rate drops below 50% for 15 minutes
+
+**Provider Details:**
+- Open-Meteo: International forecasts (no rate limits on free tier)
+- National Weather Service (NWS): US forecasts (5 requests/sec limit, no issues expected)
+
+**Implemented in:** `ObservabilityMetrics.java` (gauge), `WeatherService.java` (counters)
+
+### 11.4 Stock Market Data Monitoring
+
+**Metrics Implemented:**
+
+- `stock_fetch_total{symbol, status}` (Counter) - Stock fetches tagged by status (success/rate_limited/error)
+- `stock_api_duration` (Timer) - Alpha Vantage API response times
+- `stock_rate_limit_exceeded` (Counter) - Rate limit hits
+- `stock_cache_hits` / `stock_cache_misses` (Counters) - Cache performance
+
+**Dashboard Panels:**
+- Stock Rate Limit Hits: `sum(rate(stock_fetch_total{status="rate_limited"}[5m]))`
+- Stock Fetch Status Breakdown: Pie chart of success/rate_limited/error over 1 hour
+- Stock API Latency (p95): `histogram_quantile(0.95, rate(stock_api_duration_bucket[5m]))`
+
+**Alerts:**
+- `StockRateLimitExceeded`: Triggers when rate limited requests exceed 0.1/sec for 10 minutes
+- `StockFetchErrorRateHigh`: Triggers when error rate exceeds 5% for 10 minutes
+
+**Provider Limits:**
+- Free tier: 5 API calls/min, 100 calls/day
+- Premium tier: Higher limits (check subscription)
+
+**Implemented in:** `StockService.java`
+
+### 11.5 Social Integration Monitoring
+
+**Metrics Implemented:**
+
+- `social_feed_requests{platform, status}` (Counter) - Feed requests tagged by status (fresh/stale/disconnected)
+- `social_api_failures{platform}` (Counter) - API failures per platform (Instagram/Facebook)
+- `social_api_duration{platform}` (Timer) - Meta Graph API response times
+- `social_feed_errors` (Counter) - General social feed errors
+
+**Dashboard Panels:**
+- Social Refresh Failures by Platform: `sum(rate(social_api_failures[5m])) by (platform)`
+- Social Feed Request Status: `sum(rate(social_feed_requests[5m])) by (status)`
+
+**Alerts:**
+- `SocialRefreshFailures`: Triggers when failure rate exceeds 0.1/sec per platform for 10 minutes
+- `SocialDisconnectedUsersHigh`: Info alert when disconnected requests exceed 1.0/sec for 15 minutes
+
+**OAuth Token Management:**
+- Meta refresh tokens valid for 60 days
+- Automatic refresh recommended before expiration
+- Users prompted to re-authenticate when tokens expire
+
+**Implemented in:** `SocialIntegrationService.java`
+
+### 11.6 Storage Gateway Monitoring
+
+**Metrics Implemented:**
+
+- `storage_uploads_total{bucket, status}` (Counter) - Upload outcomes (success/failure)
+- `storage_bytes_uploaded{bucket}` (Counter) - Bytes uploaded per bucket
+- `storage_upload_duration{bucket}` (Timer) - Upload latency
+- `storage_downloads_total{bucket, status}` (Counter) - Download outcomes
+- `storage_bytes_downloaded{bucket}` (Counter) - Download bandwidth
+- `storage_download_duration{bucket}` (Timer) - Download latency
+- `storage_signed_urls_total{bucket}` (Counter) - Signed URL generation count
+- `storage_deletes_total{bucket, status}` (Counter) - Delete operations
+
+**Dashboard Panels:**
+- Storage Upload Error Rate: `sum(rate(storage_uploads_total{status="failure"}[5m])) by (bucket)`
+- Storage Upload Latency (p95): `histogram_quantile(0.95, rate(storage_upload_duration_bucket[5m])) by (bucket)`
+- Bytes Uploaded (Last Hour): `sum(increase(storage_bytes_uploaded[1h])) by (bucket)`
+
+**Alerts:**
+- `StorageGatewayErrors`: Triggers when upload error rate exceeds 5% for 10 minutes
+- `StorageUploadLatencyHigh`: Triggers when p95 latency exceeds 10 seconds for 15 minutes
+
+**Storage Buckets:**
+- `screenshots`: Good Sites directory thumbnails
+- `listings`: Marketplace listing images
+
+**Provider:** Cloudflare R2 (S3-compatible)
+
+**Implemented in:** `StorageGateway.java`
+
+### 11.7 Dashboard Access
+
+**Primary Dashboard:** [Content Services Dashboard](https://grafana.villagecompute.com/d/village-homepage-content-services)
+
+**Dashboard Features:**
+- 18 panels covering all content services
+- Real-time metrics with 30-second refresh
+- 6-hour time window (configurable)
+- Alert annotations overlay
+- Summary health table
+
+**Dashboard File:** `docs/ops/dashboards/content-services.json`
+
+### 11.8 Alert Configuration
+
+**Alert Definitions File:** `docs/ops/alerts/content-services.yaml`
+
+**Alert Groups:**
+1. `content_services_ai_budget` - AI tagging budget alerts (3 rules)
+2. `content_services_feeds` - RSS feed alerts (3 rules)
+3. `content_services_weather` - Weather cache alerts (2 rules)
+4. `content_services_stocks` - Stock API alerts (2 rules)
+5. `content_services_social` - Social integration alerts (2 rules)
+6. `content_services_storage` - Storage gateway alerts (2 rules)
+7. `content_services_composite` - Multi-service health check (1 rule)
+
+**Total Alert Rules:** 15 rules with proper annotations, runbook links, and dashboard links
+
+### 11.9 Runbook Reference
+
+**Runbook File:** `docs/ops/runbooks/content-monitoring.md`
+
+**Runbook Contents:**
+- Alert response procedures for all 15 alert rules
+- Diagnosis steps with PromQL queries and kubectl commands
+- Resolution procedures for common failure scenarios
+- Escalation paths and severity definitions
+- External dependency status pages
+- Maintenance tasks (daily/weekly/monthly)
+- Common troubleshooting scenarios
+
+**Escalation Levels:**
+- **Critical:** Immediate page (AI budget ≥100%, storage down, feed backlog >2000)
+- **Warning:** Slack alert (AI budget >75%, feed backlog >500, weather >90min)
+- **Info:** Dashboard only (cache hit rates, latency trends)
+
+### 11.10 Deployment Checklist
+
+When deploying content services monitoring to production:
+
+1. **Metrics:** Verify all gauges/counters/timers are exported at `/q/metrics`
+2. **Dashboard:** Import `content-services.json` to Grafana
+3. **Alerts:** Deploy `content-services.yaml` to Prometheus Alertmanager
+4. **Routing:** Configure Slack webhook for `#homepage-alerts` channel
+5. **PagerDuty:** Add integration for critical-severity alerts
+6. **Runbook:** Publish to internal wiki and link from alert annotations
+7. **Testing:** Trigger test alerts to verify routing
+8. **Documentation:** Update ops team training materials
+
+---
+
 ## 10. Changelog
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-01-08 | Platform Squad | Initial observability baseline (I1.T8) |
+| 1.1 | 2026-01-09 | Platform Squad | Added content services monitoring (I3.T9): RSS feeds, AI tagging, weather, stocks, social, storage gateway metrics, alerts, and runbook |

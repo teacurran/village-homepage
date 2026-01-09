@@ -1,0 +1,297 @@
+# Content Services Alert Rules
+#
+# This file contains Prometheus alert rule definitions for content aggregation services
+# implemented in Iteration I3. These rules monitor RSS feeds, AI tagging, weather cache,
+# stock market data, social integrations, and storage gateway operations.
+#
+# Deploy these rules to Prometheus Alertmanager in production environments.
+
+groups:
+  - name: content_services_ai_budget
+    interval: 60s
+    rules:
+      - alert: AIBudgetWarning
+        expr: homepage_ai_budget_consumed_percent > 75
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          service: ai-tagging
+          iteration: I3
+        annotations:
+          summary: "AI tagging budget at 75%"
+          description: |
+            Current consumption: {{ $value | humanizePercentage }}.
+            Monthly ceiling: $500.
+            Approaching REDUCE state (queue processing slows at 80%).
+            Review batch sizes and prompt engineering.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#ai-budget"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+      - alert: AIBudgetCritical
+        expr: homepage_ai_budget_consumed_percent > 90
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          service: ai-tagging
+          iteration: I3
+        annotations:
+          summary: "AI tagging budget at 90% (critical threshold)"
+          description: |
+            Current consumption: {{ $value | humanizePercentage }}.
+            Monthly ceiling: $500.
+            Entering QUEUE state - new tagging jobs will be queued until next month.
+            Consider emergency budget increase if tagging is critical.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#ai-budget"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+      - alert: AIBudgetExceeded
+        expr: homepage_ai_budget_consumed_percent >= 100
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+          service: ai-tagging
+          iteration: I3
+          pagerduty: "true"
+        annotations:
+          summary: "AI tagging budget exceeded - HARD STOP"
+          description: |
+            Current consumption: {{ $value | humanizePercentage }}.
+            Monthly ceiling: $500.
+            HARD_STOP state active - all AI tagging has been halted.
+            Immediate action required: increase budget or disable feature flag.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#ai-budget"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+  - name: content_services_feeds
+    interval: 60s
+    rules:
+      - alert: FeedBacklog
+        expr: sum(homepage_jobs_depth{queue="DEFAULT"}) > 500
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: rss-feeds
+          iteration: I3
+        annotations:
+          summary: "Feed refresh queue backlog exceeds 500"
+          description: |
+            Pending jobs: {{ $value }}.
+            RSS feed ingestion is falling behind.
+            Check for failing sources and worker pool capacity.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#feed-backlog"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+      - alert: FeedErrorRateHigh
+        expr: sum(rate(rss_fetch_errors_total[5m])) / sum(rate(rss_fetch_duration_count[5m])) > 0.10
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          service: rss-feeds
+          iteration: I3
+        annotations:
+          summary: "RSS feed error rate exceeds 10%"
+          description: |
+            Error rate: {{ $value | humanizePercentage }}.
+            More than 10% of feed fetches are failing.
+            Check network connectivity and source health.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#feed-errors"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+      - alert: FeedFetchLatencyHigh
+        expr: histogram_quantile(0.95, rate(rss_fetch_duration_bucket[5m])) > 30
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: rss-feeds
+          iteration: I3
+        annotations:
+          summary: "Feed fetch latency p95 exceeds 30 seconds"
+          description: |
+            Current p95: {{ $value | humanizeDuration }}.
+            RSS sources are responding slowly.
+            May indicate network congestion or slow upstream servers.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#feed-latency"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+  - name: content_services_weather
+    interval: 60s
+    rules:
+      - alert: WeatherCacheTooStale
+        expr: homepage_weather_cache_staleness_minutes > 90
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          service: weather
+          iteration: I3
+        annotations:
+          summary: "Weather cache staleness exceeds 90 minutes"
+          description: |
+            Oldest cache entry: {{ $value | humanizeDuration }} old.
+            Weather widget showing outdated forecasts.
+            Check weather job scheduler and API connectivity.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#weather-stale"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+      - alert: WeatherCacheHitRateLow
+        expr: rate(weather_cache_hits[5m]) / (rate(weather_cache_hits[5m]) + rate(weather_cache_misses[5m])) < 0.50
+        for: 15m
+        labels:
+          severity: info
+          team: platform
+          service: weather
+          iteration: I3
+        annotations:
+          summary: "Weather cache hit rate below 50%"
+          description: |
+            Hit rate: {{ $value | humanizePercentage }}.
+            Most weather requests missing cache (excessive API calls).
+            May indicate cache expiration issues or location key fragmentation.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#weather-cache-misses"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+  - name: content_services_stocks
+    interval: 60s
+    rules:
+      - alert: StockRateLimitExceeded
+        expr: sum(rate(stock_fetch_total{status="rate_limited"}[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: stocks
+          iteration: I3
+        annotations:
+          summary: "Stock API rate limit being hit"
+          description: |
+            Rate limited requests: {{ $value | humanize }}/sec.
+            Alpha Vantage quota exhausted.
+            Consider increasing API tier or implementing longer cache TTL.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#stock-rate-limit"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+      - alert: StockFetchErrorRateHigh
+        expr: sum(rate(stock_fetch_total{status="error"}[5m])) / sum(rate(stock_fetch_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: stocks
+          iteration: I3
+        annotations:
+          summary: "Stock fetch error rate exceeds 5%"
+          description: |
+            Error rate: {{ $value | humanizePercentage }}.
+            Stock market data fetches failing.
+            Check Alpha Vantage API status and credentials.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#stock-errors"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+  - name: content_services_social
+    interval: 60s
+    rules:
+      - alert: SocialRefreshFailures
+        expr: sum(rate(social_api_failures[5m])) by (platform) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: social
+          iteration: I3
+        annotations:
+          summary: "Social feed refresh failures on {{ $labels.platform }}"
+          description: |
+            Failure rate: {{ $value | humanize }}/sec on {{ $labels.platform }}.
+            Social integration API calls failing.
+            Check OAuth tokens and Meta API status.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#social-failures"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+      - alert: SocialDisconnectedUsersHigh
+        expr: sum(rate(social_feed_requests{status="disconnected"}[5m])) > 1.0
+        for: 15m
+        labels:
+          severity: info
+          team: platform
+          service: social
+          iteration: I3
+        annotations:
+          summary: "High rate of social feed requests from disconnected users"
+          description: |
+            Disconnected requests: {{ $value | humanize }}/sec.
+            Many users have expired or revoked social tokens.
+            May indicate need for re-authentication prompts.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#social-disconnected"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+  - name: content_services_storage
+    interval: 60s
+    rules:
+      - alert: StorageGatewayErrors
+        expr: sum(rate(storage_uploads_total{status="failure"}[5m])) / sum(rate(storage_uploads_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: storage
+          iteration: I3
+        annotations:
+          summary: "Storage gateway upload error rate exceeds 5%"
+          description: |
+            Error rate: {{ $value | humanizePercentage }}.
+            Uploads failing to S3/R2 storage.
+            Check storage credentials and bucket permissions.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#storage-errors"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+      - alert: StorageUploadLatencyHigh
+        expr: histogram_quantile(0.95, rate(storage_upload_duration_bucket[5m])) > 10
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          service: storage
+          iteration: I3
+        annotations:
+          summary: "Storage upload latency p95 exceeds 10 seconds"
+          description: |
+            Current p95: {{ $value | humanizeDuration }}.
+            Storage uploads taking unusually long.
+            Check network connectivity to S3/R2 and file sizes.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#storage-latency"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"
+
+  - name: content_services_composite
+    interval: 120s
+    rules:
+      - alert: ContentServicesUnhealthy
+        expr: |
+          (homepage_ai_budget_consumed_percent > 90) or
+          (sum(homepage_jobs_depth{queue="DEFAULT"}) > 500) or
+          (homepage_weather_cache_staleness_minutes > 120) or
+          (sum(rate(social_api_failures[5m])) > 0.5) or
+          (sum(rate(storage_uploads_total{status="failure"}[5m])) / sum(rate(storage_uploads_total[5m])) > 0.10)
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          service: content-services
+          iteration: I3
+        annotations:
+          summary: "Multiple content services showing degraded health"
+          description: |
+            One or more content services are unhealthy:
+            - AI budget may be exceeded
+            - Feed backlog may be high
+            - Weather cache may be stale
+            - Social APIs may be failing
+            - Storage errors may be occurring
+            Check individual service alerts and dashboard.
+          runbook_url: "https://wiki.villagecompute.com/runbooks/content-monitoring#composite-health"
+          dashboard_url: "https://grafana.villagecompute.com/d/village-homepage-content-services"

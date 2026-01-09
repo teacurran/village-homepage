@@ -1,0 +1,812 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "village-homepage-content-services",
+    "title": "Village Homepage - Content Services",
+    "tags": ["homepage", "content", "feeds", "ai", "weather", "stocks", "social", "storage"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Feed Ingestion Throughput",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(rss_fetch_items_total{status=\"new\"}[5m])",
+            "legendFormat": "{{source_id}} - new items",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(rss_fetch_items_total{status=\"duplicate\"}[5m])",
+            "legendFormat": "{{source_id}} - duplicates",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true,
+            "calcs": ["mean", "lastNotNull"]
+          }
+        },
+        "description": "RSS feed item ingestion rate per source. Shows new items vs duplicates."
+      },
+      {
+        "id": 2,
+        "title": "Feed Error Rate by Type",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(rss_fetch_errors_total[5m])) by (error_type)",
+            "legendFormat": "{{error_type}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20,
+              "stacking": {
+                "mode": "normal"
+              }
+            },
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true,
+            "calcs": ["mean", "max", "lastNotNull"]
+          }
+        },
+        "description": "RSS feed fetch errors grouped by error type (network, parse, timeout, etc)."
+      },
+      {
+        "id": 3,
+        "title": "AI Tagging Budget Consumption",
+        "type": "gauge",
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 6,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "homepage_ai_budget_consumed_percent",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": 0,
+                  "color": "green"
+                },
+                {
+                  "value": 75,
+                  "color": "yellow"
+                },
+                {
+                  "value": 90,
+                  "color": "orange"
+                },
+                {
+                  "value": 100,
+                  "color": "red"
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "description": "AI tagging budget consumption as percentage of monthly ceiling ($500). Alerts at 75% (warning), 90% (critical), 100% (hard stop)."
+      },
+      {
+        "id": 4,
+        "title": "AI Tagging Success Rate",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 6,
+          "y": 8,
+          "w": 6,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "rate(ai_tagging_items_total{status=\"success\"}[5m]) / (rate(ai_tagging_items_total{status=\"success\"}[5m]) + rate(ai_tagging_items_total{status=\"failure\"}[5m])) * 100",
+            "legendFormat": "Success rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": 0,
+                  "color": "red"
+                },
+                {
+                  "value": 90,
+                  "color": "yellow"
+                },
+                {
+                  "value": 95,
+                  "color": "green"
+                }
+              ]
+            }
+          }
+        },
+        "description": "AI tagging job success rate over time."
+      },
+      {
+        "id": 5,
+        "title": "AI Budget Throttles",
+        "type": "stat",
+        "gridPos": {
+          "x": 12,
+          "y": 8,
+          "w": 6,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(ai_tagging_budget_throttles[1h]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": 0,
+                  "color": "green"
+                },
+                {
+                  "value": 1,
+                  "color": "yellow"
+                },
+                {
+                  "value": 10,
+                  "color": "red"
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "textMode": "auto"
+        },
+        "description": "Number of AI tagging requests throttled due to budget constraints in the last hour."
+      },
+      {
+        "id": 6,
+        "title": "Feed Backlog by Queue",
+        "type": "stat",
+        "gridPos": {
+          "x": 18,
+          "y": 8,
+          "w": 6,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "sum(homepage_jobs_depth{queue=\"DEFAULT\"})",
+            "legendFormat": "DEFAULT queue",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": 0,
+                  "color": "green"
+                },
+                {
+                  "value": 250,
+                  "color": "yellow"
+                },
+                {
+                  "value": 500,
+                  "color": "red"
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "textMode": "auto"
+        },
+        "description": "Pending feed refresh jobs in DEFAULT queue. Alert threshold: >500 for 10 minutes."
+      },
+      {
+        "id": 7,
+        "title": "Weather Cache Staleness",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 14,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "homepage_weather_cache_staleness_minutes",
+            "legendFormat": "Cache age (minutes)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "m",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": 0,
+                  "color": "green"
+                },
+                {
+                  "value": 60,
+                  "color": "yellow"
+                },
+                {
+                  "value": 90,
+                  "color": "red"
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Alert Threshold"
+              },
+              "properties": [
+                {
+                  "id": "custom.lineStyle",
+                  "value": {
+                    "dash": [10, 5],
+                    "fill": "dash"
+                  }
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "red"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        },
+        "description": "Age of oldest weather cache entry in minutes. Alert at >90 minutes (stale data threshold).",
+        "targets": [
+          {
+            "expr": "homepage_weather_cache_staleness_minutes",
+            "legendFormat": "Cache age",
+            "refId": "A"
+          },
+          {
+            "expr": "90",
+            "legendFormat": "Alert Threshold",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Weather Cache Hit Rate",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 12,
+          "y": 14,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(weather_cache_hits[5m]) / (rate(weather_cache_hits[5m]) + rate(weather_cache_misses[5m])) * 100",
+            "legendFormat": "Hit rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          }
+        },
+        "description": "Weather cache hit rate percentage. Higher is better (fewer API calls)."
+      },
+      {
+        "id": 9,
+        "title": "Stock Rate Limit Hits",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 22,
+          "w": 8,
+          "h": 7
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(stock_fetch_total{status=\"rate_limited\"}[5m]))",
+            "legendFormat": "Rate limited requests",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "bars",
+              "lineInterpolation": "smooth"
+            },
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "red"
+            }
+          }
+        },
+        "description": "Stock API requests hitting rate limits (Alpha Vantage quota exhaustion)."
+      },
+      {
+        "id": 10,
+        "title": "Stock Fetch Status Breakdown",
+        "type": "piechart",
+        "gridPos": {
+          "x": 8,
+          "y": 22,
+          "w": 8,
+          "h": 7
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(stock_fetch_total[1h])) by (status)",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true,
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut"
+        },
+        "description": "Stock fetch outcomes over last hour: success vs rate_limited vs error."
+      },
+      {
+        "id": 11,
+        "title": "Stock API Latency (95th percentile)",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 16,
+          "y": 22,
+          "w": 8,
+          "h": 7
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(stock_api_duration_bucket[5m]))",
+            "legendFormat": "p95 latency",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(stock_api_duration_bucket[5m]))",
+            "legendFormat": "p50 latency",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          }
+        },
+        "description": "Stock API response time percentiles."
+      },
+      {
+        "id": 12,
+        "title": "Social Refresh Failures by Platform",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 29,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(social_api_failures[5m])) by (platform)",
+            "legendFormat": "{{platform}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20,
+              "stacking": {
+                "mode": "normal"
+              }
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true,
+            "calcs": ["mean", "max", "lastNotNull"]
+          }
+        },
+        "description": "Social feed API failures broken down by platform (Instagram, Facebook)."
+      },
+      {
+        "id": 13,
+        "title": "Social Feed Request Status",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 12,
+          "y": 29,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(social_feed_requests[5m])) by (status)",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          }
+        },
+        "description": "Social feed requests by status: fresh (new data), stale (old data), disconnected (no token)."
+      },
+      {
+        "id": 14,
+        "title": "Storage Gateway Upload Error Rate",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 37,
+          "w": 8,
+          "h": 7
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(storage_uploads_total{status=\"failure\"}[5m])) by (bucket)",
+            "legendFormat": "{{bucket}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20
+            },
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "description": "Storage gateway upload failures per bucket (screenshots, listings)."
+      },
+      {
+        "id": 15,
+        "title": "Storage Gateway Upload Latency",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 8,
+          "y": 37,
+          "w": 8,
+          "h": 7
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(storage_upload_duration_bucket[5m])) by (bucket)",
+            "legendFormat": "{{bucket}} - p95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(storage_upload_duration_bucket[5m])) by (bucket)",
+            "legendFormat": "{{bucket}} - p50",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          }
+        },
+        "description": "Storage upload latency percentiles by bucket."
+      },
+      {
+        "id": 16,
+        "title": "Storage Bytes Uploaded (Last Hour)",
+        "type": "stat",
+        "gridPos": {
+          "x": 16,
+          "y": 37,
+          "w": 8,
+          "h": 7
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(storage_bytes_uploaded[1h])) by (bucket)",
+            "legendFormat": "{{bucket}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decbytes",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "textMode": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "description": "Total bytes uploaded to storage gateway in the last hour, per bucket."
+      },
+      {
+        "id": 17,
+        "title": "Feed Fetch Duration (p95)",
+        "type": "timeseries",
+        "gridPos": {
+          "x": 0,
+          "y": 44,
+          "w": 12,
+          "h": 7
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(rss_fetch_duration_bucket[5m]))",
+            "legendFormat": "p95 duration",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(rss_fetch_duration_bucket[5m]))",
+            "legendFormat": "p50 duration",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          }
+        },
+        "description": "RSS feed fetch duration percentiles (time to download and parse)."
+      },
+      {
+        "id": 18,
+        "title": "Overall Content Services Health",
+        "type": "table",
+        "gridPos": {
+          "x": 12,
+          "y": 44,
+          "w": 12,
+          "h": 7
+        },
+        "targets": [
+          {
+            "expr": "homepage_ai_budget_consumed_percent",
+            "legendFormat": "AI Budget %",
+            "refId": "A",
+            "instant": true
+          },
+          {
+            "expr": "sum(homepage_jobs_depth{queue=\"DEFAULT\"})",
+            "legendFormat": "Feed Backlog",
+            "refId": "B",
+            "instant": true
+          },
+          {
+            "expr": "homepage_weather_cache_staleness_minutes",
+            "legendFormat": "Weather Staleness (min)",
+            "refId": "C",
+            "instant": true
+          },
+          {
+            "expr": "sum(rate(stock_fetch_total{status=\"rate_limited\"}[5m]))",
+            "legendFormat": "Stock Rate Limits",
+            "refId": "D",
+            "instant": true
+          },
+          {
+            "expr": "sum(rate(social_api_failures[5m]))",
+            "legendFormat": "Social Failures",
+            "refId": "E",
+            "instant": true
+          },
+          {
+            "expr": "sum(rate(storage_uploads_total{status=\"failure\"}[5m]))",
+            "legendFormat": "Storage Errors",
+            "refId": "F",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "seriesToRows"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": []
+        },
+        "description": "Summary table of all content services key metrics."
+      }
+    ],
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "enable": true,
+          "expr": "ALERTS{alertname=~\"AIBudget.*|FeedBacklog|WeatherCacheTooStale|SocialRefreshFailures|StorageGatewayErrors\"}",
+          "iconColor": "red",
+          "name": "Content Service Alerts",
+          "tagKeys": "alertname,severity"
+        }
+      ]
+    }
+  },
+  "overwrite": true
+}
