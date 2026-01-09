@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{data.theme.mode()}" data-contrast="{data.theme.contrast()}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Your personalized homepage - news, weather, stocks, and more">
+    <title>Village Homepage - Your Personalized Portal</title>
+
+    <!-- Preconnect to external APIs for performance -->
+    <link rel="preconnect" href="https://api.openweathermap.org">
+    <link rel="preconnect" href="https://api.open-meteo.com">
+
+    <!-- Gridstack CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@11.0.1/dist/gridstack.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@11.0.1/dist/gridstack-extra.min.css">
+
+    <!-- Homepage CSS with theme tokens -->
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+
+    <!-- Apply custom accent color if set -->
+    {#if data.theme.accent()}
+    <style>
+        :root {
+            --accent-color: {data.theme.accent()};
+        }
+    </style>
+    {/if}
+
+    <!-- React islands bundle (content-hashed) -->
+    <script type="module" src="{data.mountsScriptPath}" defer></script>
+
+    <!-- Gridstack JS (only in edit mode) -->
+    {#if data.editMode}
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@11.0.1/dist/gridstack-all.js" defer></script>
+    {/if}
+</head>
+<body>
+    <!-- Header with navigation -->
+    <header class="homepage-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="site-title">Village Homepage</h1>
+                <nav class="header-nav">
+                    {#if data.isAuthenticated}
+                    <a href="/?edit={#if data.editMode}false{#else}true{/if}" class="btn-toggle-edit">
+                        {#if data.editMode}
+                        Done Editing
+                        {#else}
+                        Customize
+                        {/if}
+                    </a>
+                    <a href="/api/preferences" class="btn-preferences">Settings</a>
+                    <a href="/api/auth/logout" class="btn-logout">Logout</a>
+                    {#else}
+                    <a href="/api/auth/login/google" class="btn-login">Login</a>
+                    {/if}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main content area with gridstack layout -->
+    <main class="homepage-main">
+        <div class="container">
+            {#if data.editMode}
+            <div class="edit-mode-banner">
+                <p>
+                    <strong>Edit Mode:</strong> Drag widgets to rearrange. Changes are saved automatically.
+                </p>
+            </div>
+            {/if}
+
+            <!-- Gridstack container -->
+            <div class="grid-stack" id="homepage-grid">
+                {#for widget in data.layout}
+                <div class="grid-stack-item"
+                     data-gs-id="{widget.widgetId()}"
+                     data-gs-x="{widget.x()}"
+                     data-gs-y="{widget.y()}"
+                     data-gs-width="{widget.width()}"
+                     data-gs-height="{widget.height()}"
+                     data-gs-min-width="2"
+                     data-gs-min-height="2">
+                    <div class="grid-stack-item-content widget-container" data-widget-type="{widget.widgetType()}">
+                        <!-- Widget placeholder - will be populated by React islands or future REST endpoints -->
+                        <div class="widget-header">
+                            <h3 class="widget-title">{data.widgetTitle(widget.widgetType())}</h3>
+                            {#if data.editMode}
+                            <button class="btn-widget-remove" data-widget-id="{widget.widgetId()}" aria-label="Remove widget">
+                                &times;
+                            </button>
+                            {/if}
+                        </div>
+                        <div class="widget-body">
+                            {#switch widget.widgetType()}
+                                {#case "search_bar"}
+                                <div class="widget-search">
+                                    <input type="search" placeholder="Search the web..." class="search-input" aria-label="Search">
+                                    <button class="btn-search" aria-label="Search">Search</button>
+                                </div>
+                                {#case "news_feed"}
+                                <div class="widget-placeholder">
+                                    <p>Loading news feed...</p>
+                                </div>
+                                {#case "weather"}
+                                <div class="widget-placeholder">
+                                    <p>Loading weather...</p>
+                                </div>
+                                {#case "stocks"}
+                                <div class="widget-placeholder">
+                                    <p>Loading stocks...</p>
+                                </div>
+                                {#case "social_feed"}
+                                <div class="widget-placeholder">
+                                    <p>Loading social feed...</p>
+                                </div>
+                                {#case "rss_feed"}
+                                <div class="widget-placeholder">
+                                    <p>Loading RSS feed...</p>
+                                </div>
+                                {#case "quick_links"}
+                                <div class="widget-placeholder">
+                                    <p>Your quick links</p>
+                                </div>
+                                {#case}
+                                <div class="widget-placeholder">
+                                    <p>Widget: {widget.widgetType()}</p>
+                                </div>
+                            {/switch}
+                        </div>
+                    </div>
+                </div>
+                {/for}
+            </div>
+
+            <!-- React island mount point for GridstackEditor (edit mode only) -->
+            {#if data.editMode}
+            <div data-mount="GridstackEditor"
+                 data-props='{"gridId": "homepage-grid", "widgetConfigs": {data.widgetConfigsJson}, "saveEndpoint": "/api/preferences"}'>
+            </div>
+            {/if}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="homepage-footer">
+        <div class="container">
+            <p>&copy; 2025 Village Homepage. <a href="/about">About</a> | <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a></p>
+        </div>
+    </footer>
+</body>
+</html>

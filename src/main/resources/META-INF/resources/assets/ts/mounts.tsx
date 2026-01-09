@@ -38,6 +38,7 @@ import { z } from 'zod';
 
 // Import components
 import SampleWidget from './components/SampleWidget';
+import GridstackEditor from './components/GridstackEditor';
 
 /**
  * Component registry mapping data-mount attribute values to React components
@@ -49,6 +50,14 @@ const COMPONENT_REGISTRY = {
     propsSchema: z.object({
       title: z.string(),
       count: z.number().int().nonnegative().optional(),
+    }),
+  },
+  GridstackEditor: {
+    component: GridstackEditor,
+    propsSchema: z.object({
+      gridId: z.string(),
+      widgetConfigs: z.record(z.unknown()),
+      saveEndpoint: z.string(),
     }),
   },
   // Add additional components here as they are developed:
