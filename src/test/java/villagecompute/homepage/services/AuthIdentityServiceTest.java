@@ -1,15 +1,18 @@
 package villagecompute.homepage.services;
 
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.NewCookie;
 import org.junit.jupiter.api.Test;
+import villagecompute.homepage.testing.H2TestResource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
+@QuarkusTestResource(H2TestResource.class)
 class AuthIdentityServiceTest {
 
     @Inject

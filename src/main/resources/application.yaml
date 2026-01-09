@@ -52,6 +52,15 @@ quarkus:
     sdk:
       disabled: false
 
+  # Hibernate ORM Configuration
+  hibernate-orm:
+    # JSON format mapping for database columns (JSONB support)
+    # Uses global formatting facilities for JSON serialization/deserialization
+    mapping:
+      format:
+        # Ignore format mapper warnings - we use standard ObjectMapper for database JSON
+        global: ignore
+
   # OIDC Multi-Tenant Configuration (Policy P1, P9, F1)
   # Supports Google, Facebook, and Apple OAuth providers
   oidc:
@@ -166,6 +175,23 @@ villagecompute:
       sdk:
         # Disable telemetry in tests to avoid noise
         disabled: true
+    datasource:
+      db-kind: h2
+      username: sa
+      password: sa
+      jdbc:
+        url: jdbc:h2:mem:homepage-tests;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+        driver: org.h2.Driver
+      devservices:
+        enabled: false
+    # Tests use in-memory H2 to avoid external Postgres dependency
+    hibernate-orm:
+      database:
+        # Create/drop schema for test isolation
+        generation: drop-and-create
+      # Suppress unnecessary warnings in tests
+      log:
+        sql: false
 
 "%prod":
   quarkus:

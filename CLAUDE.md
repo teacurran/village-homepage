@@ -177,10 +177,19 @@ src/main/java/villagecompute/homepage/
 - IP-based blocking for abuse
 
 ### Feature Flags
-- Admin-controlled feature toggles
-- Rollout percentage support
-- User whitelist for beta testing
-- Initial flags: `stocks_widget`, `social_integration`, `promoted_listings` (disabled)
+- **FeatureFlagService** - Application-scoped service for flag evaluation and management
+- **Stable cohort assignment** - MD5 hash of `flagKey + ":" + subjectId` for deterministic rollout
+- **Evaluation priority**: master kill switch → whitelist → rollout percentage → stable cohort
+- **Whitelist support** - Force-enable flags for specific user IDs or session hashes
+- **Analytics toggle** - Consent-aware evaluation logging (Policy P14 compliance)
+- **Audit trail** - All mutations logged to `feature_flag_audit` with before/after state
+- **Partitioned evaluation logs** - 90-day retention via monthly partitions
+- **Admin endpoints**:
+  - `GET /admin/api/feature-flags` - List all flags
+  - `GET /admin/api/feature-flags/{key}` - Get single flag
+  - `PATCH /admin/api/feature-flags/{key}` - Update flag configuration
+- **Initial flags**: `stocks_widget`, `social_integration`, `promoted_listings` (all disabled by default)
+- **Database schema**: `feature_flags`, `feature_flag_audit`, `feature_flag_evaluations` (partitioned)
 
 ### Search
 - **Hibernate Search** with **Elasticsearch** backend

@@ -92,19 +92,60 @@ The script downloads the latest archive, extracts `sql/world.sql`, and streams i
 
 ## 6. Feature Flags
 
-The baseline `feature_flags` table and initial entries are created by `20250108000200_create_feature_flags.sql`. To re-seed manually:
+The feature flag system is managed through database tables with enhanced schema supporting stable cohort evaluation, whitelist overrides, and audit logging (Policy P7 & P14 compliance).
+
+### Schema Migrations
+
+- **Bootstrap migration** (`20250108000200_create_feature_flags.sql`) - Initial minimal table
+- **Enhanced migration** (`20250109000300_enhance_feature_flags.sql`) - Full I2.T2 schema with:
+  - Stable cohort hashing support (whitelist JSONB, analytics toggle)
+  - Audit table (`feature_flag_audit`) for mutation traceability
+  - Partitioned evaluation logs (`feature_flag_evaluations`) for 90-day retention
+
+### Manual Seeding
+
+To re-seed feature flags manually:
 
 ```bash
 psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   -f migrations/seeds/feature_flags.sql
 ```
 
-Validate loaded data:
+### Validation
+
+Validate loaded flags:
 
 ```bash
 psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-  -c "SELECT name, enabled, rollout_percentage FROM feature_flags ORDER BY name;"
+  -c "SELECT flag_key, enabled, rollout_percentage, analytics_enabled FROM feature_flags ORDER BY flag_key;"
 ```
+
+Check audit trail:
+
+```bash
+psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "SELECT flag_key, action, actor_type, timestamp FROM feature_flag_audit ORDER BY timestamp DESC LIMIT 10;"
+```
+
+### Evaluation Logs Maintenance
+
+Partitioned evaluation logs require monthly partition creation. To create partitions:
+
+```sql
+-- Example: Create partition for March 2025
+CREATE TABLE feature_flag_evaluations_2025_03 PARTITION OF feature_flag_evaluations
+    FOR VALUES FROM ('2025-03-01') TO ('2025-04-01');
+```
+
+To drop old partitions (90-day retention per Policy P14):
+
+```bash
+# Drop partitions older than 90 days
+psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "DROP TABLE IF EXISTS feature_flag_evaluations_2024_10;"
+```
+
+**Note:** Partition management should be automated via scheduled job in production.
 
 ## 7. Creating New Migrations
 
