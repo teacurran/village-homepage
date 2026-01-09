@@ -392,6 +392,24 @@ kubectl apply -k ../villagecompute/k8s/overlays/production/homepage
 
 ## Architecture
 
+### Architectural Diagrams
+
+The system architecture is documented using PlantUML diagrams that capture the runtime structure, integration boundaries, and policy enforcement points:
+
+- **[System Context Diagram](docs/diagrams/context.puml)** - Shows Village Homepage's interactions with external actors (users, administrators) and systems (OAuth providers, Stripe, Meta Graph API, weather/stock APIs, LangChain4j, Cloudflare R2, PostgreSQL, Elasticsearch). Includes policy annotations (P1-P14) governing GDPR compliance, AI budgets, payment audits, screenshot retention, and geographic filtering.
+
+- **[Container Diagram](docs/diagrams/container.puml)** - Decomposes the Quarkus application into internal components (ExperienceShell, AuthIdentityService, FeedAggregationService, MarketplaceService, DirectoryService, etc.), async job queue families (DEFAULT/HIGH/LOW/BULK/SCREENSHOT), and Kubernetes deployment pods. Highlights delayed job orchestration, worker isolation, and cross-cutting services (FeatureFlagService, RateLimitService, StorageGateway).
+
+**Key Points:**
+- Diagrams align with ADR 0001 toolchain decisions (Java 21, Quarkus 3.26.1, Node 20.10.0)
+- Policy tags reference cross-cutting rulebook (GDPR consent, AI cost controls, rate limiting)
+- Queue segregation supports targeted scaling and priority management in Kubernetes
+- All external integrations show protocol/policy annotations for ops alignment
+
+**Rendering:**
+- Use a PlantUML renderer (IDE plugin, online viewer, or `plantuml` CLI) to visualize `.puml` sources
+- Diagrams are versioned alongside code for architecture reviews and onboarding
+
 ### Design Decisions
 
 See [Architecture Decision Records](docs/adr/) for key technical decisions:

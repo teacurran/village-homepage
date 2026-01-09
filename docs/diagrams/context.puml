@@ -1,0 +1,113 @@
+@startuml Village Homepage - System Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+' System Context Diagram for Village Homepage
+' Shows actors, external systems, and key policy boundaries
+
+title Village Homepage - System Context Diagram
+
+' === ACTORS ===
+
+Person(anonymous_user, "Anonymous User", "Guest browsing default homepage, marketplace, and directory")
+Person(auth_user, "Authenticated User", "Logged-in user with personalized widgets and customizations")
+Person(admin, "Administrator", "Super admin, support, ops, or read-only staff")
+
+' === CORE SYSTEM ===
+
+System(homepage_system, "Village Homepage", "Quarkus-based SaaS platform providing personalized homepage, marketplace classifieds, and curated web directory\n\nJava 21 + Quarkus 3.26.1")
+
+System_Ext(ts_pipeline, "TypeScript Build Pipeline", "Node 20.10 + esbuild\nfrontend-maven-plugin bundles React islands")
+
+' === EXTERNAL SYSTEMS ===
+
+System_Ext(google_oauth, "Google OAuth", "Authentication provider")
+System_Ext(facebook_oauth, "Facebook OAuth", "Authentication provider")
+System_Ext(apple_oauth, "Apple OAuth", "Authentication provider")
+
+System_Ext(stripe, "Stripe", "Payment processing for marketplace features, promotions, and refunds")
+
+System_Ext(meta_api, "Meta Graph API", "Instagram/Facebook social feed integration")
+System_Ext(alpha_vantage, "Alpha Vantage", "Stock market data provider")
+System_Ext(open_meteo, "Open-Meteo", "International weather data")
+System_Ext(nws, "National Weather Service", "US weather data")
+
+System_Ext(langchain4j, "LangChain4j", "AI integration layer (model-agnostic)\nConnects to Anthropic Claude Sonnet 4")
+
+System_Ext(postgres, "PostgreSQL 17 + PostGIS", "Primary database with geo-spatial support")
+System_Ext(elasticsearch, "Elasticsearch 8", "Full-text search and geo-spatial filtering")
+System_Ext(cloudflare_r2, "Cloudflare R2", "S3-compatible object storage + CDN\nScreenshots, listing images, user uploads")
+
+System_Ext(email_smtp, "SMTP Server", "Outbound email via Qute templates")
+System_Ext(email_imap, "IMAP Server", "Inbound email for marketplace reply relay")
+
+System_Ext(jaeger, "Jaeger", "Distributed tracing backend")
+
+' === RELATIONSHIPS ===
+
+' User interactions
+Rel(anonymous_user, homepage_system, "Views default homepage\nBrowses marketplace/directory\nNo login required", "HTTPS\n[P9: Anonymous tracking]")
+Rel(auth_user, homepage_system, "Personalizes widgets\nPosts marketplace listings\nVotes on directory sites\nCustomizes layouts", "HTTPS\n[P1: GDPR consent]\n[P14: Analytics consent]")
+Rel(admin, homepage_system, "Manages users, content\nConfigures feature flags\nMonitors budgets and jobs", "HTTPS\n[Admin roles]")
+
+' OAuth authentication
+Rel(homepage_system, google_oauth, "Authenticates users", "OAuth 2.0\n[P1: Account merge]")
+Rel(homepage_system, facebook_oauth, "Authenticates users", "OAuth 2.0\n[P1: Account merge]")
+Rel(homepage_system, apple_oauth, "Authenticates users", "OAuth 2.0\n[P1: Account merge]")
+
+' Payments
+Rel(homepage_system, stripe, "Processes payments\nHandles refunds", "REST API\n[P3: Refund policies]\n[Audit trails]")
+
+' Content integrations
+Rel(homepage_system, meta_api, "Fetches Instagram/Facebook feeds", "REST API\n[P5/P13: Token storage]\n[30-min refresh]")
+Rel(homepage_system, alpha_vantage, "Fetches stock market data", "REST API\n[5-min refresh during market hours]")
+Rel(homepage_system, open_meteo, "Fetches international weather", "REST API\n[1-hour refresh]")
+Rel(homepage_system, nws, "Fetches US weather data", "REST API\n[1-hour refresh]")
+
+' AI integration
+Rel(homepage_system, langchain4j, "AI tagging, categorization\nContent recommendations\nFraud detection", "Java API\n[P2/P10: $500/month budget]\n[Cost tracking]")
+
+' Data storage
+Rel(homepage_system, postgres, "Stores users, widgets, listings\nDirectory sites, jobs, configs", "JDBC\n[P1: GDPR compliance]\n[P6/P11: PostGIS queries]")
+Rel(homepage_system, elasticsearch, "Indexes listings and directory\nGeo-spatial + full-text search", "REST API\n[Hibernate Search]")
+Rel(homepage_system, ts_pipeline, "Bundles + consumes React/TS assets", "frontend-maven-plugin + npm\n[P8: TypeScript build integration]")
+Rel(homepage_system, cloudflare_r2, "Stores screenshots, images\nServes via CDN", "S3 API\n[P4: Screenshot retention]\n[P12: SCREENSHOT queue & Puppeteer pool]\n[WebP compression]")
+
+' Email
+Rel(homepage_system, email_smtp, "Sends notifications\nMarketplace relay emails", "SMTP\n[Qute templates]")
+Rel(email_imap, homepage_system, "Polls for inbound replies\nMarketplace contact relay", "IMAP\n[1-min polling]")
+
+' Observability
+Rel(homepage_system, jaeger, "Exports distributed traces\nFeed refresh, AI tagging, screenshots", "OpenTelemetry")
+
+' === LEGEND ===
+
+note right of homepage_system
+  **Policy Annotations:**
+
+  **P1:** GDPR/CCPA consent, account merge, data export/deletion
+  **P2:** AI tagging budget control ($500/month ceiling)
+  **P3:** Stripe payment/refund audit trails
+  **P4:** Screenshot capture and indefinite retention
+  **P5:** Social token storage (indefinite per policy)
+  **P6:** PostGIS geographic queries (≤250mi radius)
+  **P7:** Feature flag database-backed rollouts
+  **P8:** TypeScript build integration (Node 20.10 + frontend-maven-plugin)
+  **P9:** Anonymous user tracking (vu_anon_id cookie)
+  **P10:** AI cost tracking across feeds, directory, fraud detection
+  **P11:** Geographic filtering for marketplace
+  **P12:** Dedicated SCREENSHOT queue + Puppeteer pool per pod
+  **P13:** Social integration data retention
+  **P14:** Analytics consent and 90-day evaluation log purge
+
+  **Deployment Environments:**
+  - **Local:** docker-compose (Postgres, Elasticsearch, MinIO, Mailpit, Jaeger)
+  - **Beta:** homepage-beta.villagecompute.com
+  - **Production:** homepage.villagecompute.com
+
+  **Runtime:** Kubernetes (k3s cluster)
+  **Container Build:** Jib (quarkus-container-image-jib)
+end note
+
+SHOW_LEGEND()
+
+@enduml

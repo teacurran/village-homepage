@@ -1,0 +1,232 @@
+@startuml Village Homepage - Container Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Container Diagram for Village Homepage
+' Shows internal Quarkus components, async queues, and deployment pods
+
+title Village Homepage - Container Diagram
+
+' === ACTORS ===
+
+Person(users, "Users", "Anonymous + Authenticated")
+Person(admins, "Administrators", "Super admin, support, ops, read-only")
+
+' === DEPLOYMENT BOUNDARIES ===
+
+System_Boundary(k8s_cluster, "Kubernetes Cluster (k3s)") {
+
+    ' === EXPERIENCE POD ===
+
+    Container_Boundary(experience_pod, "Experience Pod (Quarkus Runtime)") {
+
+        Container(experience_shell, "Experience Shell", "Qute + React Islands", "Renders homepage UI\nGridstack layout\nAnt Design components\n[P8: TS build integration]")
+
+        Container(auth_service, "AuthIdentityService", "Java 21 Service", "OAuth integration (Google/FB/Apple)\nAnonymous account merge\nJWT enforcement\n[P1/P9: GDPR + anonymous tracking]")
+
+        Container(user_pref_service, "UserPreferenceService", "Java 21 Service", "Widget layout persistence\nCustomization settings\nConsent management\n[P14: Analytics consent]")
+
+        Container(feed_service, "FeedAggregationService", "Java 21 Service", "RSS feed ingestion\nAI tagging orchestration\nNews aggregation\n[P2/P10: AI budget control]")
+
+        Container(weather_service, "WeatherService", "Java 21 Service", "Open-Meteo + NWS clients\n1-hour refresh cadence\nLocation-based forecasts")
+
+        Container(stock_service, "StockService", "Java 21 Service", "Alpha Vantage client\n5-min refresh (market hours)\nPortfolio tracking")
+
+        Container(social_service, "SocialIntegrationService", "Java 21 Service", "Meta Graph API client\n30-min refresh\nToken management\n[P5/P13: Token storage]")
+
+        Container(marketplace_service, "MarketplaceService", "Java 21 Service", "Classifieds CRUD\nStripe payments/refunds\nGeographic filtering\n[P3/P11: Payments + PostGIS]")
+
+        Container(directory_service, "DirectoryService", "Java 21 Service", "Good Sites management\nKarma-based trust\nVoting, categorization\n[P4: Screenshot integration]")
+
+        Container(profile_service, "ProfileService", "Java 21 Service", "Public templates\n(public_homepage, your_times, your_report)\nCurated feeds\nSEO + analytics")
+
+        Container(click_tracking_service, "ClickTrackingService", "Java 21 Service", "Click event capture\n90-day aggregation\nAnalytics rollups\n[P14: Consent gating]")
+
+        Container(feature_flag_service, "FeatureFlagService", "Java 21 Service", "Database-backed flags\nCohort hashing\nRollout percentages\n[P7: Flag strategy]")
+
+        Container(rate_limit_service, "RateLimitService", "Java 21 Service", "Tiered rate limiting\nIP-based blocking\nViolation logs\n[F14.2: Rate tiers]")
+
+        Container(storage_gateway, "StorageGateway", "Java 21 Service", "Cloudflare R2 client\nS3-compatible uploads\nCDN-signed URLs\n[P4: Screenshot storage]")
+
+        Container(ai_tagging_service, "AiTaggingService", "Java 21 Service", "LangChain4j wrapper\nBudget tracking\nCost enforcement\n[P2/P10: $500/month ceiling]")
+
+        Container(screenshot_service, "ScreenshotService", "Java 21 Service", "jvppeteer integration\nChromium renderer\n1280x800 viewport\n[P4/P12: WebP compression + dedicated queue]")
+
+        Container(job_orchestrator, "JobOrchestrator", "Java 21 Service", "Delayed job dispatcher\nQueue routing\nRetry logic + exponential backoff")
+
+        Container(ops_portal, "OpsAnalyticsPortal", "Java 21 Service", "Admin dashboards\nBudget monitors\nJob health gauges\nFeature flag controls")
+
+    }
+
+    ' === WORKER POD ===
+
+    Container_Boundary(worker_pod, "Worker Pod (Async Job Handlers)") {
+
+        queue "DEFAULT Queue" as queue_default <<Queue>> #LightBlue
+        queue "HIGH Queue" as queue_high <<Queue>> #Salmon
+        queue "LOW Queue" as queue_low <<Queue>> #LightGreen
+        queue "BULK Queue" as queue_bulk <<Queue>> #LightYellow
+        queue "SCREENSHOT Queue" as queue_screenshot <<Queue>> #Lavender
+
+        Container(job_handlers, "Job Handlers", "Java 21 Workers", "Feed refresh, weather refresh\nStock refresh, social refresh\nAI tagging, screenshot capture\nListing expiration, message relay\nImage processing, link health\nRank recalculation, email polling\nSitemap generation")
+
+    }
+
+    ' === DATA STORES (in cluster) ===
+
+    ContainerDb(postgres, "PostgreSQL 17 + PostGIS", "Relational + Geo DB", "Users, widgets, layouts\nListings, directory sites\nJobs, feature flags, configs\n[P1: GDPR compliance]\n[P6/P11: PostGIS indexes]")
+
+    ContainerDb(elasticsearch, "Elasticsearch 8", "Search Engine", "Marketplace listings index\nDirectory sites index\nGeo-spatial + full-text search\n[Hibernate Search backend]")
+
+}
+
+' === EXTERNAL SYSTEMS ===
+
+System_Ext(oauth_providers, "OAuth Providers", "Google, Facebook, Apple")
+System_Ext(stripe, "Stripe", "Payment processing")
+System_Ext(meta_api, "Meta Graph API", "Social feeds")
+System_Ext(weather_apis, "Weather APIs", "Open-Meteo + NWS")
+System_Ext(alpha_vantage, "Alpha Vantage", "Stock data")
+System_Ext(langchain4j_ai, "LangChain4j → Claude", "AI services")
+System_Ext(cloudflare_r2, "Cloudflare R2", "Object storage + CDN")
+System_Ext(email_servers, "Email (SMTP/IMAP)", "Outbound + inbound relay")
+System_Ext(jaeger, "Jaeger", "Distributed tracing")
+
+' === RELATIONSHIPS - Users to Experience Pod ===
+
+Rel(users, experience_shell, "Views homepage, marketplace, directory", "HTTPS")
+Rel(admins, ops_portal, "Manages system, monitors budgets", "HTTPS + Admin auth")
+
+' === RELATIONSHIPS - Experience Shell to Services ===
+
+Rel(experience_shell, auth_service, "Authenticates, manages sessions")
+Rel(experience_shell, user_pref_service, "Loads widget layouts, preferences")
+Rel(experience_shell, feed_service, "Fetches aggregated news feeds")
+Rel(experience_shell, weather_service, "Fetches weather forecasts")
+Rel(experience_shell, stock_service, "Fetches stock market data")
+Rel(experience_shell, social_service, "Fetches social media feeds")
+Rel(experience_shell, marketplace_service, "CRUD listings, payments")
+Rel(experience_shell, directory_service, "Browses directory, votes")
+Rel(experience_shell, profile_service, "Renders public templates")
+Rel(experience_shell, click_tracking_service, "Logs click events")
+
+' === RELATIONSHIPS - Cross-Service Dependencies ===
+
+Rel(user_pref_service, feature_flag_service, "Checks cohorts, consent")
+Rel(feed_service, ai_tagging_service, "Tags content, categorizes")
+Rel(marketplace_service, storage_gateway, "Uploads listing images")
+Rel(directory_service, screenshot_service, "Captures site screenshots")
+Rel(profile_service, click_tracking_service, "Aggregates analytics")
+
+Rel(ai_tagging_service, langchain4j_ai, "Calls AI models", "[P2/P10: Budget tracking]")
+Rel(storage_gateway, cloudflare_r2, "Stores/retrieves objects", "S3 API")
+Rel(screenshot_service, cloudflare_r2, "Stores screenshots", "[P4: WebP format]")
+
+Rel(auth_service, oauth_providers, "OAuth flows", "[P1: Account merge]")
+Rel(marketplace_service, stripe, "Payments/refunds", "[P3: Audit trails]")
+Rel(social_service, meta_api, "Fetches feeds", "[P5/P13: Token storage]")
+Rel(weather_service, weather_apis, "Fetches forecasts")
+Rel(stock_service, alpha_vantage, "Fetches stock data")
+
+Rel(rate_limit_service, ops_portal, "Exposes violation logs")
+Rel(feature_flag_service, ops_portal, "Manages flag rollouts")
+
+' === RELATIONSHIPS - Job Orchestration ===
+
+Rel(feed_service, job_orchestrator, "Enqueues feed refresh jobs")
+Rel(weather_service, job_orchestrator, "Enqueues weather refresh jobs")
+Rel(stock_service, job_orchestrator, "Enqueues stock refresh jobs")
+Rel(social_service, job_orchestrator, "Enqueues social refresh jobs")
+Rel(ai_tagging_service, job_orchestrator, "Enqueues AI tagging jobs")
+Rel(marketplace_service, job_orchestrator, "Enqueues listing expiration, message relay")
+Rel(directory_service, job_orchestrator, "Enqueues screenshot capture, link health, rank recalc")
+Rel(profile_service, job_orchestrator, "Enqueues view aggregation")
+Rel(screenshot_service, job_orchestrator, "Enqueues screenshot batches", "[P12: SCREENSHOT queue]")
+
+Rel(job_orchestrator, queue_default, "Routes: feed refresh, weather, listings, link health, click rollups")
+Rel(job_orchestrator, queue_high, "Routes: stock refresh, message relay, inbound email")
+Rel(job_orchestrator, queue_low, "Routes: anon cleanup, profile aggregation, metadata refresh")
+Rel(job_orchestrator, queue_bulk, "Routes: AI tagging, image processing, bulk imports")
+Rel(job_orchestrator, queue_screenshot, "Routes: screenshot capture (limited concurrency)", "[P12: Dedicated queue + Puppeteer pool]")
+
+Rel(queue_default, job_handlers, "Processes DEFAULT jobs")
+Rel(queue_high, job_handlers, "Processes HIGH priority jobs")
+Rel(queue_low, job_handlers, "Processes LOW priority jobs")
+Rel(queue_bulk, job_handlers, "Processes BULK jobs")
+Rel(queue_screenshot, job_handlers, "Processes SCREENSHOT jobs")
+
+' === RELATIONSHIPS - Data Access ===
+
+Rel(auth_service, postgres, "Reads/writes users, sessions", "JDBC + Panache")
+Rel(user_pref_service, postgres, "Reads/writes widget layouts", "JDBC + Panache")
+Rel(feed_service, postgres, "Reads/writes feeds, articles", "JDBC + Panache")
+Rel(weather_service, postgres, "Reads/writes weather cache", "JDBC + Panache")
+Rel(stock_service, postgres, "Reads/writes stock data", "JDBC + Panache")
+Rel(social_service, postgres, "Reads/writes social tokens, posts", "JDBC + Panache")
+Rel(marketplace_service, postgres, "Reads/writes listings (PostGIS)", "JDBC + Panache [P6/P11]")
+Rel(directory_service, postgres, "Reads/writes sites, votes, categories", "JDBC + Panache")
+Rel(profile_service, postgres, "Reads/writes templates, analytics", "JDBC + Panache")
+Rel(feature_flag_service, postgres, "Reads/writes flags, rollouts", "JDBC + Panache")
+Rel(job_orchestrator, postgres, "Reads/writes delayed jobs", "JDBC + Panache")
+Rel(ops_portal, postgres, "Reads aggregated rollups", "JDBC + Panache")
+
+Rel(marketplace_service, elasticsearch, "Indexes/searches listings", "Hibernate Search")
+Rel(directory_service, elasticsearch, "Indexes/searches directory sites", "Hibernate Search")
+
+Rel(job_handlers, postgres, "Reads/writes job results", "JDBC + Panache")
+Rel(job_handlers, email_servers, "Sends emails, polls IMAP", "SMTP/IMAP")
+
+' === RELATIONSHIPS - Observability ===
+
+Rel(experience_pod, jaeger, "Exports traces", "OpenTelemetry")
+Rel(worker_pod, jaeger, "Exports traces", "OpenTelemetry")
+
+' === LEGEND ===
+
+note bottom of k8s_cluster
+  **Queue Families (Per Async Workload Matrix):**
+
+  **DEFAULT (Blue):** Feed refresh (15min-daily), weather refresh (1hr),
+                      listing expiration (daily), click rollups (hourly),
+                      link health (weekly), sitemap generation (daily)
+
+  **HIGH (Salmon):** Stock refresh (5min market hours), message relay (on-demand),
+                     inbound email parsing (1min polling)
+
+  **LOW (Green):** Anonymous cleanup (daily), profile view aggregation (hourly),
+                   metadata refresh, rate limit log processing
+
+  **BULK (Yellow):** AI tagging (on-demand, budget-controlled),
+                     screenshot batches, image processing, bulk Good Sites imports
+
+  **SCREENSHOT (Lavender):** Dedicated queue with limited concurrency per P12
+                             (jvppeteer + Chromium in same container)
+
+  **Deployment Characteristics:**
+  - **Experience Pod:** Multi-replica, serves HTTPS traffic, stateless (CDN media)
+  - **Worker Pod:** Dedicated queue workers, job polling, exponential backoff retries
+  - **Local Dev:** docker-compose (Postgres, Elasticsearch, MinIO, Mailpit, Jaeger)
+  - **Beta/Prod:** K8s with secrets, feature flags differentiate environments
+
+  **Key Policies Enforced at Boundaries:**
+  - **P1/P9:** Auth service handles GDPR consent + anonymous merge
+  - **P2/P10:** AI service enforces $500/month budget ceiling
+  - **P3:** Marketplace service audits all Stripe transactions
+  - **P4:** Screenshot service stores indefinitely (WebP compressed)
+  - **P5/P13:** Social service retains tokens indefinitely
+  - **P6/P11:** Marketplace uses PostGIS for ≤250mi radius queries
+  - **P7:** Feature flags stored in DB with cohort-based rollouts
+  - **P14:** Click tracking logs consent, purges evaluations after 90 days
+
+  **Technology Stack:**
+  - **Runtime:** Java 21 + Quarkus 3.26.1
+  - **Frontend:** Qute templates + React islands (TypeScript, Ant Design, gridstack.js)
+  - **Data Access:** Hibernate ORM + Panache (ActiveRecord pattern)
+  - **Search:** Hibernate Search + Elasticsearch 8
+  - **AI:** LangChain4j (model-agnostic, Anthropic Claude Sonnet 4)
+  - **Observability:** SmallRye Metrics, OpenTelemetry, Jaeger tracing
+  - **Container Build:** Jib (no Docker daemon required)
+end note
+
+SHOW_LEGEND()
+
+@enduml
