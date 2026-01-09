@@ -43,7 +43,7 @@ All async workloads are enumerated in the `JobType` enum. Each type is permanent
 | `INBOUND_EMAIL` | DEFAULT | 1 minute | `InboundEmailHandler` | IMAP polling for marketplace relay |
 | `STOCK_REFRESH` | HIGH | 5 min (market hours), 1hr (after hours), 6hr (weekends) | `StockRefreshJobHandler` | Alpha Vantage API: 25 req/day free tier, rate limit fallback serves stale cache, market hours: 9:30am-4pm ET Mon-Fri |
 | `MESSAGE_RELAY` | HIGH | On-demand | `MessageRelayHandler` | Marketplace inquiry relay with email masking |
-| `SOCIAL_REFRESH` | LOW | 30 minutes | `SocialRefreshHandler` | P5/P13: Secure token storage required |
+| `SOCIAL_REFRESH` | LOW | 30 minutes | `SocialFeedRefreshJobHandler` | P5/P13: Token encryption (TODO), 7-day expiry refresh, staleness banners (green/yellow/orange/red), graceful degradation on API failure, posts archived after >7 days stale |
 | `LINK_HEALTH_CHECK` | LOW | Weekly | `LinkHealthCheckHandler` | Detects dead links in Good Sites directory |
 | `SITEMAP_GENERATION` | LOW | Daily @ 3am UTC | `SitemapGenerationHandler` | SEO sitemap XML generation |
 | `CLICK_ROLLUP` | LOW | Hourly | `ClickRollupHandler` | P14: Consent-gated, 90-day retention |
