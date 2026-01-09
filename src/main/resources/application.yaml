@@ -5,6 +5,20 @@ quarkus:
   http:
     port: 8080
 
+  # S3 Configuration - Disable DevServices (use MinIO from docker-compose)
+  s3:
+    devservices:
+      enabled: false
+    # S3 Client Configuration for Cloudflare R2 (Policy P4)
+    aws:
+      region: ${S3_REGION:auto}
+      credentials:
+        type: static
+        static-provider:
+          access-key-id: ${S3_ACCESS_KEY:minioadmin}
+          secret-access-key: ${S3_SECRET_KEY:minioadmin}
+    endpoint-override: ${S3_ENDPOINT:http://localhost:9000}
+
   # Logging Configuration
   log:
     level: INFO
@@ -157,6 +171,33 @@ villagecompute:
       log-requests: ${AI_LOG_REQUESTS:false}
       log-responses: ${AI_LOG_RESPONSES:false}
 
+  # Object Storage Configuration (Policy P4: Indefinite retention with versioning)
+  storage:
+    # S3/R2 Connection Settings
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}  # MinIO for dev, R2 for prod
+    access-key: ${S3_ACCESS_KEY:minioadmin}
+    secret-key: ${S3_SECRET_KEY:minioadmin}
+    region: ${S3_REGION:auto}  # Cloudflare R2 uses 'auto'
+
+    # Bucket names per asset domain (Policy P4)
+    buckets:
+      screenshots: ${S3_BUCKET_SCREENSHOTS:screenshots}
+      listings: ${S3_BUCKET_LISTINGS:listings}
+      profiles: ${S3_BUCKET_PROFILES:profiles}
+
+    # Signed URL TTLs (Policy P4)
+    signed-url-ttl:
+      private-minutes: ${SIGNED_URL_PRIVATE_TTL:1440}  # 24 hours for drafts
+      public-minutes: ${SIGNED_URL_PUBLIC_TTL:10080}    # 7 days for public assets
+
+    # WebP conversion settings (Policy P4: thumbnail/full variants)
+    webp:
+      quality: ${WEBP_QUALITY:85}
+      thumbnail-width: 320
+      thumbnail-height: 200
+      full-width: 1280
+      full-height: 800
+
 # Profile-specific overrides
 "%dev":
   quarkus:
@@ -194,6 +235,10 @@ villagecompute:
       jdbc:
         url: jdbc:h2:mem:homepage-tests;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
         driver: org.h2.Driver
+      devservices:
+        enabled: false
+    # Disable S3 dev services in tests
+    s3:
       devservices:
         enabled: false
     # Tests use in-memory H2 to avoid external Postgres dependency

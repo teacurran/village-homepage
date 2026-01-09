@@ -141,9 +141,11 @@ services:
       mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
       mc mb --ignore-existing local/screenshots;
       mc mb --ignore-existing local/listings;
+      mc mb --ignore-existing local/profiles;
       mc anonymous set download local/screenshots;
       mc anonymous set download local/listings;
-      echo 'MinIO buckets initialized: screenshots, listings';
+      mc anonymous set download local/profiles;
+      echo 'MinIO buckets initialized: screenshots, listings, profiles';
       exit 0;
       "
 

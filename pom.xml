@@ -66,6 +66,15 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- Amazon Services (S3) BOM for Cloudflare R2 (Policy P4) -->
+            <!-- Using platform BOM ensures compatibility with Quarkus 3.26.1 -->
+            <dependency>
+                <groupId>io.quarkus.platform</groupId>
+                <artifactId>quarkus-amazon-services-bom</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -132,15 +141,16 @@
             <artifactId>quarkus-scheduler</artifactId>
         </dependency>
 
-        <!-- S3/Object Storage (Cloudflare R2) - TODO: Verify version compatibility in I1.T2 -->
-        <!-- Temporarily commented out due to devservices classloader issue -->
-        <!--
+        <!-- S3/Object Storage (Cloudflare R2) for Policy P4 -->
         <dependency>
             <groupId>io.quarkiverse.amazonservices</groupId>
             <artifactId>quarkus-amazon-s3</artifactId>
-            <version>2.18.0</version>
         </dependency>
-        -->
+        <!-- Required HTTP client for S3 SDK -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+        </dependency>
 
         <!-- Mailer -->
         <dependency>
