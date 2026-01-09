@@ -7,18 +7,20 @@
     "watch": "node esbuild.config.js --watch",
     "lint": "eslint 'src/main/resources/META-INF/resources/assets/ts/**/*.{ts,tsx}'",
     "lint:fix": "npm run lint -- --fix",
-    "typecheck": "tsc --noEmit"
+    "lint:secrets": "node tools/detect-secrets.cjs",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "VillageCompute",
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "antd": "^5.22.6",
     "@ant-design/icons": "^5.5.2",
     "@antv/g2plot": "^2.4.32",
-    "@antv/s2": "^2.0.0-next.18",
     "@antv/l7": "^2.23.1",
+    "@antv/s2": "^2.0.0-next.18",
+    "antd": "^5.22.6",
     "dayjs": "^1.11.13",
     "gridstack": "^11.0.1",
     "lodash-es": "^4.17.21",
@@ -37,6 +39,7 @@
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.3",
     "eslint-plugin-react-hooks": "^5.1.0",
+    "husky": "^9.1.7",
     "typescript": "^5.7.2"
   },
   "engines": {

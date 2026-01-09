@@ -62,3 +62,24 @@ test-results/
 
 # Environment files
 .env
+.env.local
+.env.*.local
+
+# Secret files and credentials (Security: I1.T9)
+*.p8
+*.pem
+*.key
+*.crt
+*.jks
+*.keystore
+*.truststore
+config/secrets.yaml
+config/sealed-secrets.yaml
+.secrets/
+secrets/
+credentials.json
+service-account.json
+
+# Vault tokens and temporary secret files
+.vault-token
+.vault-creds
