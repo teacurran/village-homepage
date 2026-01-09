@@ -38,8 +38,8 @@ import villagecompute.homepage.api.types.StorageUploadResultType;
  * StorageGateway service for Cloudflare R2 object storage operations.
  *
  * <p>
- * This service provides a unified abstraction over S3-compatible object storage (MinIO for dev,
- * Cloudflare R2 for prod), with support for:
+ * This service provides a unified abstraction over S3-compatible object storage (MinIO for dev, Cloudflare R2 for
+ * prod), with support for:
  * <ul>
  * <li>WebP conversion with thumbnail/full variants (Policy P4)</li>
  * <li>Signed URL generation with TTL-based access control</li>
@@ -49,8 +49,7 @@ import villagecompute.homepage.api.types.StorageUploadResultType;
  * </ul>
  *
  * <p>
- * <b>Policy P4:</b> Implements indefinite screenshot retention with versioning and CDN-backed
- * delivery.
+ * <b>Policy P4:</b> Implements indefinite screenshot retention with versioning and CDN-backed delivery.
  *
  * <p>
  * <b>Usage Example:</b>
@@ -82,49 +81,55 @@ public class StorageGateway {
     @Inject
     MeterRegistry meterRegistry;
 
-    @ConfigProperty(name = "villagecompute.storage.buckets.screenshots")
+    @ConfigProperty(
+            name = "villagecompute.storage.buckets.screenshots")
     String screenshotsBucket;
 
-    @ConfigProperty(name = "villagecompute.storage.buckets.listings")
+    @ConfigProperty(
+            name = "villagecompute.storage.buckets.listings")
     String listingsBucket;
 
-    @ConfigProperty(name = "villagecompute.storage.buckets.profiles")
+    @ConfigProperty(
+            name = "villagecompute.storage.buckets.profiles")
     String profilesBucket;
 
-    @ConfigProperty(name = "villagecompute.storage.webp.quality")
+    @ConfigProperty(
+            name = "villagecompute.storage.webp.quality")
     Integer webpQuality;
 
-    @ConfigProperty(name = "villagecompute.storage.webp.thumbnail-width")
+    @ConfigProperty(
+            name = "villagecompute.storage.webp.thumbnail-width")
     Integer thumbnailWidth;
 
-    @ConfigProperty(name = "villagecompute.storage.webp.thumbnail-height")
+    @ConfigProperty(
+            name = "villagecompute.storage.webp.thumbnail-height")
     Integer thumbnailHeight;
 
-    @ConfigProperty(name = "villagecompute.storage.webp.full-width")
+    @ConfigProperty(
+            name = "villagecompute.storage.webp.full-width")
     Integer fullWidth;
 
-    @ConfigProperty(name = "villagecompute.storage.webp.full-height")
+    @ConfigProperty(
+            name = "villagecompute.storage.webp.full-height")
     Integer fullHeight;
 
     /**
      * Bucket types per asset domain (Policy P4).
      */
     public enum BucketType {
-        SCREENSHOTS,
-        LISTINGS,
-        PROFILES
+        SCREENSHOTS, LISTINGS, PROFILES
     }
 
     /**
      * Uploads file to specified bucket with WebP conversion and variant handling.
      *
      * <p>
-     * Generates object key with appropriate prefix for bucket organization. Records upload metrics
-     * and traces for observability.
+     * Generates object key with appropriate prefix for bucket organization. Records upload metrics and traces for
+     * observability.
      *
      * <p>
-     * <b>Note:</b> WebP conversion is currently stubbed and will be implemented in a future
-     * iteration. Images are stored as-is for now.
+     * <b>Note:</b> WebP conversion is currently stubbed and will be implemented in a future iteration. Images are
+     * stored as-is for now.
      *
      * @param bucket
      *            target bucket (screenshots, listings, profiles)
@@ -201,8 +206,8 @@ public class StorageGateway {
      * Downloads file from bucket by object key.
      *
      * <p>
-     * Returns raw bytes for further processing. Typically used internally by job handlers for
-     * image processing pipelines.
+     * Returns raw bytes for further processing. Typically used internally by job handlers for image processing
+     * pipelines.
      *
      * @param bucket
      *            source bucket
@@ -262,8 +267,8 @@ public class StorageGateway {
      * Generates pre-signed URL for temporary direct access to private object.
      *
      * <p>
-     * TTL based on bucket type and privacy requirements (24 hours for private drafts, 7 days for
-     * public assets per Policy P4).
+     * TTL based on bucket type and privacy requirements (24 hours for private drafts, 7 days for public assets per
+     * Policy P4).
      *
      * @param bucket
      *            source bucket
@@ -316,8 +321,7 @@ public class StorageGateway {
      * Deletes object from bucket (for GDPR compliance and user-requested removals).
      *
      * <p>
-     * Logs deletion for audit trail per Policy P1. Note: This is a hard delete and cannot be
-     * undone.
+     * Logs deletion for audit trail per Policy P1. Note: This is a hard delete and cannot be undone.
      *
      * @param bucket
      *            source bucket
@@ -333,8 +337,7 @@ public class StorageGateway {
         try (Scope scope = span.makeCurrent()) {
             String bucketName = getBucketName(bucket);
 
-            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder().bucket(bucketName).key(objectKey)
-                    .build();
+            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder().bucket(bucketName).key(objectKey).build();
 
             s3Client.deleteObject(deleteRequest);
 
@@ -368,8 +371,7 @@ public class StorageGateway {
      * Lists all objects with given prefix (for admin dashboards and audit operations).
      *
      * <p>
-     * Returns object keys and metadata. Use with caution on large buckets - consider pagination
-     * for production use.
+     * Returns object keys and metadata. Use with caution on large buckets - consider pagination for production use.
      *
      * @param bucket
      *            source bucket
@@ -396,8 +398,8 @@ public class StorageGateway {
             List<StorageObjectType> objects = new ArrayList<>();
             for (S3Object s3Object : response.contents()) {
                 objects.add(new StorageObjectType(s3Object.key(), s3Object.size(), "unknown", // ContentType not
-                                                                                                // included in
-                                                                                                // listObjectsV2
+                                                                                              // included in
+                                                                                              // listObjectsV2
                         s3Object.lastModified().toString(), new HashMap<>() // Metadata requires separate HEAD request
                 ));
             }
@@ -427,8 +429,8 @@ public class StorageGateway {
      * Converts uploaded image to WebP format with appropriate dimensions.
      *
      * <p>
-     * <b>TODO:</b> Implement actual WebP conversion using image processing library. For now, this
-     * is a pass-through that preserves the original image format.
+     * <b>TODO:</b> Implement actual WebP conversion using image processing library. For now, this is a pass-through
+     * that preserves the original image format.
      *
      * <p>
      * Future implementation should use a library like Thumbnailator or ImageMagick wrapper to:
@@ -483,8 +485,7 @@ public class StorageGateway {
      * Builds retention metadata for S3 object tagging.
      *
      * <p>
-     * Metadata is used by Cloudflare lifecycle policies to manage tiering and retention per Policy
-     * P4.
+     * Metadata is used by Cloudflare lifecycle policies to manage tiering and retention per Policy P4.
      *
      * @param contentType
      *            original MIME type
@@ -515,9 +516,9 @@ public class StorageGateway {
      */
     private String getBucketName(BucketType bucket) {
         return switch (bucket) {
-        case SCREENSHOTS -> screenshotsBucket;
-        case LISTINGS -> listingsBucket;
-        case PROFILES -> profilesBucket;
+            case SCREENSHOTS -> screenshotsBucket;
+            case LISTINGS -> listingsBucket;
+            case PROFILES -> profilesBucket;
         };
     }
 
@@ -531,8 +532,8 @@ public class StorageGateway {
                 .register(meterRegistry).increment();
 
         if (success) {
-            Counter.builder("storage.bytes.uploaded").tag("bucket", bucket.name().toLowerCase())
-                    .register(meterRegistry).increment(bytes);
+            Counter.builder("storage.bytes.uploaded").tag("bucket", bucket.name().toLowerCase()).register(meterRegistry)
+                    .increment(bytes);
         }
 
         Timer.builder("storage.upload.duration").tag("bucket", bucket.name().toLowerCase()).tag("status", status)

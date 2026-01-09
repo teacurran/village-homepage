@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 
 import java.net.URL;
 import java.time.Instant;
-import java.util.HashMap;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,8 +42,7 @@ import villagecompute.homepage.api.types.StorageUploadResultType;
 import villagecompute.homepage.services.StorageGateway.BucketType;
 
 /**
- * Unit tests for StorageGateway covering upload, download, signed URL generation, and error
- * handling.
+ * Unit tests for StorageGateway covering upload, download, signed URL generation, and error handling.
  *
  * <p>
  * Critical test coverage per I3.T7 acceptance criteria:
@@ -137,8 +135,8 @@ class StorageGatewayTest {
     @Test
     void testDownload_success() {
         byte[] testData = "test-image-data".getBytes();
-        ResponseBytes<GetObjectResponse> responseBytes = ResponseBytes.fromByteArray(
-                GetObjectResponse.builder().build(), testData);
+        ResponseBytes<GetObjectResponse> responseBytes = ResponseBytes
+                .fromByteArray(GetObjectResponse.builder().build(), testData);
 
         when(s3Client.getObjectAsBytes(any(GetObjectRequest.class))).thenReturn(responseBytes);
 
@@ -159,8 +157,8 @@ class StorageGatewayTest {
 
         when(s3Client.getObjectAsBytes(any(GetObjectRequest.class))).thenThrow(s3Exception);
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> storageGateway
-                .download(BucketType.SCREENSHOTS, "site-123/thumbnail/image.webp"));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> storageGateway.download(BucketType.SCREENSHOTS, "site-123/thumbnail/image.webp"));
 
         assertNotNull(exception.getMessage());
     }
@@ -176,8 +174,8 @@ class StorageGatewayTest {
         when(presignedRequest.url()).thenReturn(mockUrl);
         when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class))).thenReturn(presignedRequest);
 
-        SignedUrlType result = storageGateway.generateSignedUrl(BucketType.SCREENSHOTS,
-                "site-123/thumbnail/image.webp", 1440);
+        SignedUrlType result = storageGateway.generateSignedUrl(BucketType.SCREENSHOTS, "site-123/thumbnail/image.webp",
+                1440);
 
         assertNotNull(result, "Signed URL result should not be null");
         assertEquals(mockUrl.toString(), result.url());
@@ -241,8 +239,7 @@ class StorageGatewayTest {
     @Test
     void testListObjects_success() {
         software.amazon.awssdk.services.s3.model.S3Object s3Object = software.amazon.awssdk.services.s3.model.S3Object
-                .builder().key("site-123/thumbnail/image.webp").size(1024L)
-                .lastModified(Instant.now()).build();
+                .builder().key("site-123/thumbnail/image.webp").size(1024L).lastModified(Instant.now()).build();
 
         ListObjectsV2Response listResponse = ListObjectsV2Response.builder().contents(s3Object).build();
 
@@ -331,8 +328,7 @@ class StorageGatewayTest {
 
         // WebP conversion is currently a pass-through stub
         // When implemented, this test should verify actual conversion
-        assertEquals(testData.length, result.sizeBytes(),
-                "Current stub implementation preserves original size");
+        assertEquals(testData.length, result.sizeBytes(), "Current stub implementation preserves original size");
     }
 
     /**

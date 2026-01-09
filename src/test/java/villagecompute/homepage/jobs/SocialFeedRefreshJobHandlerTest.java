@@ -113,8 +113,8 @@ class SocialFeedRefreshJobHandlerTest {
 
         // Create some cached posts
         SocialPost.create(token.id, SocialToken.PLATFORM_INSTAGRAM, "post1", "image", "Old caption",
-                List.of(Map.of("url", "https://example.com/old.jpg", "type", "image")),
-                now.minus(10, ChronoUnit.DAYS), Map.of("likes", 5, "comments", 1));
+                List.of(Map.of("url", "https://example.com/old.jpg", "type", "image")), now.minus(10, ChronoUnit.DAYS),
+                Map.of("likes", 5, "comments", 1));
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("archive_expired", true);

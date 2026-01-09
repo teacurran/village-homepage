@@ -4,7 +4,6 @@
 package villagecompute.homepage.api.rest;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.RestAssured;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +52,8 @@ class SocialWidgetResourceTest {
         given().queryParam("user_id", testUser.id.toString()).queryParam("platform", "instagram").when()
                 .get("/api/widgets/social").then().statusCode(200).body("platform", equalTo("instagram"))
                 .body("connection_status", equalTo("disconnected")).body("staleness", equalTo("VERY_STALE"))
-                .body("posts", hasSize(0)).body("reconnect_url", notNullValue()).body("message", containsString("Connect"));
+                .body("posts", hasSize(0)).body("reconnect_url", notNullValue())
+                .body("message", containsString("Connect"));
     }
 
     @Test
@@ -99,8 +99,7 @@ class SocialWidgetResourceTest {
     @Test
     void testGetSocialFeed_MissingPlatformParameter() {
         // Test with missing platform parameter
-        given().queryParam("user_id", testUser.id.toString()).when().get("/api/widgets/social").then()
-                .statusCode(400);
+        given().queryParam("user_id", testUser.id.toString()).when().get("/api/widgets/social").then().statusCode(400);
     }
 
     @Test
@@ -114,8 +113,8 @@ class SocialWidgetResourceTest {
         token.persist();
 
         SocialPost.create(token.id, SocialToken.PLATFORM_INSTAGRAM, "ig123", "image", "Old post",
-                List.of(Map.of("url", "https://example.com/old.jpg", "type", "image")),
-                now.minus(5, ChronoUnit.DAYS), Map.of("likes", 15, "comments", 3));
+                List.of(Map.of("url", "https://example.com/old.jpg", "type", "image")), now.minus(5, ChronoUnit.DAYS),
+                Map.of("likes", 15, "comments", 3));
 
         // Test GET /api/widgets/social with stale token
         given().queryParam("user_id", testUser.id.toString()).queryParam("platform", "instagram").when()

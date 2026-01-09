@@ -285,19 +285,25 @@ paths:
 
   /api/widgets/news:
     get:
-      summary: Get news feed widget data (stub)
+      summary: Get personalized news feed widget data
       description: |
-        **[Stub Endpoint - Implementation Pending]**
+        Returns personalized news feed items based on user's RSS source subscriptions and
+        AI-tagged content. Supports pagination and filtering by category/topics.
 
-        Will return personalized news feed items based on user's subscribed topics and
-        AI-tagged RSS feed entries. Supports pagination and filtering by category.
+        **Personalization:** Items are filtered by:
+        - User's active RSS source subscriptions
+        - User's topic preferences (matched against AI tags)
+        - Optional category and topics query parameters
 
-        Implementation planned for iteration I3.
+        **Caching:** 5-minute TTL (Cache-Control: max-age=300, must-revalidate)
+
+        **Rate Limiting:** 100 reads/hour for logged_in tier
       tags:
         - Widgets
       parameters:
         - name: limit
           in: query
+          description: Maximum items per page
           schema:
             type: integer
             minimum: 1
@@ -305,29 +311,73 @@ paths:
             default: 20
         - name: offset
           in: query
+          description: Pagination offset
           schema:
             type: integer
             minimum: 0
             default: 0
         - name: category
           in: query
+          description: Filter by RSS source category
           schema:
             type: string
+        - name: topics
+          in: query
+          description: Comma-separated topics for AI tag matching
+          schema:
+            type: string
+          example: "technology,ai,science"
       responses:
         '200':
-          description: News feed data
+          description: Personalized news feed data
+          headers:
+            Cache-Control:
+              description: Caching directives
+              schema:
+                type: string
+              example: "max-age=300, must-revalidate"
+            Vary:
+              description: Response varies by Authorization header
+              schema:
+                type: string
+              example: "Authorization"
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Window:
+              $ref: '#/components/headers/X-RateLimit-Window'
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      type: object
-                  status:
-                    type: string
-                    example: "not_implemented"
+                $ref: '#/components/schemas/NewsWidgetType'
+              example:
+                items:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    source_id: "660e8400-e29b-41d4-a716-446655440000"
+                    title: "Latest AI Breakthrough in Machine Learning"
+                    url: "https://example.com/article"
+                    description: "Researchers announce new transformer architecture..."
+                    author: "Jane Doe"
+                    published_at: "2025-01-09T10:00:00Z"
+                    ai_tags:
+                      topics: ["ai", "machine-learning", "research"]
+                      sentiment: "positive"
+                      categories: ["Technology", "Science"]
+                      confidence: 0.95
+                    ai_tagged: true
+                    fetched_at: "2025-01-09T10:30:00Z"
+                total_count: 150
+                limit: 20
+                offset: 0
+                metadata:
+                  click_tracking_enabled: true
+                  click_tracking_base_url: "/track/click"
+                  feature_flags:
+                    ai_tags_enabled: true
+                    personalization_enabled: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -337,37 +387,45 @@ paths:
 
   /api/widgets/weather:
     get:
-      summary: Get weather widget data (stub)
+      summary: Get weather widget data
       description: |
-        **[Stub Endpoint - Implementation Pending]**
-
-        Will return weather forecasts for user's saved locations using Open-Meteo
+        Returns weather forecasts for all user's saved locations using Open-Meteo
         (international) or National Weather Service (US) APIs.
 
-        Implementation planned for iteration I3.
+        **Caching:** 1-hour TTL. Cache-first strategy serves fresh data when available,
+        falls back to stale cache on API failure.
+
+        **Rate Limiting:** 100 reads/hour for logged_in tier
       tags:
         - Widgets
-      parameters:
-        - name: location_index
-          in: query
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
-          description: Index into user's saved weather locations
       responses:
         '200':
-          description: Weather data
+          description: Weather data for all user locations
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Window:
+              $ref: '#/components/headers/X-RateLimit-Window'
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                  status:
-                    type: string
-                    example: "not_implemented"
+                type: array
+                items:
+                  type: object
+                  description: Weather data for a single location (WeatherWidgetType)
+              example:
+                - location_name: "San Francisco, CA"
+                  provider: "nws"
+                  current:
+                    temperature: 62.0
+                    feels_like: 60.0
+                  hourly: []
+                  daily: []
+                  alerts: []
+                  cached_at: "2025-01-09T10:00:00Z"
+                  stale: false
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -377,31 +435,41 @@ paths:
 
   /api/widgets/stocks:
     get:
-      summary: Get stocks widget data (stub)
+      summary: Get stocks widget data
       description: |
-        **[Stub Endpoint - Implementation Pending]**
+        Returns real-time stock quotes for symbols in user's watchlist via Alpha Vantage API.
+        Refreshes every 5 minutes during market hours, 1 hour when markets are closed.
 
-        Will return real-time stock quotes for symbols in user's watchlist via Alpha Vantage API.
-        Refreshes every 5 minutes during market hours.
+        **Caching:** Variable TTL based on market status (5 min during hours, 1 hour when closed)
 
-        Implementation planned for iteration I3.
+        **Rate Limiting:** 100 reads/hour for logged_in tier
       tags:
         - Widgets
       responses:
         '200':
-          description: Stock data
+          description: Stock quotes for watchlist symbols
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Window:
+              $ref: '#/components/headers/X-RateLimit-Window'
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      type: object
-                  status:
-                    type: string
-                    example: "not_implemented"
+                type: array
+                items:
+                  type: object
+                  description: Stock quote data (StockQuoteType)
+              example:
+                - symbol: "AAPL"
+                  price: 175.50
+                  change: 2.35
+                  change_percent: 1.36
+                  volume: 52000000
+                  market_cap: 2800000000000
+                  updated_at: "2025-01-09T16:00:00Z"
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -411,31 +479,55 @@ paths:
 
   /api/widgets/social:
     get:
-      summary: Get social feed widget data (stub)
+      summary: Get social feed widget data
       description: |
-        **[Stub Endpoint - Implementation Pending]**
+        Returns aggregated social media posts from connected Instagram/Facebook accounts
+        via Meta Graph API. Requires user authorization and platform connections.
 
-        Will return aggregated social media posts from connected Instagram/Facebook accounts
-        via Meta Graph API. Requires user authorization.
+        **Caching:** 30-minute TTL for social posts
 
-        Implementation planned for iteration I3.
+        **Rate Limiting:** 100 reads/hour for logged_in tier
+
+        **Feature Flag:** Gated by `social_integration` feature flag
       tags:
         - Widgets
+      parameters:
+        - name: platform
+          in: query
+          description: Filter by specific platform (instagram, facebook, or both)
+          schema:
+            type: string
+            enum:
+              - instagram
+              - facebook
+              - both
+            default: both
       responses:
         '200':
-          description: Social feed data
+          description: Social feed posts from connected accounts
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Window:
+              $ref: '#/components/headers/X-RateLimit-Window'
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      type: object
-                  status:
-                    type: string
-                    example: "not_implemented"
+                type: array
+                items:
+                  type: object
+                  description: Social media post data (SocialPostType)
+              example:
+                - platform: "instagram"
+                  post_id: "12345"
+                  caption: "Beautiful sunset today!"
+                  media_type: "image"
+                  media_url: "https://example.com/image.jpg"
+                  timestamp: "2025-01-09T18:00:00Z"
+                  likes_count: 42
+                  comments_count: 3
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -1118,6 +1210,145 @@ components:
           format: date-time
           description: Timestamp of most recent violation (ISO-8601)
           example: "2026-01-09T10:05:00Z"
+
+    NewsWidgetType:
+      type: object
+      required:
+        - items
+        - total_count
+        - limit
+        - offset
+        - metadata
+      properties:
+        items:
+          type: array
+          description: List of feed items for current page
+          items:
+            $ref: '#/components/schemas/FeedItemType'
+        total_count:
+          type: integer
+          description: Total number of items available (before pagination)
+          example: 150
+        limit:
+          type: integer
+          description: Maximum items per page
+          example: 20
+        offset:
+          type: integer
+          description: Pagination offset
+          example: 0
+        metadata:
+          type: object
+          description: Additional context (feature flags, click tracking config)
+          properties:
+            click_tracking_enabled:
+              type: boolean
+              example: true
+            click_tracking_base_url:
+              type: string
+              example: "/track/click"
+            feature_flags:
+              type: object
+              additionalProperties: true
+              example:
+                ai_tags_enabled: true
+                personalization_enabled: true
+
+    FeedItemType:
+      type: object
+      required:
+        - id
+        - source_id
+        - title
+        - url
+        - published_at
+        - ai_tagged
+        - fetched_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the feed item
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        source_id:
+          type: string
+          format: uuid
+          description: RSS source UUID
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          description: Article title
+          example: "Latest AI Breakthrough in Machine Learning"
+        url:
+          type: string
+          format: uri
+          description: Article URL
+          example: "https://example.com/article"
+        description:
+          type: string
+          nullable: true
+          description: Article summary/description
+          example: "Researchers announce new transformer architecture..."
+        author:
+          type: string
+          nullable: true
+          description: Article author
+          example: "Jane Doe"
+        published_at:
+          type: string
+          format: date-time
+          description: Publication timestamp (ISO-8601)
+          example: "2025-01-09T10:00:00Z"
+        ai_tags:
+          $ref: '#/components/schemas/AiTagsType'
+          nullable: true
+          description: AI-generated tags (topics, sentiment, categories)
+        ai_tagged:
+          type: boolean
+          description: Whether AI tagging has completed for this item
+          example: true
+        fetched_at:
+          type: string
+          format: date-time
+          description: Timestamp when item was fetched from RSS source (ISO-8601)
+          example: "2025-01-09T10:30:00Z"
+
+    AiTagsType:
+      type: object
+      required:
+        - topics
+        - sentiment
+        - categories
+        - confidence
+      properties:
+        topics:
+          type: array
+          items:
+            type: string
+          description: AI-identified topics/keywords from article content
+          example: ["ai", "machine-learning", "research"]
+        sentiment:
+          type: string
+          description: Sentiment analysis result
+          enum:
+            - positive
+            - negative
+            - neutral
+            - mixed
+          example: "positive"
+        categories:
+          type: array
+          items:
+            type: string
+          description: Content categories (Technology, Business, Science, etc.)
+          example: ["Technology", "Science"]
+        confidence:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 1.0
+          description: AI confidence score (0.0-1.0) for tag quality
+          example: 0.95
 
     ErrorResponse:
       type: object

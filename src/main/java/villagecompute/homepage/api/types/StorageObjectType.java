@@ -14,8 +14,8 @@ import jakarta.validation.constraints.NotNull;
  * Used by StorageGateway when listing objects for admin dashboards and audit operations.
  *
  * <p>
- * <b>Policy P4:</b> Object metadata includes retention policy and version information for
- * indefinite retention compliance.
+ * <b>Policy P4:</b> Object metadata includes retention policy and version information for indefinite retention
+ * compliance.
  *
  * @param objectKey
  *            full object key including bucket prefix
