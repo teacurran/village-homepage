@@ -110,13 +110,19 @@ jobs:
         run: npm run typecheck
 
       # ================================
-      # 12. Build Frontend Assets
+      # 12. OpenAPI Specification Validation
+      # ================================
+      - name: Validate OpenAPI spec
+        run: npm run openapi:validate
+
+      # ================================
+      # 13. Build Frontend Assets
       # ================================
       - name: Build frontend assets
         run: npm run build
 
       # ================================
-      # 13. Run Unit and Integration Tests
+      # 14. Run Unit and Integration Tests
       # ================================
       - name: Run tests with coverage
         run: ./mvnw verify -DskipITs=false ${{ env.MAVEN_CLI_OPTS }}
@@ -127,13 +133,13 @@ jobs:
           QUARKUS_LANGCHAIN4J_ANTHROPIC_ENABLED: false
 
       # ================================
-      # 14. Generate JaCoCo Coverage Report
+      # 15. Generate JaCoCo Coverage Report
       # ================================
       - name: Generate coverage report
         run: ./mvnw jacoco:report ${{ env.MAVEN_CLI_OPTS }}
 
       # ================================
-      # 15. Upload Coverage to Codecov (Optional)
+      # 16. Upload Coverage to Codecov (Optional)
       # ================================
       # Uncomment when Codecov is configured
       # - name: Upload coverage to Codecov
@@ -145,7 +151,7 @@ jobs:
       #     fail_ci_if_error: true
 
       # ================================
-      # 16. SonarCloud Scan
+      # 17. SonarCloud Scan
       # ================================
       # Uncomment and configure when SonarCloud credentials are available
       # - name: SonarCloud Scan
@@ -161,7 +167,7 @@ jobs:
       #       -Dsonar.qualitygate.wait=true
 
       # ================================
-      # 17. Build Container Image (Jib)
+      # 18. Build Container Image (Jib)
       # ================================
       - name: Build container image (Jib - no push)
         run: ./mvnw package jib:dockerBuild -DskipTests ${{ env.MAVEN_CLI_OPTS }}
@@ -169,7 +175,7 @@ jobs:
         # To push to a registry, configure credentials and use jib:build with registry settings
 
       # ================================
-      # 18. Upload Test Results
+      # 19. Upload Test Results
       # ================================
       - name: Upload test results
         if: always()
@@ -182,7 +188,7 @@ jobs:
             target/site/jacoco/
 
       # ================================
-      # 19. Upload Build Artifacts
+      # 20. Upload Build Artifacts
       # ================================
       - name: Upload build artifacts
         if: success()

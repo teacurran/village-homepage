@@ -9,6 +9,7 @@
     "lint:fix": "npm run lint -- --fix",
     "lint:secrets": "node tools/detect-secrets.cjs",
     "typecheck": "tsc --noEmit",
+    "openapi:validate": "swagger-cli validate api/openapi/v1.yaml",
     "prepare": "husky"
   },
   "keywords": [],
@@ -30,6 +31,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@apidevtools/swagger-cli": "^4.0.4",
     "@types/lodash-es": "^4.17.12",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

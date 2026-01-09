@@ -1047,12 +1047,149 @@ docker stats --no-stream
 
 ---
 
+## API Documentation
+
+### OpenAPI Specification
+
+The Village Homepage API is fully documented using **OpenAPI v3.0.3**. The specification covers:
+
+- Authentication endpoints (OAuth, bootstrap, logout)
+- User preferences API
+- Widget data endpoints (news, weather, stocks, social)
+- Admin endpoints (feature flags, rate limits)
+- All DTO schemas with validation constraints
+- Security schemes and rate limiting
+
+**Specification Location:** [`api/openapi/v1.yaml`](api/openapi/v1.yaml)
+
+**Version:** `1.0.0-alpha` (Iteration I2 milestone)
+
+### Viewing the API Spec
+
+#### During Development
+
+When running Quarkus in dev mode, access the auto-generated API documentation:
+
+```bash
+./mvnw quarkus:dev
+```
+
+Then visit:
+- **Swagger UI:** http://localhost:8080/q/swagger-ui (interactive API explorer)
+- **OpenAPI YAML:** http://localhost:8080/q/openapi
+- **OpenAPI JSON:** http://localhost:8080/q/openapi?format=json
+
+#### Via Swagger Editor
+
+View and validate the spec online:
+
+1. Go to https://editor.swagger.io/
+2. File → Import URL
+3. Paste the raw GitHub URL to `api/openapi/v1.yaml`
+
+Or load the file directly from your local checkout.
+
+### Validating the Spec
+
+Validate the OpenAPI specification locally:
+
+```bash
+# Validate using swagger-cli
+npm run openapi:validate
+
+# This runs: swagger-cli validate api/openapi/v1.yaml
+```
+
+The CI pipeline automatically validates the spec on every build. Validation failures will block merges.
+
+### API Conventions
+
+#### JSON Naming
+
+All API responses use **snake_case** for JSON properties:
+
+```json
+{
+  "schema_version": 1,
+  "news_topics": ["technology", "science"],
+  "widget_configs": {}
+}
+```
+
+#### Rate Limiting
+
+All endpoints enforce tier-based rate limiting. Rate limit information is returned in response headers:
+
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Window: 60
+```
+
+When limits are exceeded, endpoints return `429 Too Many Requests` with a `Retry-After` header.
+
+#### Authentication
+
+The API supports three authentication methods:
+
+1. **OAuth2** - Google, Facebook, Apple (user authentication)
+2. **Cookie** - `vu_anon_id` cookie for anonymous users
+3. **JWT Bearer** - Admin endpoints require `super_admin` role
+
+#### Error Responses
+
+All errors follow a consistent format:
+
+```json
+{
+  "error": "Human-readable error message"
+}
+```
+
+**Common status codes:**
+- `400` - Validation error or invalid parameters
+- `401` - Authentication required
+- `403` - Insufficient permissions
+- `404` - Resource not found
+- `429` - Rate limit exceeded
+- `500` - Internal server error
+
+### Documentation
+
+For detailed API documentation, see:
+
+- **[OpenAPI Specification](api/openapi/v1.yaml)** - Complete API contract
+- **[OpenAPI Notes](docs/api/openapi-notes.md)** - Spec conventions, validation, maintenance guide
+
+### Generating Client SDKs
+
+Use the OpenAPI spec to generate client SDKs for various languages:
+
+```bash
+# TypeScript/JavaScript client
+npx @openapitools/openapi-generator-cli generate \
+  -i api/openapi/v1.yaml \
+  -g typescript-fetch \
+  -o generated/typescript-client
+
+# Python client
+npx @openapitools/openapi-generator-cli generate \
+  -i api/openapi/v1.yaml \
+  -g python \
+  -o generated/python-client
+```
+
+See [OpenAPI Generator documentation](https://openapi-generator.tech/docs/generators) for all supported languages.
+
+---
+
 ## Resources
 
 - [Quarkus Documentation](https://quarkus.io/guides/)
 - [LangChain4j Documentation](https://docs.langchain4j.dev/)
 - [Ant Design Components](https://ant.design/components/overview/)
 - [Gridstack.js Documentation](https://gridstackjs.com/)
+- [OpenAPI Specification](https://spec.openapis.org/oas/v3.0.3)
 - [VillageCompute Standards](../village-storefront/docs/java-project-standards.adoc)
 
 ---

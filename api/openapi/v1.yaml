@@ -1,0 +1,1244 @@
+openapi: 3.0.3
+info:
+  title: Village Homepage API
+  version: 1.0.0-alpha
+  description: |
+    RESTful API for Village Homepage platform covering authentication, user preferences,
+    feature flags, rate limiting, and widget data.
+
+    ## Authentication
+    - **OAuth2**: Google, Facebook, Apple authentication flows
+    - **Anonymous Cookies**: Anonymous users get `vu_anon_id` cookie for preference storage
+    - **JWT Tokens**: Admin endpoints require JWT bearer tokens with `super_admin` role
+
+    ## Rate Limiting
+    All API endpoints enforce tier-based rate limiting. Rate limit information is returned
+    in response headers:
+    - `X-RateLimit-Limit`: Maximum requests allowed in window
+    - `X-RateLimit-Remaining`: Requests remaining in current window
+    - `X-RateLimit-Window`: Window duration in seconds
+
+    ## Schema Versioning
+    DTOs include `schema_version` fields for forward-compatible migrations. Services handle
+    older versions gracefully by applying defaults for missing fields.
+
+    ## Policy References
+    - **P1 (GDPR/CCPA)**: User data is mergeable and deletable
+    - **P9 (Anonymous Cookie Security)**: Anonymous users can store preferences pre-auth
+    - **P14 (Rate Limiting)**: All endpoints enforce tier-based limits
+
+  contact:
+    name: VillageCompute Team
+    url: https://villagecompute.com
+
+servers:
+  - url: http://localhost:8080
+    description: Development
+  - url: https://homepage-beta.villagecompute.com
+    description: Beta
+  - url: https://homepage.villagecompute.com
+    description: Production
+
+security:
+  - cookieAuth: []
+  - oauth2: []
+
+tags:
+  - name: Authentication
+    description: OAuth login, logout, and bootstrap endpoints
+  - name: Preferences
+    description: User homepage preferences and layout management
+  - name: Widgets
+    description: Widget data endpoints (news, weather, stocks, social)
+  - name: Admin - Feature Flags
+    description: Feature flag configuration and management (admin only)
+  - name: Admin - Rate Limits
+    description: Rate limit configuration and violation monitoring (admin only)
+
+paths:
+  /bootstrap:
+    post:
+      summary: Create first superadmin user (one-time use)
+      description: |
+        Bootstrap endpoint for creating the first superadmin user. This endpoint is protected
+        by a guard that returns 403 after the first admin is created. Used during initial
+        deployment to establish the first privileged account.
+
+        **Security Note**: This endpoint is disabled after first use. Subsequent attempts
+        will receive 403 Forbidden.
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@villagecompute.com
+                name:
+                  type: string
+                  example: Admin User
+            example:
+              email: admin@villagecompute.com
+              name: Admin User
+      responses:
+        '201':
+          description: Superadmin user created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: integer
+                    format: int64
+                  email:
+                    type: string
+                  message:
+                    type: string
+              example:
+                user_id: 1
+                email: admin@villagecompute.com
+                message: "Bootstrap superadmin created successfully"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Bootstrap already used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Bootstrap endpoint disabled - first admin already exists"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      summary: Log out current user
+      description: |
+        Invalidates the current session and clears authentication cookies. Anonymous cookie
+        (`vu_anon_id`) is preserved to maintain preferences for anonymous users.
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "Logged out successfully"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/preferences:
+    get:
+      summary: Get user preferences
+      description: |
+        Retrieves the current user's homepage preferences including layout, theme, and widget
+        configurations. Anonymous users receive default preferences on first access.
+      tags:
+        - Preferences
+      responses:
+        '200':
+          description: User preferences retrieved successfully
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Window:
+              $ref: '#/components/headers/X-RateLimit-Window'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferencesType'
+              example:
+                schema_version: 1
+                layout:
+                  - widget_id: search
+                    widget_type: search_bar
+                    x: 0
+                    y: 0
+                    width: 12
+                    height: 2
+                  - widget_id: news
+                    widget_type: news_feed
+                    x: 0
+                    y: 2
+                    width: 8
+                    height: 6
+                  - widget_id: weather
+                    widget_type: weather
+                    x: 8
+                    y: 2
+                    width: 4
+                    height: 3
+                  - widget_id: stocks
+                    widget_type: stocks
+                    x: 8
+                    y: 5
+                    width: 4
+                    height: 3
+                news_topics: []
+                watchlist: []
+                weather_locations: []
+                theme:
+                  mode: system
+                  accent: null
+                  contrast: standard
+                widget_configs: {}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      summary: Update user preferences
+      description: |
+        Updates the user's homepage preferences. All fields are required (full replacement).
+        For partial updates, retrieve current preferences via GET, modify desired fields,
+        then PUT the complete object.
+
+        **Validation**: Layout widgets must reference valid widget types. Theme mode and
+        contrast must use enumerated values.
+      tags:
+        - Preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferencesType'
+            example:
+              schema_version: 1
+              layout:
+                - widget_id: search
+                  widget_type: search_bar
+                  x: 0
+                  y: 0
+                  width: 12
+                  height: 2
+                - widget_id: news
+                  widget_type: news_feed
+                  x: 0
+                  y: 2
+                  width: 8
+                  height: 6
+              news_topics:
+                - technology
+                - science
+              watchlist:
+                - AAPL
+                - GOOGL
+              weather_locations:
+                - city: "San Francisco, CA"
+                  city_id: null
+                  latitude: 37.7749
+                  longitude: -122.4194
+              theme:
+                mode: dark
+                accent: "#3B82F6"
+                contrast: standard
+              widget_configs:
+                news:
+                  density: compact
+                  sort: date_desc
+                  filters: {}
+      responses:
+        '200':
+          description: Preferences updated successfully
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Window:
+              $ref: '#/components/headers/X-RateLimit-Window'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferencesType'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/widgets/news:
+    get:
+      summary: Get news feed widget data (stub)
+      description: |
+        **[Stub Endpoint - Implementation Pending]**
+
+        Will return personalized news feed items based on user's subscribed topics and
+        AI-tagged RSS feed entries. Supports pagination and filtering by category.
+
+        Implementation planned for iteration I3.
+      tags:
+        - Widgets
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: News feed data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  status:
+                    type: string
+                    example: "not_implemented"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/widgets/weather:
+    get:
+      summary: Get weather widget data (stub)
+      description: |
+        **[Stub Endpoint - Implementation Pending]**
+
+        Will return weather forecasts for user's saved locations using Open-Meteo
+        (international) or National Weather Service (US) APIs.
+
+        Implementation planned for iteration I3.
+      tags:
+        - Widgets
+      parameters:
+        - name: location_index
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Index into user's saved weather locations
+      responses:
+        '200':
+          description: Weather data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  status:
+                    type: string
+                    example: "not_implemented"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/widgets/stocks:
+    get:
+      summary: Get stocks widget data (stub)
+      description: |
+        **[Stub Endpoint - Implementation Pending]**
+
+        Will return real-time stock quotes for symbols in user's watchlist via Alpha Vantage API.
+        Refreshes every 5 minutes during market hours.
+
+        Implementation planned for iteration I3.
+      tags:
+        - Widgets
+      responses:
+        '200':
+          description: Stock data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  status:
+                    type: string
+                    example: "not_implemented"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/widgets/social:
+    get:
+      summary: Get social feed widget data (stub)
+      description: |
+        **[Stub Endpoint - Implementation Pending]**
+
+        Will return aggregated social media posts from connected Instagram/Facebook accounts
+        via Meta Graph API. Requires user authorization.
+
+        Implementation planned for iteration I3.
+      tags:
+        - Widgets
+      responses:
+        '200':
+          description: Social feed data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  status:
+                    type: string
+                    example: "not_implemented"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/api/feature-flags:
+    get:
+      summary: List all feature flags
+      description: |
+        Returns all feature flags in the system with their current configuration.
+        Requires `super_admin` role.
+      tags:
+        - Admin - Feature Flags
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of feature flags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeatureFlagType'
+              example:
+                - flag_key: stocks_widget
+                  description: Enable stocks widget with Alpha Vantage integration
+                  enabled: false
+                  rollout_percentage: 0
+                  whitelist: []
+                  analytics_enabled: true
+                  created_at: "2026-01-09T00:00:00Z"
+                  updated_at: "2026-01-09T00:00:00Z"
+                - flag_key: social_integration
+                  description: Enable Instagram/Facebook feed widget
+                  enabled: false
+                  rollout_percentage: 0
+                  whitelist: []
+                  analytics_enabled: true
+                  created_at: "2026-01-09T00:00:00Z"
+                  updated_at: "2026-01-09T00:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/api/feature-flags/{key}:
+    get:
+      summary: Get single feature flag
+      description: |
+        Retrieves configuration for a specific feature flag by key.
+        Requires `super_admin` role.
+      tags:
+        - Admin - Feature Flags
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          example: stocks_widget
+      responses:
+        '200':
+          description: Feature flag details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureFlagType'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      summary: Update feature flag configuration
+      description: |
+        Updates feature flag configuration using PATCH semantics. Only provided fields are updated;
+        null values mean "no change". All mutations are logged to the audit trail.
+
+        **Stable Cohort Assignment**: Uses MD5 hash of `flagKey + ":" + subjectId` for deterministic
+        rollout across sessions.
+
+        Requires `super_admin` role.
+      tags:
+        - Admin - Feature Flags
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          example: stocks_widget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFeatureFlagRequestType'
+            example:
+              enabled: true
+              rollout_percentage: 25
+              reason: "Gradual rollout to 25% of users for beta testing"
+      responses:
+        '200':
+          description: Feature flag updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureFlagType'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/api/rate-limits:
+    get:
+      summary: List rate limit configurations
+      description: |
+        Returns all rate limit configurations organized by action type and user tier.
+        Requires `super_admin` role.
+      tags:
+        - Admin - Rate Limits
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of rate limit configurations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RateLimitConfigType'
+              example:
+                - action_type: login
+                  tier: anonymous
+                  limit_count: 5
+                  window_seconds: 300
+                  updated_by_user_id: null
+                  updated_at: "2026-01-09T00:00:00Z"
+                - action_type: preferences_update
+                  tier: logged_in
+                  limit_count: 60
+                  window_seconds: 60
+                  updated_by_user_id: null
+                  updated_at: "2026-01-09T00:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/api/rate-limits/{action}:
+    patch:
+      summary: Update rate limit configuration
+      description: |
+        Updates rate limit configuration for a specific action type and tier using PATCH semantics.
+        Only provided fields are updated.
+
+        Requires `super_admin` role.
+      tags:
+        - Admin - Rate Limits
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: action
+          in: path
+          required: true
+          schema:
+            type: string
+          example: preferences_update
+        - name: tier
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - anonymous
+              - logged_in
+              - trusted
+          example: logged_in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRateLimitConfigRequestType'
+            example:
+              limit_count: 120
+              window_seconds: 60
+      responses:
+        '200':
+          description: Rate limit configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitConfigType'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/api/rate-limits/violations:
+    get:
+      summary: View rate limit violations
+      description: |
+        Returns recent rate limit violations for monitoring and abuse detection.
+        Supports filtering by user, IP, action type, and time range.
+
+        Requires `super_admin` role.
+      tags:
+        - Admin - Rate Limits
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: ip_address
+          in: query
+          schema:
+            type: string
+        - name: action_type
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: ISO-8601 timestamp for filtering violations after this time
+      responses:
+        '200':
+          description: List of rate limit violations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  violations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RateLimitViolationType'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+              example:
+                violations:
+                  - user_id: null
+                    ip_address: "192.0.2.100"
+                    action_type: login
+                    endpoint: "/api/auth/login"
+                    violation_count: 12
+                    first_violation_at: "2026-01-09T10:00:00Z"
+                    last_violation_at: "2026-01-09T10:05:00Z"
+                total: 1
+                limit: 100
+                offset: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    UserPreferencesType:
+      type: object
+      required:
+        - schema_version
+        - layout
+        - news_topics
+        - watchlist
+        - weather_locations
+        - theme
+        - widget_configs
+      properties:
+        schema_version:
+          type: integer
+          minimum: 1
+          description: "Schema version for migration tracking (current: 1)"
+          example: 1
+        layout:
+          type: array
+          description: Gridstack.js widget layout configuration
+          items:
+            $ref: '#/components/schemas/LayoutWidgetType'
+        news_topics:
+          type: array
+          description: Subscribed news categories/interests for feed personalization
+          items:
+            type: string
+          example:
+            - technology
+            - science
+        watchlist:
+          type: array
+          description: Stock symbols for the stocks widget
+          items:
+            type: string
+          example:
+            - AAPL
+            - GOOGL
+            - MSFT
+        weather_locations:
+          type: array
+          description: Saved weather locations (city, coordinates)
+          items:
+            $ref: '#/components/schemas/WeatherLocationType'
+        theme:
+          $ref: '#/components/schemas/ThemeType'
+        widget_configs:
+          type: object
+          description: Per-widget configuration (density, sorting, filters)
+          additionalProperties:
+            $ref: '#/components/schemas/WidgetConfigType'
+          example:
+            news:
+              density: compact
+              sort: date_desc
+              filters: {}
+
+    LayoutWidgetType:
+      type: object
+      required:
+        - widget_id
+        - widget_type
+        - x
+        - y
+        - width
+        - height
+      properties:
+        widget_id:
+          type: string
+          description: Unique identifier for this widget instance
+          example: news
+        widget_type:
+          type: string
+          description: Widget type identifier
+          enum:
+            - search_bar
+            - news_feed
+            - weather
+            - stocks
+            - social_feed
+            - rss_feed
+            - quick_links
+          example: news_feed
+        x:
+          type: integer
+          minimum: 0
+          description: Column offset (0-based)
+          example: 0
+        y:
+          type: integer
+          minimum: 0
+          description: Row offset (0-based)
+          example: 2
+        width:
+          type: integer
+          minimum: 1
+          description: Widget width in columns
+          example: 8
+        height:
+          type: integer
+          minimum: 1
+          description: Widget height in rows
+          example: 6
+
+    ThemeType:
+      type: object
+      required:
+        - mode
+        - contrast
+      properties:
+        mode:
+          type: string
+          enum:
+            - light
+            - dark
+            - system
+          description: |
+            Theme mode:
+            - `light`: Light theme always
+            - `dark`: Dark theme always
+            - `system`: Follow browser/OS preference (prefers-color-scheme)
+          example: system
+        accent:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          nullable: true
+          description: Optional accent color (hex format), null for default
+          example: "#3B82F6"
+        contrast:
+          type: string
+          enum:
+            - standard
+            - high
+          description: Contrast level for accessibility
+          example: standard
+
+    WeatherLocationType:
+      type: object
+      required:
+        - city
+        - latitude
+        - longitude
+      properties:
+        city:
+          type: string
+          description: City name (e.g., "San Francisco, CA")
+          example: "San Francisco, CA"
+        city_id:
+          type: integer
+          nullable: true
+          description: Optional reference to cities table for geocoding
+          example: null
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          description: Latitude coordinate for weather API
+          example: 37.7749
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          description: Longitude coordinate for weather API
+          example: -122.4194
+
+    WidgetConfigType:
+      type: object
+      properties:
+        density:
+          type: string
+          enum:
+            - comfortable
+            - compact
+          nullable: true
+          description: Display density (null for default)
+          example: compact
+        sort:
+          type: string
+          nullable: true
+          description: Widget-specific sorting preference
+          example: date_desc
+        filters:
+          type: object
+          additionalProperties: true
+          description: Flexible key-value map for widget-specific filters
+          example:
+            category: tech
+
+    FeatureFlagType:
+      type: object
+      required:
+        - flag_key
+        - description
+        - enabled
+        - rollout_percentage
+        - whitelist
+        - analytics_enabled
+      properties:
+        flag_key:
+          type: string
+          description: Unique feature flag identifier
+          example: stocks_widget
+        description:
+          type: string
+          description: Human-readable feature description
+          example: Enable stocks widget with Alpha Vantage integration
+        enabled:
+          type: boolean
+          description: Master kill switch state
+          example: false
+        rollout_percentage:
+          type: integer
+          format: int16
+          minimum: 0
+          maximum: 100
+          description: Cohort rollout percentage [0-100]
+          example: 0
+        whitelist:
+          type: array
+          items:
+            type: string
+          description: List of whitelisted user IDs or session hashes
+          example: []
+        analytics_enabled:
+          type: boolean
+          description: Whether evaluation logging is enabled (Policy P14)
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation timestamp (ISO-8601)
+          example: "2026-01-09T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last modification timestamp (ISO-8601)
+          example: "2026-01-09T00:00:00Z"
+
+    UpdateFeatureFlagRequestType:
+      type: object
+      properties:
+        description:
+          type: string
+          nullable: true
+          description: New description (null to keep current)
+        enabled:
+          type: boolean
+          nullable: true
+          description: New enabled state (null to keep current)
+        rollout_percentage:
+          type: integer
+          format: int16
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: New rollout percentage [0-100] (null to keep current)
+        whitelist:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: New whitelist entries (null to keep current)
+        analytics_enabled:
+          type: boolean
+          nullable: true
+          description: New analytics toggle (null to keep current)
+        reason:
+          type: string
+          nullable: true
+          description: Optional explanation for audit log
+
+    RateLimitConfigType:
+      type: object
+      required:
+        - action_type
+        - tier
+        - limit_count
+        - window_seconds
+        - updated_at
+      properties:
+        action_type:
+          type: string
+          description: Action identifier (e.g., "login", "search", "vote")
+          example: preferences_update
+        tier:
+          type: string
+          enum:
+            - anonymous
+            - logged_in
+            - trusted
+          description: User tier
+          example: logged_in
+        limit_count:
+          type: integer
+          minimum: 1
+          description: Maximum allowed requests within window
+          example: 60
+        window_seconds:
+          type: integer
+          minimum: 1
+          description: Time window in seconds for limit enforcement
+          example: 60
+        updated_by_user_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: User ID who last modified this config
+          example: null
+        updated_at:
+          type: string
+          format: date-time
+          description: Last modification timestamp (ISO-8601)
+          example: "2026-01-09T00:00:00Z"
+
+    UpdateRateLimitConfigRequestType:
+      type: object
+      properties:
+        limit_count:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: New limit count (optional, must be positive if provided)
+        window_seconds:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: New window in seconds (optional, must be positive if provided)
+
+    RateLimitViolationType:
+      type: object
+      required:
+        - ip_address
+        - action_type
+        - endpoint
+        - violation_count
+        - first_violation_at
+        - last_violation_at
+      properties:
+        user_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Authenticated user ID (null for anonymous violations)
+          example: null
+        ip_address:
+          type: string
+          description: Source IP address
+          example: "192.0.2.100"
+        action_type:
+          type: string
+          description: Action that triggered the violation
+          example: login
+        endpoint:
+          type: string
+          description: HTTP endpoint path
+          example: "/api/auth/login"
+        violation_count:
+          type: integer
+          description: Number of violations since first_violation_at
+          example: 12
+        first_violation_at:
+          type: string
+          format: date-time
+          description: Timestamp of first violation in window (ISO-8601)
+          example: "2026-01-09T10:00:00Z"
+        last_violation_at:
+          type: string
+          format: date-time
+          description: Timestamp of most recent violation (ISO-8601)
+          example: "2026-01-09T10:05:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: Invalid request parameters
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Validation failed: schema_version must be at least 1"
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Authentication required"
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Requires super_admin role"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Feature flag not found"
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        X-RateLimit-Window:
+          $ref: '#/components/headers/X-RateLimit-Window'
+        Retry-After:
+          description: Seconds until rate limit resets
+          schema:
+            type: integer
+          example: 45
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Rate limit exceeded. Retry after 45 seconds."
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "An unexpected error occurred"
+
+  headers:
+    X-RateLimit-Limit:
+      description: Maximum requests allowed in window
+      schema:
+        type: integer
+      example: 60
+
+    X-RateLimit-Remaining:
+      description: Requests remaining in current window
+      schema:
+        type: integer
+      example: 45
+
+    X-RateLimit-Window:
+      description: Window duration in seconds
+      schema:
+        type: integer
+      example: 60
+
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: |
+        OAuth2 authentication supporting Google, Facebook, and Apple providers.
+        Anonymous users receive `vu_anon_id` cookie for preference storage before authentication.
+      flows:
+        authorizationCode:
+          authorizationUrl: /auth/oauth/{provider}
+          tokenUrl: /auth/token
+          scopes: {}
+
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: vu_anon_id
+      description: |
+        Anonymous user cookie for preference storage before authentication.
+        Automatically issued on first visit and merged with user account on login.
+
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT bearer token for admin endpoints. Requires `super_admin` role claim.
+        Obtained via OAuth2 authentication flow for privileged users.
