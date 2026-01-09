@@ -1,5 +1,6 @@
 package villagecompute.homepage.observability;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
@@ -11,6 +12,8 @@ import villagecompute.homepage.jobs.JobQueue;
 import villagecompute.homepage.services.DelayedJobService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -30,7 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <li><b>Timers:</b> Feed ingestion latency (future - requires feed service integration)</li>
  * <li><b>Counters:</b> AI tag batches processed (future - requires AI service integration)</li>
  * <li><b>Histograms:</b> Screenshot capture duration (future - requires screenshot service integration)</li>
- * <li><b>Meters:</b> Rate-limit violations (future - requires rate limiter integration)</li>
+ * <li><b>Counters:</b> {@code homepage_rate_limit_checks_total{action,tier,result}} - Rate limit check outcomes</li>
+ * <li><b>Counters:</b> {@code homepage_rate_limit_violations_total{action,tier}} - Rate limit violations</li>
  * </ul>
  *
  * <p>
@@ -72,6 +76,22 @@ public class ObservabilityMetrics {
      * future iterations.
      */
     private final AtomicInteger aiTaggingBudgetConsumedCents = new AtomicInteger(0);
+
+    /**
+     * Rate limit check counters indexed by action:tier:result.
+     *
+     * <p>
+     * Tracks outcomes of all rate limit checks for monitoring and alerting. Result values: "allowed", "denied".
+     */
+    private final Map<String, Counter> rateLimitCheckCounters = new ConcurrentHashMap<>();
+
+    /**
+     * Rate limit violation counters indexed by action:tier.
+     *
+     * <p>
+     * Tracks violation events for abuse detection and capacity planning.
+     */
+    private final Map<String, Counter> rateLimitViolationCounters = new ConcurrentHashMap<>();
 
     /**
      * Registers all custom metrics at application startup.
@@ -174,5 +194,54 @@ public class ObservabilityMetrics {
      */
     public void setAiBudgetConsumedCents(int cents) {
         aiTaggingBudgetConsumedCents.set(cents);
+    }
+
+    /**
+     * Increments the rate limit check counter for a specific action, tier, and result.
+     *
+     * <p>
+     * Called by RateLimitService to track all rate limit check outcomes.
+     *
+     * @param actionType
+     *            action identifier (e.g., "login", "search")
+     * @param tier
+     *            user tier ("anonymous", "logged_in", "trusted")
+     * @param allowed
+     *            true if request was allowed, false if denied
+     */
+    public void incrementRateLimitCheck(String actionType, String tier, boolean allowed) {
+        String result = allowed ? "allowed" : "denied";
+        String key = actionType + ":" + tier + ":" + result;
+
+        Counter counter = rateLimitCheckCounters.computeIfAbsent(key, k -> {
+            return Counter.builder("homepage_rate_limit_checks_total").description("Total rate limit checks performed")
+                    .tags(List.of(Tag.of("action", actionType), Tag.of("tier", tier), Tag.of("result", result)))
+                    .register(registry);
+        });
+
+        counter.increment();
+    }
+
+    /**
+     * Increments the rate limit violation counter for a specific action and tier.
+     *
+     * <p>
+     * Called by RateLimitService when a violation is recorded.
+     *
+     * @param actionType
+     *            action identifier
+     * @param tier
+     *            user tier
+     */
+    public void incrementRateLimitViolation(String actionType, String tier) {
+        String key = actionType + ":" + tier;
+
+        Counter counter = rateLimitViolationCounters.computeIfAbsent(key, k -> {
+            return Counter.builder("homepage_rate_limit_violations_total")
+                    .description("Total rate limit violations recorded")
+                    .tags(List.of(Tag.of("action", actionType), Tag.of("tier", tier))).register(registry);
+        });
+
+        counter.increment();
     }
 }
