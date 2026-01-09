@@ -57,6 +57,35 @@ This directory contains PlantUML diagrams documenting the Village Homepage syste
 - Local dev: docker-compose for dependencies
 - Beta/prod: feature flag differentiation, Kubernetes secrets for credentials
 
+### Entity Relationship Diagram (`erd.puml`)
+
+**Purpose:** Comprehensive database schema covering all 40+ core tables with relationships, indexes, partitioning, and compliance annotations.
+
+**Key Elements:**
+
+**Core Domains:**
+- **Users & Auth:** users, user_sessions, user_consents, user_profiles, admin_roles
+- **Feed Aggregation:** rss_sources, feed_items, user_feed_subscriptions, ai_usage_tracking
+- **Widget Caching:** weather_cache, stock_quotes, social_tokens, social_posts
+- **Marketplace:** marketplace_categories, marketplace_listings, marketplace_images, marketplace_messages, payment_transactions, payment_refunds
+- **Directory:** directory_categories, directory_sites, directory_site_categories, directory_votes, directory_rankings, directory_screenshot_versions
+- **Infrastructure:** delayed_jobs, feature_flags, rate_limit_rules, rate_limit_violations
+- **Analytics:** link_clicks, analytics_rollups
+- **I18n Placeholders:** i18n_translations, geo_regions
+
+**Technical Annotations:**
+- **[PART]:** Partitioned tables (daily/monthly) for data lifecycle management
+- **[TTL]:** Time-based retention policies (30/90 days, indefinite)
+- **[GEO]:** PostGIS geographic indexes (GIST) for radius filtering (P6/P11)
+- **[FTS]:** Elasticsearch full-text search indexes (Hibernate Search)
+- **[JSONB]:** JSONB columns for flexible data storage (widget layouts, metadata, etc.)
+- **[Px]:** Policy enforcement points (P1-P14) mapped to tables
+
+**Companion Document:**
+- **[ERD Guide](erd-guide.md):** 12-section deep-dive covering table purposes, indexing strategies, retention policies, policy mappings, performance considerations, and migration strategy
+
+**Reference:** Derived from container.puml services and Section 2 data model requirements; supports MyBatis migration implementation in I1.
+
 ## Rendering
 
 ### Online Viewers
@@ -77,14 +106,17 @@ apt install plantuml   # Ubuntu/Debian
 # Generate PNG
 plantuml docs/diagrams/context.puml
 plantuml docs/diagrams/container.puml
+plantuml docs/diagrams/erd.puml
 
 # Generate SVG
 plantuml -tsvg docs/diagrams/context.puml
 plantuml -tsvg docs/diagrams/container.puml
+plantuml -tsvg docs/diagrams/erd.puml
 ```
 
 ## Validation Checklist
 
+### System Context & Container Diagrams
 - [x] PlantUML syntax valid (@startuml/@enduml tags present)
 - [x] All policies P1-P14 annotated at relevant boundaries
 - [x] Queue families (DEFAULT/HIGH/LOW/BULK/SCREENSHOT) color-coded and documented
@@ -94,6 +126,20 @@ plantuml -tsvg docs/diagrams/container.puml
 - [x] Legends explain policy abbreviations and queue colors
 - [x] README.md updated with diagram references
 
+### Entity Relationship Diagram
+- [x] PlantUML syntax valid with entity relationship notation
+- [x] All mandated tables present (40+ core tables from task description)
+- [x] JSONB fields annotated with purpose
+- [x] Partition keys specified (daily/monthly partitions)
+- [x] Indexes documented (B-tree, GIST, partial, covering)
+- [x] Retention policies linked to policies (TTL annotations)
+- [x] PostGIS geographic columns marked with [GEO] annotation
+- [x] Elasticsearch indexes marked with [FTS] annotation
+- [x] Policy references (P1-P14) mapped to relevant tables
+- [x] Relationships (foreign keys) connect domain entities
+- [x] Future expansion placeholders (i18n, geo_regions) included
+- [x] Companion erd-guide.md with comprehensive explanations
+
 ## Maintenance
 
 When updating diagrams:
@@ -102,6 +148,13 @@ When updating diagrams:
 3. Add new external integrations with protocol/policy annotations
 4. Regenerate exported images (PNG/SVG) if sharing outside the codebase
 5. Cross-reference with ADRs when toolchain or deployment changes occur
+6. When adding new tables to ERD:
+   - Add indexes for foreign keys and common query patterns
+   - Specify partitioning strategy if high-volume writes
+   - Define retention policy (TTL or indefinite)
+   - Map to relevant policies (P1-P14)
+   - Update erd-guide.md with table purpose and features
+7. Keep ERD synchronized with MyBatis migration scripts
 
 ## References
 

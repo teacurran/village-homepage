@@ -46,7 +46,7 @@
       "I1.T2"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T4",

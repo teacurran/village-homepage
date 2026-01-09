@@ -1,0 +1,927 @@
+@startuml Village Homepage - Entity Relationship Diagram
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <b><u>x</u></b>
+!define foreign_key(x) <i>x</i>
+!define unique(x) <color:green>x</color>
+!define indexed(x) <color:blue>x</color>
+
+title Village Homepage - Entity Relationship Diagram
+
+' Legend
+legend top left
+  **Key:**
+  <b><u>primary_key</u></b>
+  <i>foreign_key</i>
+  <color:green>unique column</color>
+  <color:blue>indexed column</color>
+
+  **Annotations:**
+  [Px] = Policy reference (P1-P14)
+  [PART] = Partitioned table
+  [TTL] = Time-based retention
+  [GEO] = PostGIS geographic index
+  [FTS] = Elasticsearch full-text search
+  [JSONB] = JSONB column type
+
+  **Policies:**
+  P1: GDPR/CCPA consent, data export/deletion
+  P2/P10: AI budget control ($500/month)
+  P3: Stripe payment/refund audit trails
+  P4: Screenshot indefinite retention
+  P5/P13: Social token storage (indefinite)
+  P6/P11: PostGIS geographic queries (≤250mi)
+  P7: Feature flag database-backed rollouts
+  P9: Anonymous user tracking (vu_anon_id cookie)
+  P14: Analytics consent + 90-day purge
+end legend
+
+' ============================================================================
+' CORE DOMAIN: USERS, AUTHENTICATION, PROFILES
+' ============================================================================
+
+entity users {
+  primary_key(id) : BIGINT
+  --
+  unique(email) : VARCHAR(255)
+  indexed(vu_anon_id) : UUID [P9: Anonymous tracking]
+  password_hash : VARCHAR(255)
+  oauth_provider : VARCHAR(50) [google|facebook|apple]
+  oauth_subject : VARCHAR(255)
+  indexed(is_anonymous) : BOOLEAN
+  indexed(account_status) : VARCHAR(20) [active|suspended|deleted]
+  indexed(created_at) : TIMESTAMP
+  updated_at : TIMESTAMP
+  deleted_at : TIMESTAMP [P1: Soft delete for GDPR]
+  --
+  **Indexes:**
+  email_idx (email) UNIQUE
+  anon_id_idx (vu_anon_id)
+  oauth_idx (oauth_provider, oauth_subject) UNIQUE WHERE NOT NULL
+  status_created_idx (account_status, created_at)
+  --
+  **Policies:**
+  [P1: GDPR consent, account merge, data export]
+  [P9: Anonymous user tracking]
+}
+
+entity user_sessions {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT
+  indexed(session_token) : VARCHAR(255)
+  indexed(refresh_token) : VARCHAR(255)
+  ip_address : INET
+  user_agent : TEXT
+  indexed(expires_at) : TIMESTAMP
+  indexed(created_at) : TIMESTAMP
+  revoked_at : TIMESTAMP
+  --
+  **Indexes:**
+  session_token_idx (session_token) UNIQUE
+  refresh_token_idx (refresh_token) UNIQUE WHERE NOT NULL
+  user_expires_idx (user_id, expires_at)
+  --
+  **Retention:**
+  [TTL: 90 days after expiration]
+  [P1: Session tracking for consent]
+}
+
+entity user_consents {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT
+  consent_type : VARCHAR(50) [gdpr|analytics|marketing|ai_tagging]
+  indexed(granted) : BOOLEAN
+  indexed(granted_at) : TIMESTAMP
+  revoked_at : TIMESTAMP
+  ip_address : INET
+  user_agent : TEXT
+  version : VARCHAR(20)
+  --
+  **Indexes:**
+  user_consent_type_idx (user_id, consent_type)
+  granted_idx (granted, granted_at)
+  --
+  **Policies:**
+  [P1: GDPR consent tracking]
+  [P14: Analytics consent gating]
+  [Indefinite retention for audit trail]
+}
+
+entity user_profiles {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT UNIQUE
+  display_name : VARCHAR(100)
+  bio : TEXT
+  avatar_url : VARCHAR(500)
+  indexed(public_username) : VARCHAR(50) UNIQUE
+  indexed(public_homepage_enabled) : BOOLEAN
+  indexed(your_times_enabled) : BOOLEAN
+  indexed(your_report_enabled) : BOOLEAN
+  preferences : JSONB [P8: Widget layout, theme, locale]
+  indexed(karma_score) : INTEGER DEFAULT 0 [Directory trust metric]
+  indexed(created_at) : TIMESTAMP
+  updated_at : TIMESTAMP
+  --
+  **Indexes:**
+  user_id_idx (user_id) UNIQUE
+  public_username_idx (public_username) UNIQUE WHERE NOT NULL
+  karma_idx (karma_score DESC)
+  public_homepage_idx (public_homepage_enabled, user_id)
+  --
+  **Policies:**
+  [P1: User data for export/deletion]
+  [JSONB: preferences stores widget layout]
+}
+
+entity admin_roles {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT
+  indexed(role_type) : VARCHAR(50) [super_admin|support|ops|read_only]
+  granted_by : BIGINT
+  indexed(granted_at) : TIMESTAMP
+  revoked_at : TIMESTAMP
+  notes : TEXT
+  --
+  **Indexes:**
+  user_role_idx (user_id, role_type) UNIQUE WHERE revoked_at IS NULL
+  role_active_idx (role_type, granted_at) WHERE revoked_at IS NULL
+  --
+  **Policies:**
+  [Audit trail for admin access]
+}
+
+' ============================================================================
+' FEED & CONTENT AGGREGATION: RSS, AI TAGGING
+' ============================================================================
+
+entity rss_sources {
+  primary_key(id) : BIGINT
+  --
+  unique(feed_url) : VARCHAR(1000)
+  indexed(source_name) : VARCHAR(200)
+  indexed(source_type) : VARCHAR(50) [system|user_custom]
+  foreign_key(created_by_user_id) : BIGINT [NULL for system feeds]
+  indexed(is_active) : BOOLEAN DEFAULT true
+  indexed(refresh_interval_minutes) : INTEGER DEFAULT 60
+  last_fetched_at : TIMESTAMP
+  last_fetch_status : VARCHAR(20) [success|error|timeout]
+  last_error_message : TEXT
+  indexed(created_at) : TIMESTAMP
+  updated_at : TIMESTAMP
+  --
+  **Indexes:**
+  feed_url_idx (feed_url) UNIQUE
+  source_type_active_idx (source_type, is_active, refresh_interval_minutes)
+  next_fetch_idx (last_fetched_at, refresh_interval_minutes) WHERE is_active = true
+  --
+  **Policies:**
+  [P1: User-created feeds included in data export]
+}
+
+entity feed_items {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(rss_source_id) : BIGINT
+  unique(item_guid) : VARCHAR(500)
+  title : VARCHAR(500)
+  summary : TEXT
+  indexed(published_at) : TIMESTAMP
+  author : VARCHAR(200)
+  link : VARCHAR(1000)
+  image_url : VARCHAR(1000)
+  content_hash : VARCHAR(64)
+  ai_tagged : BOOLEAN DEFAULT false
+  ai_tags : JSONB [P2/P10: AI-generated tags]
+  indexed(created_at) : TIMESTAMP
+  --
+  **Indexes:**
+  guid_idx (item_guid) UNIQUE
+  source_published_idx (rss_source_id, published_at DESC)
+  published_idx (published_at DESC)
+  ai_tagged_idx (ai_tagged) WHERE ai_tagged = false
+  --
+  **Retention:**
+  [TTL: 90 days for non-bookmarked items]
+  --
+  **Partitioning:**
+  [PART: Monthly partitions by published_at]
+  --
+  **Policies:**
+  [P2/P10: AI tagging budget control]
+}
+
+entity user_feed_subscriptions {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT
+  foreign_key(rss_source_id) : BIGINT
+  indexed(subscribed_at) : TIMESTAMP
+  unsubscribed_at : TIMESTAMP
+  --
+  **Indexes:**
+  user_source_idx (user_id, rss_source_id) UNIQUE WHERE unsubscribed_at IS NULL
+  --
+  **Policies:**
+  [P1: User subscriptions for data export]
+}
+
+entity ai_usage_tracking {
+  primary_key(id) : BIGINT
+  --
+  indexed(usage_type) : VARCHAR(50) [feed_tagging|fraud_detection|categorization]
+  foreign_key(user_id) : BIGINT [NULL for system tasks]
+  model_name : VARCHAR(100)
+  prompt_tokens : INTEGER
+  completion_tokens : INTEGER
+  total_cost_usd : DECIMAL(10, 6)
+  indexed(created_at) : TIMESTAMP
+  metadata : JSONB [Request/response metadata]
+  --
+  **Indexes:**
+  usage_type_created_idx (usage_type, created_at DESC)
+  cost_tracking_idx (created_at, total_cost_usd) [P2/P10: Budget monitoring]
+  --
+  **Partitioning:**
+  [PART: Monthly partitions by created_at]
+  --
+  **Policies:**
+  [P2/P10: $500/month AI budget ceiling enforcement]
+  [Indefinite retention for cost audit]
+}
+
+' ============================================================================
+' WIDGET CACHING: WEATHER, STOCKS, SOCIAL
+' ============================================================================
+
+entity weather_cache {
+  primary_key(id) : BIGINT
+  --
+  indexed(location_lat) : DECIMAL(10, 7)
+  indexed(location_lng) : DECIMAL(10, 7)
+  indexed(location_hash) : VARCHAR(32) [MD5 of lat/lng rounded]
+  provider : VARCHAR(20) [open_meteo|nws]
+  forecast_data : JSONB [Hourly + daily forecasts]
+  indexed(fetched_at) : TIMESTAMP
+  indexed(expires_at) : TIMESTAMP
+  --
+  **Indexes:**
+  location_hash_idx (location_hash, expires_at DESC)
+  expires_idx (expires_at)
+  --
+  **Retention:**
+  [TTL: 7 days after expiration]
+  --
+  **Policies:**
+  [1-hour refresh cadence per P14 background jobs]
+}
+
+entity stock_quotes {
+  primary_key(id) : BIGINT
+  --
+  indexed(symbol) : VARCHAR(10)
+  indexed(market) : VARCHAR(10) [NYSE|NASDAQ|etc]
+  price_usd : DECIMAL(12, 4)
+  change_percent : DECIMAL(6, 3)
+  volume : BIGINT
+  indexed(quote_timestamp) : TIMESTAMP
+  indexed(fetched_at) : TIMESTAMP
+  metadata : JSONB [Alpha Vantage extended data]
+  --
+  **Indexes:**
+  symbol_timestamp_idx (symbol, quote_timestamp DESC)
+  market_timestamp_idx (market, quote_timestamp DESC)
+  --
+  **Partitioning:**
+  [PART: Monthly partitions by quote_timestamp]
+  --
+  **Retention:**
+  [TTL: 30 days for historical quotes]
+  --
+  **Policies:**
+  [5-min refresh during market hours per HIGH queue]
+}
+
+entity social_tokens {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT
+  indexed(platform) : VARCHAR(20) [instagram|facebook]
+  access_token : VARCHAR(1000) [Encrypted at rest]
+  refresh_token : VARCHAR(1000) [Encrypted at rest]
+  indexed(expires_at) : TIMESTAMP
+  indexed(granted_at) : TIMESTAMP
+  revoked_at : TIMESTAMP
+  scopes : VARCHAR(500)
+  --
+  **Indexes:**
+  user_platform_idx (user_id, platform) UNIQUE WHERE revoked_at IS NULL
+  expires_idx (expires_at) WHERE revoked_at IS NULL
+  --
+  **Policies:**
+  [P5/P13: Indefinite token retention until revocation]
+  [Encryption at rest via database TDE]
+  [P1: Included in user data export/deletion]
+}
+
+entity social_posts {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(social_token_id) : BIGINT
+  indexed(platform) : VARCHAR(20)
+  platform_post_id : VARCHAR(100)
+  post_type : VARCHAR(50) [image|video|carousel|story]
+  caption : TEXT
+  media_urls : JSONB
+  indexed(posted_at) : TIMESTAMP
+  indexed(fetched_at) : TIMESTAMP
+  engagement_data : JSONB [Likes, comments, shares]
+  --
+  **Indexes:**
+  token_posted_idx (social_token_id, posted_at DESC)
+  platform_post_id_idx (platform, platform_post_id) UNIQUE
+  --
+  **Retention:**
+  [TTL: 90 days after fetched_at]
+  --
+  **Policies:**
+  [P5/P13: Social integration data retention]
+  [30-min refresh cadence per DEFAULT queue]
+}
+
+' ============================================================================
+' MARKETPLACE: LISTINGS, PAYMENTS, GEO FILTERING
+' ============================================================================
+
+entity marketplace_categories {
+  primary_key(id) : BIGINT
+  --
+  indexed(parent_id) : BIGINT [Self-referential]
+  unique(slug) : VARCHAR(100)
+  name : VARCHAR(100)
+  indexed(display_order) : INTEGER
+  is_active : BOOLEAN DEFAULT true
+  --
+  **Indexes:**
+  parent_display_idx (parent_id, display_order)
+  slug_idx (slug) UNIQUE
+  --
+  **Policies:**
+  [Hierarchical: For Sale, Housing, Jobs, Services, Community]
+}
+
+entity marketplace_listings {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT [P3: Login required to post]
+  foreign_key(category_id) : BIGINT
+  title : VARCHAR(200)
+  description : TEXT
+  price_usd : DECIMAL(10, 2)
+  indexed(location_lat) : DECIMAL(10, 7)
+  indexed(location_lng) : DECIMAL(10, 7)
+  location_geog : GEOGRAPHY(POINT, 4326) [GEO: PostGIS]
+  indexed(location_city) : VARCHAR(100)
+  indexed(location_state) : VARCHAR(50)
+  indexed(location_country) : VARCHAR(50)
+  contact_method : VARCHAR(20) [email_relay|phone]
+  contact_value : VARCHAR(255) [Masked email or phone]
+  images : JSONB [Up to 12 S3 object keys]
+  indexed(status) : VARCHAR(20) [active|sold|expired|flagged]
+  indexed(is_featured) : BOOLEAN DEFAULT false [P3: Paid promotion]
+  indexed(featured_until) : TIMESTAMP
+  indexed(published_at) : TIMESTAMP
+  indexed(expires_at) : TIMESTAMP
+  bumped_at : TIMESTAMP
+  indexed(created_at) : TIMESTAMP
+  updated_at : TIMESTAMP
+  --
+  **Indexes:**
+  user_status_idx (user_id, status, published_at DESC)
+  category_status_pub_idx (category_id, status, published_at DESC)
+  location_geog_gist (location_geog) USING GIST [GEO: Radius search]
+  status_expires_idx (status, expires_at) WHERE status = 'active'
+  featured_idx (is_featured, featured_until DESC) WHERE is_featured = true
+  --
+  **Retention:**
+  [TTL: Soft delete after expiration; hard delete after 1 year]
+  --
+  **Policies:**
+  [P3: Login required, Stripe payments for featured/bump]
+  [P6/P11: PostGIS radius filtering (5mi-250mi or Any)]
+  [FTS: Elasticsearch index for full-text + geo search]
+}
+
+entity marketplace_images {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(listing_id) : BIGINT
+  s3_bucket : VARCHAR(100)
+  s3_key : VARCHAR(500)
+  cdn_url : VARCHAR(1000)
+  indexed(display_order) : INTEGER
+  width : INTEGER
+  height : INTEGER
+  format : VARCHAR(10) [webp|jpeg|png]
+  file_size_bytes : BIGINT
+  indexed(uploaded_at) : TIMESTAMP
+  --
+  **Indexes:**
+  listing_display_idx (listing_id, display_order)
+  --
+  **Retention:**
+  [TTL: Retained while parent listing exists; purged 30 days after deletion]
+  --
+  **Policies:**
+  [P4: Cloudflare R2 storage, WebP compression]
+}
+
+entity marketplace_messages {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(listing_id) : BIGINT
+  foreign_key(from_user_id) : BIGINT
+  foreign_key(to_user_id) : BIGINT
+  relay_email_id : VARCHAR(100) [homepage-marketplace-{id}@villagecompute.com]
+  subject : VARCHAR(200)
+  body : TEXT
+  indexed(sent_at) : TIMESTAMP
+  read_at : TIMESTAMP
+  parent_message_id : BIGINT [For threading]
+  --
+  **Indexes:**
+  listing_sent_idx (listing_id, sent_at DESC)
+  from_user_idx (from_user_id, sent_at DESC)
+  to_user_idx (to_user_id, sent_at DESC)
+  relay_idx (relay_email_id) UNIQUE
+  --
+  **Retention:**
+  [TTL: 90 days after sent_at]
+  --
+  **Policies:**
+  [P3: Email masking via relay]
+  [HIGH queue: 1-min IMAP polling for inbound relay]
+}
+
+entity payment_transactions {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT
+  foreign_key(listing_id) : BIGINT [NULL for non-listing payments]
+  stripe_payment_intent_id : VARCHAR(100) UNIQUE
+  stripe_charge_id : VARCHAR(100)
+  indexed(transaction_type) : VARCHAR(50) [featured_listing|bump_listing|subscription]
+  amount_usd : DECIMAL(10, 2)
+  stripe_fee_usd : DECIMAL(10, 2)
+  net_amount_usd : DECIMAL(10, 2)
+  indexed(status) : VARCHAR(20) [pending|succeeded|failed|refunded]
+  indexed(created_at) : TIMESTAMP
+  succeeded_at : TIMESTAMP
+  metadata : JSONB [Stripe webhook payload]
+  --
+  **Indexes:**
+  stripe_payment_intent_idx (stripe_payment_intent_id) UNIQUE
+  user_status_created_idx (user_id, status, created_at DESC)
+  type_created_idx (transaction_type, created_at DESC)
+  --
+  **Policies:**
+  [P3: Indefinite retention for Stripe audit trails]
+}
+
+entity payment_refunds {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(payment_transaction_id) : BIGINT
+  stripe_refund_id : VARCHAR(100) UNIQUE
+  refund_amount_usd : DECIMAL(10, 2)
+  refund_reason : VARCHAR(100)
+  indexed(status) : VARCHAR(20) [pending|succeeded|failed]
+  indexed(created_at) : TIMESTAMP
+  succeeded_at : TIMESTAMP
+  metadata : JSONB
+  --
+  **Indexes:**
+  stripe_refund_idx (stripe_refund_id) UNIQUE
+  payment_transaction_idx (payment_transaction_id)
+  --
+  **Policies:**
+  [P3: Indefinite retention for audit compliance]
+}
+
+' ============================================================================
+' GOOD SITES DIRECTORY: VOTING, SCREENSHOTS, CATEGORIES
+' ============================================================================
+
+entity directory_categories {
+  primary_key(id) : BIGINT
+  --
+  indexed(parent_id) : BIGINT [Self-referential, unlimited depth]
+  unique(slug) : VARCHAR(200)
+  name : VARCHAR(200)
+  description : TEXT
+  indexed(display_order) : INTEGER
+  is_active : BOOLEAN DEFAULT true
+  foreign_key(moderator_user_id) : BIGINT [P7: Assigned by super_admin]
+  --
+  **Indexes:**
+  parent_display_idx (parent_id, display_order)
+  slug_idx (slug) UNIQUE
+  moderator_idx (moderator_user_id) WHERE moderator_user_id IS NOT NULL
+  --
+  **Policies:**
+  [P7: Category moderators for curation]
+}
+
+entity directory_sites {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(submitted_by_user_id) : BIGINT
+  indexed(url) : VARCHAR(1000) UNIQUE
+  title : VARCHAR(200)
+  description : TEXT
+  opengraph_title : VARCHAR(200)
+  opengraph_description : TEXT
+  opengraph_image_url : VARCHAR(1000)
+  indexed(status) : VARCHAR(20) [pending|approved|rejected|flagged]
+  indexed(trust_status) : VARCHAR(20) [untrusted|trusted] [Karma-based]
+  indexed(submitted_at) : TIMESTAMP
+  approved_at : TIMESTAMP
+  approved_by : BIGINT
+  rejection_reason : TEXT
+  indexed(last_health_check) : TIMESTAMP
+  health_status : VARCHAR(20) [healthy|dead|redirect]
+  redirect_url : VARCHAR(1000)
+  indexed(created_at) : TIMESTAMP
+  updated_at : TIMESTAMP
+  --
+  **Indexes:**
+  url_idx (url) UNIQUE
+  status_submitted_idx (status, submitted_at DESC)
+  trust_status_idx (trust_status)
+  health_check_idx (last_health_check) WHERE status = 'approved'
+  --
+  **Retention:**
+  [Indefinite for approved sites; 90 days for rejected]
+  --
+  **Policies:**
+  [P4: Auto-captured screenshots via jvppeteer]
+  [P7: Karma-based trust (untrusted → moderation queue)]
+  [FTS: Elasticsearch index for directory search]
+  [LOW queue: Weekly link health checks]
+}
+
+entity directory_site_categories {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(site_id) : BIGINT
+  foreign_key(category_id) : BIGINT
+  indexed(added_at) : TIMESTAMP
+  --
+  **Indexes:**
+  site_category_idx (site_id, category_id) UNIQUE
+  category_site_idx (category_id, site_id)
+  --
+  **Policies:**
+  [Sites can exist in multiple categories]
+}
+
+entity directory_votes {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(site_id) : BIGINT
+  foreign_key(user_id) : BIGINT [P7: Login required to vote]
+  foreign_key(category_id) : BIGINT [Votes are per category]
+  indexed(vote_type) : VARCHAR(10) [upvote|downvote]
+  indexed(voted_at) : TIMESTAMP
+  retracted_at : TIMESTAMP
+  --
+  **Indexes:**
+  user_site_category_idx (user_id, site_id, category_id) UNIQUE WHERE retracted_at IS NULL
+  site_category_vote_idx (site_id, category_id, vote_type) WHERE retracted_at IS NULL
+  category_voted_idx (category_id, voted_at DESC)
+  --
+  **Retention:**
+  [Indefinite for ranking algorithm]
+  --
+  **Policies:**
+  [P7: Reddit-style voting, login required]
+  [DEFAULT queue: Hourly rank recalculation]
+}
+
+entity directory_rankings {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(site_id) : BIGINT
+  foreign_key(category_id) : BIGINT
+  upvote_count : INTEGER DEFAULT 0
+  downvote_count : INTEGER DEFAULT 0
+  indexed(score) : INTEGER [Algorithm: (upvotes - downvotes) with time decay]
+  indexed(rank) : INTEGER [Position within category]
+  indexed(calculated_at) : TIMESTAMP
+  --
+  **Indexes:**
+  site_category_idx (site_id, category_id) UNIQUE
+  category_rank_idx (category_id, rank)
+  score_idx (score DESC, calculated_at DESC)
+  --
+  **Policies:**
+  [DEFAULT queue: Hourly recalculation]
+  [Top-ranked links bubble up to parent categories]
+}
+
+entity directory_screenshot_versions {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(site_id) : BIGINT
+  s3_bucket : VARCHAR(100)
+  s3_key : VARCHAR(500)
+  cdn_url : VARCHAR(1000)
+  width : INTEGER DEFAULT 1280
+  height : INTEGER DEFAULT 800
+  format : VARCHAR(10) [webp]
+  file_size_bytes : BIGINT
+  indexed(captured_at) : TIMESTAMP
+  indexed(is_current) : BOOLEAN DEFAULT false
+  --
+  **Indexes:**
+  site_captured_idx (site_id, captured_at DESC)
+  site_current_idx (site_id) WHERE is_current = true
+  --
+  **Retention:**
+  [P4: Indefinite retention for all versions]
+  --
+  **Policies:**
+  [P4: jvppeteer + Chromium in same container]
+  [P12: SCREENSHOT queue with limited concurrency]
+  [WebP compression for bandwidth]
+}
+
+' ============================================================================
+' INFRASTRUCTURE: JOBS, FEATURE FLAGS, RATE LIMITS
+' ============================================================================
+
+entity delayed_jobs {
+  primary_key(id) : BIGINT
+  --
+  indexed(queue_name) : VARCHAR(50) [DEFAULT|HIGH|LOW|BULK|SCREENSHOT]
+  indexed(job_type) : VARCHAR(100) [feed_refresh|weather_refresh|etc]
+  indexed(priority) : INTEGER DEFAULT 5
+  payload : JSONB
+  indexed(scheduled_at) : TIMESTAMP
+  indexed(locked_at) : TIMESTAMP
+  locked_by : VARCHAR(100) [Worker pod identifier]
+  indexed(status) : VARCHAR(20) [pending|locked|succeeded|failed|retrying]
+  attempts : INTEGER DEFAULT 0
+  max_attempts : INTEGER DEFAULT 3
+  last_error : TEXT
+  indexed(completed_at) : TIMESTAMP
+  indexed(created_at) : TIMESTAMP
+  --
+  **Indexes:**
+  queue_scheduled_idx (queue_name, scheduled_at, status) WHERE status = 'pending'
+  job_type_status_idx (job_type, status, created_at DESC)
+  locked_idx (locked_at, locked_by) WHERE locked_at IS NOT NULL
+  completed_idx (completed_at) WHERE completed_at IS NOT NULL
+  --
+  **Retention:**
+  [TTL: 30 days after completion for succeeded; 90 days for failed]
+  --
+  **Partitioning:**
+  [PART: Monthly partitions by created_at]
+  --
+  **Policies:**
+  [P7: Job orchestration across all queue families]
+  [Exponential backoff retry logic]
+}
+
+entity feature_flags {
+  primary_key(id) : BIGINT
+  --
+  unique(flag_key) : VARCHAR(100)
+  indexed(flag_name) : VARCHAR(200)
+  description : TEXT
+  indexed(is_enabled) : BOOLEAN DEFAULT false
+  indexed(rollout_percentage) : INTEGER DEFAULT 0 [0-100]
+  cohort_whitelist : JSONB [User IDs for beta testing]
+  indexed(created_at) : TIMESTAMP
+  updated_at : TIMESTAMP
+  updated_by : BIGINT [Admin user]
+  --
+  **Indexes:**
+  flag_key_idx (flag_key) UNIQUE
+  enabled_idx (is_enabled, rollout_percentage)
+  --
+  **Policies:**
+  [P7: Database-backed feature flag rollouts]
+  [Initial flags: stocks_widget, social_integration, promoted_listings (disabled)]
+}
+
+entity rate_limit_rules {
+  primary_key(id) : BIGINT
+  --
+  unique(rule_key) : VARCHAR(100)
+  indexed(action_type) : VARCHAR(100) [api_call|listing_post|vote|search]
+  indexed(user_tier) : VARCHAR(50) [anonymous|free|paid|admin]
+  requests_per_window : INTEGER
+  window_seconds : INTEGER
+  indexed(is_active) : BOOLEAN DEFAULT true
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  --
+  **Indexes:**
+  rule_key_idx (rule_key) UNIQUE
+  action_tier_idx (action_type, user_tier) WHERE is_active = true
+  --
+  **Policies:**
+  [P14: Tiered rate limiting per F14.2]
+}
+
+entity rate_limit_violations {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT [NULL for IP-based anonymous]
+  indexed(ip_address) : INET
+  foreign_key(rule_id) : BIGINT
+  indexed(action_type) : VARCHAR(100)
+  indexed(violated_at) : TIMESTAMP
+  request_count : INTEGER
+  user_agent : TEXT
+  --
+  **Indexes:**
+  user_violated_idx (user_id, violated_at DESC) WHERE user_id IS NOT NULL
+  ip_violated_idx (ip_address, violated_at DESC)
+  rule_violated_idx (rule_id, violated_at DESC)
+  --
+  **Partitioning:**
+  [PART: Daily partitions by violated_at]
+  --
+  **Retention:**
+  [TTL: 90 days for analysis; aggregated for dashboards]
+  --
+  **Policies:**
+  [P14: Admin dashboard for monitoring + adjustment]
+  [LOW queue: Hourly processing for IP blocking]
+}
+
+' ============================================================================
+' ANALYTICS & COMPLIANCE: CLICKS, PAYMENTS
+' ============================================================================
+
+entity link_clicks {
+  primary_key(id) : BIGINT
+  --
+  foreign_key(user_id) : BIGINT [NULL for anonymous]
+  indexed(vu_anon_id) : UUID [P9: Anonymous tracking]
+  indexed(click_target_type) : VARCHAR(50) [feed_item|directory_site|marketplace_listing]
+  foreign_key(target_id) : BIGINT
+  indexed(clicked_at) : TIMESTAMP
+  ip_address : INET
+  user_agent : TEXT
+  referer : VARCHAR(1000)
+  session_id : VARCHAR(100)
+  --
+  **Indexes:**
+  user_target_clicked_idx (user_id, click_target_type, clicked_at DESC) WHERE user_id IS NOT NULL
+  anon_target_clicked_idx (vu_anon_id, click_target_type, clicked_at DESC)
+  target_idx (click_target_type, target_id, clicked_at DESC)
+  --
+  **Partitioning:**
+  [PART: Daily partitions by clicked_at]
+  --
+  **Retention:**
+  [TTL: 90 days per P14; aggregated hourly for analytics]
+  --
+  **Policies:**
+  [P9: Anonymous tracking via vu_anon_id cookie]
+  [P14: Analytics consent gating; 90-day evaluation log purge]
+  [DEFAULT queue: Hourly click rollups for profiles]
+}
+
+entity analytics_rollups {
+  primary_key(id) : BIGINT
+  --
+  indexed(rollup_type) : VARCHAR(50) [daily_clicks|weekly_votes|monthly_listings]
+  indexed(target_type) : VARCHAR(50) [user|category|site|listing]
+  foreign_key(target_id) : BIGINT
+  indexed(period_start) : DATE
+  indexed(period_end) : DATE
+  metric_name : VARCHAR(100)
+  metric_value : BIGINT
+  metadata : JSONB
+  indexed(calculated_at) : TIMESTAMP
+  --
+  **Indexes:**
+  rollup_target_period_idx (rollup_type, target_type, target_id, period_start)
+  period_idx (period_start, period_end)
+  --
+  **Retention:**
+  [Indefinite for aggregated analytics]
+  --
+  **Policies:**
+  [P14: Consent-gated; feeds OpsAnalyticsPortal dashboards]
+  [LOW queue: Hourly rollup jobs]
+}
+
+' ============================================================================
+' INTERNATIONALIZATION PLACEHOLDERS (Future Expansion)
+' ============================================================================
+
+entity i18n_translations {
+  primary_key(id) : BIGINT
+  --
+  unique(translation_key) : VARCHAR(200)
+  indexed(locale) : VARCHAR(10) [en-US|es-ES|fr-FR|etc]
+  translated_text : TEXT
+  indexed(created_at) : TIMESTAMP
+  updated_at : TIMESTAMP
+  --
+  **Indexes:**
+  key_locale_idx (translation_key, locale) UNIQUE
+  locale_idx (locale)
+  --
+  **Policies:**
+  [Future: Multi-language support for UI strings]
+}
+
+entity geo_regions {
+  primary_key(id) : BIGINT
+  --
+  indexed(region_type) : VARCHAR(20) [country|state|city]
+  indexed(parent_id) : BIGINT [Self-referential]
+  name : VARCHAR(200)
+  indexed(code) : VARCHAR(10) [ISO codes]
+  latitude : DECIMAL(10, 7)
+  longitude : DECIMAL(10, 7)
+  indexed(is_active) : BOOLEAN DEFAULT true
+  --
+  **Indexes:**
+  region_type_parent_idx (region_type, parent_id)
+  code_idx (code) UNIQUE WHERE code IS NOT NULL
+  --
+  **Policies:**
+  [Source: dr5hn/countries-states-cities-database (153K+ cities)]
+  [P6/P11: Supports marketplace radius filtering]
+}
+
+' ============================================================================
+' RELATIONSHIPS
+' ============================================================================
+
+users ||--o{ user_sessions : "has many"
+users ||--o| user_profiles : "has one"
+users ||--o{ user_consents : "grants"
+users ||--o{ admin_roles : "assigned"
+users ||--o{ rss_sources : "creates (custom feeds)"
+users ||--o{ user_feed_subscriptions : "subscribes to"
+users ||--o{ social_tokens : "authorizes"
+users ||--o{ marketplace_listings : "posts"
+users ||--o{ marketplace_messages : "sends/receives"
+users ||--o{ payment_transactions : "makes"
+users ||--o{ directory_sites : "submits"
+users ||--o{ directory_votes : "casts"
+users ||--o{ link_clicks : "generates"
+
+rss_sources ||--o{ feed_items : "produces"
+rss_sources ||--o{ user_feed_subscriptions : "subscribed by"
+
+feed_items }o--|| ai_usage_tracking : "tagged by (optional)"
+
+social_tokens ||--o{ social_posts : "fetches"
+
+marketplace_categories ||--o{ marketplace_listings : "categorizes"
+marketplace_categories }o--o| marketplace_categories : "parent/child"
+
+marketplace_listings ||--o{ marketplace_images : "contains"
+marketplace_listings ||--o{ marketplace_messages : "generates"
+marketplace_listings }o--|| payment_transactions : "promoted via (optional)"
+
+payment_transactions ||--o{ payment_refunds : "refunded via"
+
+directory_categories ||--o{ directory_site_categories : "contains"
+directory_categories }o--o| directory_categories : "parent/child"
+directory_categories ||--o{ directory_votes : "votes within"
+
+directory_sites ||--o{ directory_site_categories : "belongs to"
+directory_sites ||--o{ directory_votes : "receives"
+directory_sites ||--o{ directory_rankings : "ranked in"
+directory_sites ||--o{ directory_screenshot_versions : "captured as"
+
+directory_site_categories }o--|| directory_categories : "categorized in"
+directory_site_categories }o--|| directory_sites : "categorizes"
+
+directory_votes }o--|| users : "cast by"
+directory_votes }o--|| directory_sites : "for"
+directory_votes }o--|| directory_categories : "within"
+
+directory_rankings }o--|| directory_sites : "ranks"
+directory_rankings }o--|| directory_categories : "within"
+
+rate_limit_rules ||--o{ rate_limit_violations : "violated"
+
+link_clicks }o--|| users : "clicked by (optional)"
+
+geo_regions }o--o| geo_regions : "parent/child"
+
+@enduml
