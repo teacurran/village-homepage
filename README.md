@@ -27,13 +27,19 @@ Village Homepage is a Quarkus-based SaaS platform that provides users with a per
 
 ### Development Services (Docker Compose)
 
-The following services are required for local development and will be available via Docker Compose (coming soon):
+The following services are required for local development and are provided via Docker Compose:
 
-- PostgreSQL 17 with PostGIS extension
-- Elasticsearch 8.x
-- MinIO (S3-compatible object storage)
-- Mailpit (SMTP test server)
-- Jaeger (distributed tracing)
+- **PostgreSQL 17 with PostGIS extension** - Primary database with geospatial support
+- **Elasticsearch 8** - Full-text search and geo-spatial indexing
+- **MinIO** - S3-compatible object storage (local R2 equivalent)
+- **Mailpit** - SMTP test server with web UI
+- **Jaeger** - Distributed tracing and observability
+
+**Required for development:**
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+- At least 4GB RAM available for Docker
+- **Apple Silicon (ARM64) users:** Enable Rosetta 2 emulation in Docker Desktop for best compatibility. See [docs/ops/arm64-compatibility.md](docs/ops/arm64-compatibility.md) for details.
 
 ---
 
@@ -54,9 +60,58 @@ java -version
 
 # Check Maven wrapper
 ./mvnw --version
+
+# Check Docker and Docker Compose
+docker --version
+docker-compose --version
 ```
 
-### 3. Run Development Server
+### 3. Set Up Environment
+
+```bash
+# Copy environment template
+cp .env.example .env
+
+# (Optional) Edit .env for custom configuration
+# Most developers can use defaults for local development
+```
+
+### 4. Start Development Services
+
+```bash
+# Start all backing services (Postgres, Elasticsearch, MinIO, Mailpit, Jaeger)
+docker-compose up -d
+
+# Verify all services are healthy (may take 30-60 seconds)
+docker-compose ps
+
+# Expected output: All services should show "Up (healthy)"
+```
+
+**Service Access Points:**
+- **PostgreSQL:** localhost:5432 (user: `village`, password: `village_dev_pass`)
+- **Elasticsearch:** http://localhost:9200
+- **MinIO Console:** http://localhost:9001 (user: `minioadmin`, password: `minioadmin`)
+- **Mailpit UI:** http://localhost:8025
+- **Jaeger UI:** http://localhost:16686
+
+### 5. Initialize Database
+
+```bash
+# Run database migrations
+cd migrations
+set -a && source ../.env && set +a
+mvn migration:up -Dmigration.env=development
+cd ..
+
+# Load geographic dataset (153K+ cities, ~5-10 minutes)
+./scripts/load-geo-data.sh
+
+# Verify geo data loaded successfully
+docker-compose exec postgres psql -U village -d village_homepage -c "SELECT COUNT(*) FROM cities;"
+```
+
+### 6. Run Development Server
 
 ```bash
 # Start Quarkus in dev mode (hot reload enabled)
@@ -66,6 +121,8 @@ java -version
 The application will be available at:
 - **Homepage:** http://localhost:8080
 - **Dev UI:** http://localhost:8080/q/dev
+
+**See [docs/ops/dev-services.md](docs/ops/dev-services.md) for detailed service management, troubleshooting, and operational procedures.**
 
 ---
 
@@ -133,6 +190,9 @@ java -jar target/village-homepage-1.0.0-SNAPSHOT-runner.jar
 # Navigate to migrations directory
 cd migrations
 
+# Load environment variables for ${env.*} placeholders
+set -a && source ../.env && set +a
+
 # Run pending migrations
 mvn migration:up -Dmigration.env=development
 
@@ -141,11 +201,34 @@ mvn migration:status -Dmigration.env=development
 
 # Create new migration
 mvn migration:new -Dmigration.description="add_user_preferences_table"
+
+# Return to project root when finished
+cd ..
 ```
 
 ---
 
 ## Development Workflows
+
+### Daily Development Routine
+
+For typical day-to-day development after initial setup:
+
+```bash
+# 1. Start backing services (if not already running)
+docker-compose up -d
+
+# 2. Check service health
+docker-compose ps
+
+# 3. Start Quarkus development server
+./mvnw quarkus:dev
+
+# When finished (optional - can leave services running):
+# docker-compose stop
+```
+
+**Tip:** Leave Docker Compose services running across sessions to avoid startup delays. They consume minimal resources when idle.
 
 ### Single-Terminal Workflow (Default)
 
@@ -766,15 +849,55 @@ if (item !== undefined) {
 ### Database Connection Issues
 
 ```bash
-# Check PostgreSQL is running
-docker ps | grep postgres
+# Check if services are running
+docker-compose ps
 
-# Start PostgreSQL (if using Docker Compose)
-docker-compose up -d postgres
+# View PostgreSQL logs
+docker-compose logs postgres
+
+# Restart PostgreSQL
+docker-compose restart postgres
 
 # Test connection
-psql -h localhost -U village -d village_homepage
+psql -h localhost -p 5432 -U village -d village_homepage -c "SELECT 1;"
+
+# Reset database (WARNING: destroys all data)
+docker-compose down -v
+docker-compose up -d
+cd migrations
+set -a && source ../.env && set +a
+mvn migration:up -Dmigration.env=development
+cd ..
+./scripts/load-geo-data.sh
 ```
+
+### Docker Compose Service Issues
+
+```bash
+# View all service logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f postgres
+docker-compose logs -f elasticsearch
+
+# Restart all services
+docker-compose restart
+
+# Restart specific service
+docker-compose restart elasticsearch
+
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (full reset)
+docker-compose down -v
+
+# Check resource usage
+docker stats --no-stream
+```
+
+**For detailed troubleshooting, see [docs/ops/dev-services.md](docs/ops/dev-services.md).**
 
 ---
 

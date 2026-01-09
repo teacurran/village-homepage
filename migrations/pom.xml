@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.villagecompute</groupId>
+    <artifactId>village-homepage-migrations</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Village Homepage - MyBatis Migrations</name>
+    <description>Standalone MyBatis Migrations project for the Village Homepage database.</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <migrations.plugin.version>1.2.0</migrations.plugin.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.mybatis.maven</groupId>
+                <artifactId>migrations-maven-plugin</artifactId>
+                <version>${migrations.plugin.version}</version>
+                <configuration>
+                    <!-- Point the plugin at this module directory so scripts/ and environments/ are resolved -->
+                    <path>${project.basedir}</path>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

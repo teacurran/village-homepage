@@ -1,0 +1,6 @@
+-- // bootstrap
+-- This optional script can be used to migrate pre-existing databases into a state
+-- that matches the Village Homepage baseline before regular migrations are applied.
+-- It is intentionally empty because the I1 iteration starts from a greenfield schema.
+-- Add DDL/DML statements here if you need to initialize an environment manually and
+-- execute it via `mvn migration:bootstrap`.
