@@ -1,0 +1,246 @@
+@startuml async-matrix
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "SF Pro Display"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+title Async Workload Matrix\n(Queue Strategy & Job Assignments)
+
+' Define color scheme matching queue colors from JobQueue.java
+skinparam rectangleBackgroundColor<<HIGH>> #FA8072
+skinparam rectangleBackgroundColor<<DEFAULT>> #87CEEB
+skinparam rectangleBackgroundColor<<SCREENSHOT>> #E6E6FA
+skinparam rectangleBackgroundColor<<LOW>> #90EE90
+skinparam rectangleBackgroundColor<<BULK>> #F0E68C
+skinparam rectangleFontColor #000000
+skinparam rectangleBorderColor #333333
+
+' Legend
+rectangle "LEGEND" #EEEEEE {
+  rectangle "HIGH Queue (Salmon)" <<HIGH>> as L1
+  rectangle "DEFAULT Queue (Blue)" <<DEFAULT>> as L2
+  rectangle "SCREENSHOT Queue (Lavender)" <<SCREENSHOT>> as L3
+  rectangle "LOW Queue (Green)" <<LOW>> as L4
+  rectangle "BULK Queue (Yellow)" <<BULK>> as L5
+
+  note right of L1
+    Priority: 0 (highest)
+    Concurrency: 20 workers/pod
+    SLA: < 30 seconds (P95)
+  end note
+
+  note right of L2
+    Priority: 5
+    Concurrency: 10 workers/pod
+    SLA: < 5 minutes (P95)
+  end note
+
+  note right of L3
+    Priority: 6
+    Concurrency: 3 workers/pod **P12**
+    SLA: < 2 minutes (P95)
+  end note
+
+  note right of L4
+    Priority: 7
+    Concurrency: 5 workers/pod
+    SLA: < 30 minutes (P95)
+  end note
+
+  note right of L5
+    Priority: 8 (lowest)
+    Concurrency: 8 workers/pod
+    SLA: Best effort
+  end note
+}
+
+' Vertical spacing
+L1 -[hidden]down- L2
+L2 -[hidden]down- L3
+L3 -[hidden]down- L4
+L4 -[hidden]down- L5
+
+newpage
+
+' HIGH Queue Jobs
+rectangle "HIGH QUEUE" <<HIGH>> as HighQueue {
+  rectangle "STOCK_REFRESH" as StockRefresh
+  note right of StockRefresh
+    **Cadence:** Every 5 min (9:30am-4pm ET)
+    **Handler:** StockRefreshHandler (future)
+    **API:** Alpha Vantage
+    **Purpose:** Real-time quotes during market hours
+  end note
+
+  rectangle "MESSAGE_RELAY" as MessageRelay
+  note right of MessageRelay
+    **Cadence:** On-demand (user-triggered)
+    **Handler:** MessageRelayHandler (future)
+    **Purpose:** Marketplace inquiry relay with email masking
+    **Priority:** HIGH (time-sensitive user interaction)
+  end note
+}
+note right of HighQueue
+  **Owner:** Ops On-Call (PagerDuty: vc-ops-high)
+  **SLA:** P95 latency < 30s
+end note
+
+' DEFAULT Queue Jobs
+rectangle "DEFAULT QUEUE" <<DEFAULT>> as DefaultQueue {
+  rectangle "RSS_FEED_REFRESH" as RssFeed
+  note right of RssFeed
+    **Cadence:** 15min-daily (configurable per feed)
+    **Handler:** RssFeedRefreshHandler (future)
+    **Purpose:** Fetch and parse news/content feeds
+  end note
+
+  rectangle "WEATHER_REFRESH" as Weather
+  note right of Weather
+    **Cadence:** Every 1 hour
+    **Handler:** WeatherRefreshHandler (future)
+    **APIs:** Open-Meteo (intl), NWS (US)
+  end note
+
+  rectangle "LISTING_EXPIRATION" as Expiration
+  note right of Expiration
+    **Cadence:** Daily @ 2am UTC
+    **Handler:** ListingExpirationHandler (future)
+    **Purpose:** Expire old marketplace listings
+  end note
+
+  rectangle "RANK_RECALCULATION" as RankCalc
+  note right of RankCalc
+    **Cadence:** Every 1 hour
+    **Handler:** RankRecalculationHandler (future)
+    **Purpose:** Update Good Sites ranking scores
+  end note
+
+  rectangle "INBOUND_EMAIL" as InboundEmail
+  note right of InboundEmail
+    **Cadence:** Every 1 minute
+    **Handler:** InboundEmailHandler (future)
+    **Purpose:** IMAP polling for marketplace reply relay
+  end note
+}
+note right of DefaultQueue
+  **Owner:** Platform Services Guild (Slack: #platform-feeds)
+  **SLA:** P95 latency < 5 minutes
+end note
+
+newpage
+
+' SCREENSHOT Queue Jobs
+rectangle "SCREENSHOT QUEUE" <<SCREENSHOT>> as ScreenshotQueue {
+  rectangle "SCREENSHOT_CAPTURE" as Screenshot
+  note right of Screenshot
+    **Cadence:** On-demand (site submission)
+    **Handler:** ScreenshotCaptureHandler (future)
+    **Technology:** jvppeteer/Chromium
+    **Policy P12:** Semaphore-limited to 3 concurrent jobs
+    **Why Limit:** Each Chromium instance consumes
+    200-400MB RAM. 3 concurrent = ~1.2GB max,
+    leaving headroom for JVM + Quarkus runtime.
+    **Monitoring:** DelayedJobService.getAvailableScreenshotSlots()
+  end note
+}
+note right of ScreenshotQueue
+  **Owner:** Good Sites Platform (Slack: #good-sites)
+  **SLA:** P95 latency < 2 minutes (Policy P12)
+end note
+
+' LOW Queue Jobs
+rectangle "LOW QUEUE" <<LOW>> as LowQueue {
+  rectangle "SOCIAL_REFRESH" as Social
+  note right of Social
+    **Cadence:** Every 30 minutes
+    **Handler:** SocialRefreshHandler (future)
+    **APIs:** Meta Graph API (Instagram/Facebook)
+    **Policies:** P5/P13 (secure token storage required)
+  end note
+
+  rectangle "LINK_HEALTH_CHECK" as LinkHealth
+  note right of LinkHealth
+    **Cadence:** Weekly
+    **Handler:** LinkHealthCheckHandler (future)
+    **Purpose:** Detect dead links in Good Sites directory
+  end note
+
+  rectangle "SITEMAP_GENERATION" as Sitemap
+  note right of Sitemap
+    **Cadence:** Daily @ 3am UTC
+    **Handler:** SitemapGenerationHandler (future)
+    **Purpose:** SEO sitemap XML generation
+  end note
+
+  rectangle "CLICK_ROLLUP" as ClickRollup
+  note right of ClickRollup
+    **Cadence:** Hourly
+    **Handler:** ClickRollupHandler (future)
+    **Policy P14:** Consent-gated, 90-day retention enforced
+  end note
+}
+note right of LowQueue
+  **Owner:** Data Insights Pod (Slack: #analytics)
+  **SLA:** P95 latency < 30 minutes
+end note
+
+' BULK Queue Jobs
+rectangle "BULK QUEUE" <<BULK>> as BulkQueue {
+  rectangle "AI_TAGGING" as AiTagging
+  note right of AiTagging
+    **Cadence:** On-demand (batch processing)
+    **Handler:** AiTaggingHandler (future)
+    **Technology:** LangChain4j topic tagging
+    **Policy P10:** Must check $500/month budget ceiling
+    before execution via AiTaggingService
+    **Retry:** 3 attempts (lower than default due to cost)
+  end note
+
+  rectangle "IMAGE_PROCESSING" as ImageProcessing
+  note right of ImageProcessing
+    **Cadence:** On-demand (upload-triggered)
+    **Handler:** ImageProcessingHandler (future)
+    **Purpose:** Resize and optimize marketplace listing images
+    **Storage:** Cloudflare R2 (S3-compatible)
+  end note
+}
+note right of BulkQueue
+  **Owner:** Content Intelligence Squad (Slack: #ai-pipelines)
+  **SLA:** Best effort (throttled by budget + resource availability)
+end note
+
+' Escalation Policy Summary
+note as EscalationNote
+  **ESCALATION PATHS** (after max_attempts exhausted)
+  ═══════════════════════════════════════════════
+  • **HIGH Queue:** PagerDuty alert → on-call engineer (15 min SLA)
+  • **DEFAULT Queue:** Slack #ops-alerts → ops team (4 hours, business hours)
+  • **SCREENSHOT Queue:** Slack #ops-alerts → ops team (4 hours, business hours)
+  • **LOW Queue:** Daily email digest → ops@villagecompute.com (next business day)
+  • **BULK Queue:** Daily email digest → ops@villagecompute.com (next business day)
+
+  **RETRY STRATEGY**
+  ═══════════════════════════════════════════════
+  • **Formula:** delay = (2^attempt) × 30s × jitter[0.75-1.25]
+  • **Default Max Attempts:** 5 (configurable per job type)
+  • **Jitter Purpose:** Prevent thundering herd on infrastructure failures
+
+  **POLICY CROSS-REFERENCES**
+  ═══════════════════════════════════════════════
+  • **P7:** Unified job orchestration framework (all queues)
+  • **P10:** AI tagging budget enforcement ($500/month ceiling)
+  • **P12:** SCREENSHOT queue concurrency limit (3 workers via semaphore)
+  • **P14:** Click tracking consent gating + 90-day retention
+
+  **CODE REFERENCES**
+  ═══════════════════════════════════════════════
+  • JobQueue enum: src/main/java/villagecompute/homepage/jobs/JobQueue.java
+  • JobType enum: src/main/java/villagecompute/homepage/jobs/JobType.java
+  • JobHandler interface: src/main/java/villagecompute/homepage/jobs/JobHandler.java
+  • Orchestration: src/main/java/villagecompute/homepage/services/DelayedJobService.java
+  • Operational docs: docs/ops/async-workloads.md
+  • Sequence diagram: docs/diagrams/job-dispatch-sequence.puml
+end note
+
+@enduml

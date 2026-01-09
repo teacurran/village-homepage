@@ -3,15 +3,17 @@ package villagecompute.homepage.jobs;
 /**
  * Enumeration of all async job types with their queue assignments and execution cadence.
  *
- * <p>Each job type maps to exactly one {@link JobQueue} family. Handler implementations must
- * register themselves with the corresponding job type for CDI discovery.
+ * <p>
+ * Each job type maps to exactly one {@link JobQueue} family. Handler implementations must register themselves with the
+ * corresponding job type for CDI discovery.
  *
- * <p><b>Policy References:</b>
+ * <p>
+ * <b>Policy References:</b>
  * <ul>
- *   <li>P7: All job types participate in unified orchestration framework</li>
- *   <li>P10: AI_TAGGING enforces $500/month budget ceiling via AiTaggingService</li>
- *   <li>P12: SCREENSHOT_CAPTURE runs in dedicated SCREENSHOT queue with concurrency limits</li>
- *   <li>P14: CLICK_ROLLUP respects consent gating and 90-day data retention</li>
+ * <li>P7: All job types participate in unified orchestration framework</li>
+ * <li>P10: AI_TAGGING enforces $500/month budget ceiling via AiTaggingService</li>
+ * <li>P12: SCREENSHOT_CAPTURE runs in dedicated SCREENSHOT queue with concurrency limits</li>
+ * <li>P14: CLICK_ROLLUP respects consent gating and 90-day data retention</li>
  * </ul>
  *
  * @see JobQueue for queue family descriptions
@@ -23,36 +25,46 @@ public enum JobType {
 
     /**
      * Fetches and parses RSS feeds for news/content aggregation.
-     * <p><b>Cadence:</b> 15min to daily (configurable per feed)
-     * <p><b>Handler:</b> RssFeedRefreshHandler (future)
+     * <p>
+     * <b>Cadence:</b> 15min to daily (configurable per feed)
+     * <p>
+     * <b>Handler:</b> RssFeedRefreshHandler (future)
      */
     RSS_FEED_REFRESH(JobQueue.DEFAULT, "Feed refresh (15min-daily)"),
 
     /**
      * Updates weather forecasts from Open-Meteo and NWS APIs.
-     * <p><b>Cadence:</b> Every 1 hour
-     * <p><b>Handler:</b> WeatherRefreshHandler (future)
+     * <p>
+     * <b>Cadence:</b> Every 1 hour
+     * <p>
+     * <b>Handler:</b> WeatherRefreshHandler (future)
      */
     WEATHER_REFRESH(JobQueue.DEFAULT, "Weather refresh (1 hour)"),
 
     /**
      * Expires old marketplace listings past their configured TTL.
-     * <p><b>Cadence:</b> Daily at 2am UTC
-     * <p><b>Handler:</b> ListingExpirationHandler (future)
+     * <p>
+     * <b>Cadence:</b> Daily at 2am UTC
+     * <p>
+     * <b>Handler:</b> ListingExpirationHandler (future)
      */
     LISTING_EXPIRATION(JobQueue.DEFAULT, "Listing expiration (daily)"),
 
     /**
      * Recalculates Good Sites ranking scores based on votes and category position.
-     * <p><b>Cadence:</b> Every 1 hour
-     * <p><b>Handler:</b> RankRecalculationHandler (future)
+     * <p>
+     * <b>Cadence:</b> Every 1 hour
+     * <p>
+     * <b>Handler:</b> RankRecalculationHandler (future)
      */
     RANK_RECALCULATION(JobQueue.DEFAULT, "Rank recalculation (hourly)"),
 
     /**
      * Polls IMAP inbox for marketplace reply-relay messages.
-     * <p><b>Cadence:</b> Every 1 minute
-     * <p><b>Handler:</b> InboundEmailHandler (future)
+     * <p>
+     * <b>Cadence:</b> Every 1 minute
+     * <p>
+     * <b>Handler:</b> InboundEmailHandler (future)
      */
     INBOUND_EMAIL(JobQueue.DEFAULT, "Inbound email parsing (1 minute)"),
 
@@ -60,15 +72,19 @@ public enum JobType {
 
     /**
      * Fetches real-time stock quotes from Alpha Vantage during market hours.
-     * <p><b>Cadence:</b> Every 5 minutes (9:30am-4pm ET)
-     * <p><b>Handler:</b> StockRefreshHandler (future)
+     * <p>
+     * <b>Cadence:</b> Every 5 minutes (9:30am-4pm ET)
+     * <p>
+     * <b>Handler:</b> StockRefreshHandler (future)
      */
     STOCK_REFRESH(JobQueue.HIGH, "Stock refresh (5 min market hours)"),
 
     /**
      * Relays marketplace inquiry messages to seller via masked email.
-     * <p><b>Cadence:</b> On-demand (triggered by user action)
-     * <p><b>Handler:</b> MessageRelayHandler (future)
+     * <p>
+     * <b>Cadence:</b> On-demand (triggered by user action)
+     * <p>
+     * <b>Handler:</b> MessageRelayHandler (future)
      */
     MESSAGE_RELAY(JobQueue.HIGH, "Message relay (on-demand)"),
 
@@ -76,31 +92,41 @@ public enum JobType {
 
     /**
      * Syncs Instagram/Facebook posts via Meta Graph API.
-     * <p><b>Cadence:</b> Every 30 minutes
-     * <p><b>Handler:</b> SocialRefreshHandler (future)
-     * <p><b>Policy P5/P13:</b> Secure token storage required
+     * <p>
+     * <b>Cadence:</b> Every 30 minutes
+     * <p>
+     * <b>Handler:</b> SocialRefreshHandler (future)
+     * <p>
+     * <b>Policy P5/P13:</b> Secure token storage required
      */
     SOCIAL_REFRESH(JobQueue.LOW, "Social refresh (30 min)"),
 
     /**
      * Checks Good Sites links for HTTP errors and updates health status.
-     * <p><b>Cadence:</b> Weekly
-     * <p><b>Handler:</b> LinkHealthCheckHandler (future)
+     * <p>
+     * <b>Cadence:</b> Weekly
+     * <p>
+     * <b>Handler:</b> LinkHealthCheckHandler (future)
      */
     LINK_HEALTH_CHECK(JobQueue.LOW, "Link health check (weekly)"),
 
     /**
      * Generates XML sitemaps for SEO indexing.
-     * <p><b>Cadence:</b> Daily at 3am UTC
-     * <p><b>Handler:</b> SitemapGenerationHandler (future)
+     * <p>
+     * <b>Cadence:</b> Daily at 3am UTC
+     * <p>
+     * <b>Handler:</b> SitemapGenerationHandler (future)
      */
     SITEMAP_GENERATION(JobQueue.LOW, "Sitemap generation (daily)"),
 
     /**
      * Rolls up click tracking events into aggregated metrics.
-     * <p><b>Cadence:</b> Hourly
-     * <p><b>Handler:</b> ClickRollupHandler (future)
-     * <p><b>Policy P14:</b> Consent-gated, 90-day retention enforced
+     * <p>
+     * <b>Cadence:</b> Hourly
+     * <p>
+     * <b>Handler:</b> ClickRollupHandler (future)
+     * <p>
+     * <b>Policy P14:</b> Consent-gated, 90-day retention enforced
      */
     CLICK_ROLLUP(JobQueue.LOW, "Click rollup (hourly)"),
 
@@ -108,16 +134,21 @@ public enum JobType {
 
     /**
      * Applies LangChain4j topic tagging to news/feed items.
-     * <p><b>Cadence:</b> On-demand (batch processing)
-     * <p><b>Handler:</b> AiTaggingHandler (future)
-     * <p><b>Policy P10:</b> Must check AiTaggingService budget ceiling before execution
+     * <p>
+     * <b>Cadence:</b> On-demand (batch processing)
+     * <p>
+     * <b>Handler:</b> AiTaggingHandler (future)
+     * <p>
+     * <b>Policy P10:</b> Must check AiTaggingService budget ceiling before execution
      */
     AI_TAGGING(JobQueue.BULK, "AI tagging (on-demand, P10 budget enforced)"),
 
     /**
      * Resizes and optimizes uploaded marketplace listing images.
-     * <p><b>Cadence:</b> On-demand (triggered by upload)
-     * <p><b>Handler:</b> ImageProcessingHandler (future)
+     * <p>
+     * <b>Cadence:</b> On-demand (triggered by upload)
+     * <p>
+     * <b>Handler:</b> ImageProcessingHandler (future)
      */
     IMAGE_PROCESSING(JobQueue.BULK, "Image processing (on-demand)"),
 
@@ -125,9 +156,12 @@ public enum JobType {
 
     /**
      * Captures website screenshots using jvppeteer/Chromium for Good Sites preview.
-     * <p><b>Cadence:</b> On-demand (triggered by site submission)
-     * <p><b>Handler:</b> ScreenshotCaptureHandler (future)
-     * <p><b>Policy P12:</b> Dedicated worker pool with semaphore-limited concurrency (3 workers)
+     * <p>
+     * <b>Cadence:</b> On-demand (triggered by site submission)
+     * <p>
+     * <b>Handler:</b> ScreenshotCaptureHandler (future)
+     * <p>
+     * <b>Policy P12:</b> Dedicated worker pool with semaphore-limited concurrency (3 workers)
      */
     SCREENSHOT_CAPTURE(JobQueue.SCREENSHOT, "Screenshot capture (on-demand, P12 enforced)");
 

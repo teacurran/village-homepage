@@ -270,7 +270,7 @@ public class MyCustomHandler implements JobHandler {
 ### ✅ Matrix enumerates DEFAULT/HIGH/LOW/BULK/SCREENSHOT with owners + SLA
 - **Queue Matrix:** `async-workloads.md` Section 1 table
 - **Job Type Registry:** `async-workloads.md` Section 2 table
-- **Owner Assignment:** Handler Class column in Section 2 table
+- **Owner Assignment:** Dedicated "Owner (Ops Contact)" column in Section 1 table + queue notes in `async_matrix.puml`
 
 ### ✅ Code compiles
 - **Verification:** `./mvnw compile` succeeds (see commit history)

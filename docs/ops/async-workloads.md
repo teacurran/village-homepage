@@ -14,13 +14,15 @@ Village Homepage uses five queue families for prioritized job routing. Each queu
 
 ### Queue Matrix
 
-| Queue | Priority | Color | Concurrency | SLA (P95 Latency) | Use Cases |
-|-------|----------|-------|-------------|-------------------|-----------|
-| **HIGH** | 0 | Salmon | 20 workers/pod | < 30 seconds | Stock refresh (market hours), message relay, urgent notifications |
-| **DEFAULT** | 5 | Blue | 10 workers/pod | < 5 minutes | Feed refresh, weather refresh, listing expiration, rank recalculation, inbound email |
-| **SCREENSHOT** | 6 | Lavender | 3 workers/pod (P12) | < 2 minutes | Good Sites screenshot capture via jvppeteer/Chromium |
-| **LOW** | 7 | Green | 5 workers/pod | < 30 minutes | Social refresh, link health checks, sitemap generation, click rollup |
-| **BULK** | 8 | Yellow | 8 workers/pod | Best effort | AI tagging (P10 budget enforced), image processing, bulk imports |
+| Queue | Priority | Owner (Ops Contact) | Color | Concurrency | SLA (P95 Latency) | Use Cases |
+|-------|----------|---------------------|-------|-------------|-------------------|-----------|
+| **HIGH** | 0 | Ops On-Call (PagerDuty: `vc-ops-high`) | Salmon | 20 workers/pod | < 30 seconds | Stock refresh (market hours), message relay, urgent notifications |
+| **DEFAULT** | 5 | Platform Services Guild (Slack: `#platform-feeds`) | Blue | 10 workers/pod | < 5 minutes | Feed refresh, weather refresh, listing expiration, rank recalculation, inbound email |
+| **SCREENSHOT** | 6 | Good Sites Platform (Slack: `#good-sites`) | Lavender | 3 workers/pod (P12) | < 2 minutes | Good Sites screenshot capture via jvppeteer/Chromium |
+| **LOW** | 7 | Data Insights Pod (Slack: `#analytics`) | Green | 5 workers/pod | < 30 minutes | Social refresh, link health checks, sitemap generation, click rollup |
+| **BULK** | 8 | Content Intelligence Squad (Slack: `#ai-pipelines`) | Yellow | 8 workers/pod | Best effort | AI tagging (P10 budget enforced), image processing, bulk imports |
+
+Queue owners are responsible for on-call escalations when SLA breaches occur; Ops Architects map these owners to Kubernetes worker deployments per Policy P12 and the scaling thresholds defined in Section 4.
 
 **Policy References:**
 - **P7:** Unified job orchestration framework across all queue families
