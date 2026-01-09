@@ -1,0 +1,55 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+    /* Modules */
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/main/resources/META-INF/resources/assets/ts/*"]
+    },
+
+    /* Type Checking - Strict Mode Enabled */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+
+    /* Emit */
+    "noEmit": true,
+    "sourceMap": true,
+    "removeComments": false,
+    "declaration": false,
+
+    /* Interop Constraints */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+
+    /* Skip Lib Check */
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/main/resources/META-INF/resources/assets/ts/**/*.ts",
+    "src/main/resources/META-INF/resources/assets/ts/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "target",
+    "src/main/resources/META-INF/resources/assets/js"
+  ]
+}

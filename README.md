@@ -155,15 +155,19 @@ Maven handles both backend and frontend builds automatically:
 ./mvnw quarkus:dev
 ```
 
+**What happens:**
 - Maven downloads Node/npm to `target/node` (first run only)
-- Runs `npm ci` to install dependencies
-- Runs `npm run build` to compile TypeScript
+- Runs `npm ci` to install dependencies (first run or when package.json changes)
+- Runs `npm run build` to compile TypeScript via esbuild
+- Bundles React islands from `src/main/resources/META-INF/resources/assets/ts/`
+- Outputs production-ready JavaScript to `src/main/resources/META-INF/resources/assets/js/`
 - Starts Quarkus with hot reload
 
 **Use this workflow for:**
 - Getting started quickly
 - CI/CD builds
 - Full project compilation
+- Backend-focused development
 
 ### Two-Terminal Workflow (Faster Frontend Iteration)
 
@@ -179,12 +183,212 @@ For faster frontend development, run builds separately:
 npm run watch
 ```
 
-This avoids rebuilding TypeScript on every Java hot-reload cycle.
+**What happens in watch mode:**
+- esbuild runs in incremental watch mode
+- Detects TypeScript file changes in `assets/ts/` directory
+- Rebuilds only changed modules (sub-second rebuild times)
+- Uses inline source maps for faster debugging
+- Outputs to same `assets/js/` directory (Quarkus serves automatically)
+
+This avoids triggering Maven's full build cycle on every TypeScript change.
 
 **Use this workflow for:**
 - Rapid frontend development
 - Styling/UI tweaks
 - React component development
+- Widget implementation
+
+### Frontend-Only Commands
+
+If you need to work exclusively on frontend code:
+
+```bash
+# Install dependencies (if not already installed by Maven)
+npm ci
+
+# Build TypeScript (production mode)
+npm run build
+
+# Watch mode (incremental rebuilds)
+npm run watch
+
+# Type checking (no output, just validation)
+npm run typecheck
+
+# Lint TypeScript/React code
+npm run lint
+
+# Auto-fix linting issues
+npm run lint:fix
+```
+
+**Note:** The `npm` commands above use the system-installed Node.js. Maven uses its own downloaded Node.js in `target/node/`, which may be a different version. For consistency with CI builds, prefer the Maven workflow.
+
+---
+
+## React Island Architecture
+
+Village Homepage uses the **islands architecture** pattern for its frontend. This approach combines the performance benefits of server-side rendering (via Qute templates) with the interactivity of React components.
+
+### What Are React Islands?
+
+React islands are isolated, interactive components embedded within server-rendered HTML. Unlike a traditional SPA (Single Page Application), only specific regions of the page are "hydrated" with JavaScript, reducing bundle sizes and improving performance.
+
+**Benefits:**
+- **Faster initial page load** - Server renders most content as static HTML
+- **Smaller JavaScript bundles** - Only interactive widgets load React
+- **Progressive enhancement** - Page works without JavaScript, enhanced with it
+- **SEO-friendly** - Content is server-rendered and crawlable
+
+### How It Works
+
+#### 1. Server-Side (Qute Templates)
+
+Templates render placeholder elements with special attributes:
+
+```html
+{* homepage.html - Qute template *}
+<div class="widget-container">
+  <div data-mount="WeatherWidget"
+       data-props='{"location": "San Francisco", "units": "metric"}'>
+    {* Optional: Server-rendered fallback content *}
+    <p>Loading weather...</p>
+  </div>
+</div>
+
+{* Include the React island bundle *}
+<script type="module" src="/assets/js/mounts-[hash].js"></script>
+```
+
+**Attributes:**
+- `data-mount`: Specifies which React component to render
+- `data-props`: JSON-serialized props passed to the component
+
+#### 2. Client-Side (TypeScript/React)
+
+The `mounts.tsx` entry point scans for `[data-mount]` elements and hydrates them:
+
+```typescript
+// src/main/resources/META-INF/resources/assets/ts/mounts.tsx
+const COMPONENT_REGISTRY = {
+  WeatherWidget: {
+    component: WeatherWidget,
+    propsSchema: z.object({
+      location: z.string(),
+      units: z.enum(['metric', 'imperial']),
+    }),
+  },
+};
+
+// Auto-mounts on DOMContentLoaded
+mountAll();
+```
+
+#### 3. Component Implementation
+
+Components are standard React with TypeScript:
+
+```typescript
+// src/main/resources/META-INF/resources/assets/ts/components/WeatherWidget.tsx
+import { Card } from 'antd';
+
+interface WeatherWidgetProps {
+  location: string;
+  units: 'metric' | 'imperial';
+}
+
+export default function WeatherWidget({ location, units }: WeatherWidgetProps) {
+  const [weather, setWeather] = useState(null);
+
+  useEffect(() => {
+    fetch(`/api/weather?location=${location}&units=${units}`)
+      .then(res => res.json())
+      .then(setWeather);
+  }, [location, units]);
+
+  return <Card>...</Card>;
+}
+```
+
+### Adding a New React Island
+
+1. **Create the component** in `src/main/resources/META-INF/resources/assets/ts/components/`:
+
+   ```typescript
+   // StockWidget.tsx
+   export interface StockWidgetProps {
+     symbol: string;
+     interval: '1m' | '5m' | '1h';
+   }
+
+   export default function StockWidget({ symbol, interval }: StockWidgetProps) {
+     // Implementation
+   }
+   ```
+
+2. **Register in `mounts.tsx`**:
+
+   ```typescript
+   import StockWidget from './components/StockWidget';
+
+   const COMPONENT_REGISTRY = {
+     SampleWidget: { /* ... */ },
+     StockWidget: {
+       component: StockWidget,
+       propsSchema: z.object({
+         symbol: z.string().min(1).max(5),
+         interval: z.enum(['1m', '5m', '1h']),
+       }),
+     },
+   };
+   ```
+
+3. **Use in Qute template**:
+
+   ```html
+   <div data-mount="StockWidget"
+        data-props='{"symbol": "AAPL", "interval": "5m"}'>
+   </div>
+   ```
+
+4. **Run watch mode** to see live updates:
+
+   ```bash
+   npm run watch
+   ```
+
+### Best Practices
+
+- **Props validation**: Always define Zod schemas in `mounts.tsx` to catch invalid props early
+- **Graceful degradation**: Provide server-rendered fallback content inside the mount element
+- **Bundle size**: Import only what you need (e.g., `import { debounce } from 'lodash-es'`)
+- **Type safety**: Use TypeScript strict mode with explicit `| undefined` for optional props
+- **Error boundaries**: Wrap components in error boundaries for production resilience
+- **Console statements**: Use `console.warn()` or `console.error()` for debugging (allowed by linter)
+
+### Directory Structure
+
+```
+src/main/resources/META-INF/resources/assets/
+├── ts/                          # TypeScript source (input)
+│   ├── mounts.tsx              # Entry point, mount registry
+│   ├── components/             # React island components
+│   │   ├── SampleWidget.tsx   # Example widget
+│   │   ├── WeatherWidget.tsx  # Future: weather widget
+│   │   └── StockWidget.tsx    # Future: stock widget
+│   └── utils/                  # Shared utilities
+└── js/                          # Bundled JavaScript (output)
+    ├── mounts-[hash].js        # Main bundle (auto-generated)
+    ├── chunks/                 # Code-split vendor chunks
+    └── manifest.json           # Bundle mapping for templates
+```
+
+### Development Tips
+
+- **Hot reload**: Use two-terminal workflow (see Development Workflows above)
+- **Debugging**: Browser DevTools work seamlessly with inline source maps
+- **Component testing**: Add React Testing Library tests in `src/test/typescript/` (future)
+- **Storybook**: Planned for isolated component development (future)
 
 ---
 
@@ -502,11 +706,61 @@ rm -rf ~/.m2/wrapper
 ### Frontend Build Issues
 
 ```bash
-# Clear Node cache
+# Clear Node cache and dependencies
 rm -rf node_modules target/node
 
-# Reinstall dependencies
+# Reinstall dependencies and rebuild
 ./mvnw clean compile
+
+# If npm ci fails with peer dependency errors
+npm install --legacy-peer-deps
+
+# If TypeScript errors appear but build succeeds
+npm run typecheck
+
+# If watch mode hangs or doesn't detect changes
+# Kill any orphaned esbuild processes
+pkill -f esbuild
+npm run watch
+```
+
+### React Island Architecture Issues
+
+If React components aren't mounting in the browser:
+
+1. **Check browser console** for `[mounts]` log messages
+2. **Verify Qute template** has correct `data-mount` and `data-props` attributes:
+   ```html
+   <div data-mount="SampleWidget"
+        data-props='{"title": "Test", "count": 5}'>
+   </div>
+   ```
+3. **Validate props JSON** matches the Zod schema in `mounts.ts`
+4. **Check bundle output** exists in `src/main/resources/META-INF/resources/assets/js/`
+5. **Verify script tag** in template references correct bundle:
+   ```html
+   <script type="module" src="/assets/js/mounts.js"></script>
+   ```
+
+### TypeScript Strict Mode Errors
+
+This project uses TypeScript strict mode. Common fixes:
+
+```typescript
+// ❌ Error: Type 'string | undefined' is not assignable to 'string'
+const value = props.optionalField;
+
+// ✅ Fix: Use optional chaining and nullish coalescing
+const value = props.optionalField ?? 'default';
+
+// ❌ Error: Element implicitly has an 'any' type
+const item = array[index];
+
+// ✅ Fix: Enable noUncheckedIndexedAccess handling
+const item = array[index];
+if (item !== undefined) {
+  // use item safely
+}
 ```
 
 ### Database Connection Issues
