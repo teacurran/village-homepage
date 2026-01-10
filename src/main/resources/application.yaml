@@ -224,6 +224,20 @@ villagecompute:
       full-width: 1280
       full-height: 800
 
+# Email Configuration (Features F12.6, F14.3: Marketplace email relay)
+email:
+  imap:
+    # IMAP server for polling inbound replies (F14.3)
+    # Dev: Mailpit (localhost:1143), Prod: Gmail/AWS SES/etc
+    host: ${EMAIL_IMAP_HOST:localhost}
+    port: ${EMAIL_IMAP_PORT:1143}
+    username: ${EMAIL_IMAP_USERNAME:}
+    password: ${EMAIL_IMAP_PASSWORD:}
+    folder: ${EMAIL_IMAP_FOLDER:INBOX}
+    ssl: ${EMAIL_IMAP_SSL:false}
+    # In dev mode with Mailpit: host=localhost, port=1143, username=empty, password=empty, ssl=false
+    # In prod with Gmail: host=imap.gmail.com, port=993, username=email@domain.com, password=${EMAIL_IMAP_PASSWORD}, ssl=true
+
 # Profile-specific overrides
 "%dev":
   quarkus:

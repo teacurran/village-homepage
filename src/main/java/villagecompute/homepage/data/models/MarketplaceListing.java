@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -494,6 +495,27 @@ public class MarketplaceListing extends PanacheEntityBase {
 
             LOG.debugf("Marked reminder sent for listing: id=%s", listing.id);
         });
+    }
+
+    /**
+     * Finds a listing by its masked email address.
+     *
+     * <p>
+     * Used by InboundEmailProcessor to lookup listings when processing incoming email sent to masked relay addresses
+     * (e.g., listing-{uuid}@villagecompute.com). Queries the JSONB contact_info field using PostgreSQL JSONB operators.
+     *
+     * <p>
+     * <b>Query:</b> {@code SELECT * FROM marketplace_listings WHERE contact_info->>'masked_email' = ?}
+     *
+     * @param maskedEmail
+     *            the masked email address (e.g., "listing-a3f8b9c0-1234-5678-abcd-1234567890ab@villagecompute.com")
+     * @return Optional containing listing if found, empty otherwise
+     */
+    public static Optional<MarketplaceListing> findByMaskedEmail(String maskedEmail) {
+        if (maskedEmail == null || maskedEmail.isBlank()) {
+            return Optional.empty();
+        }
+        return find("jsonb_extract_path_text(contact_info, 'masked_email') = ?1", maskedEmail).firstResultOptional();
     }
 
     /**

@@ -82,7 +82,7 @@ public enum JobType {
      * <p>
      * <b>Cadence:</b> Every 1 minute
      * <p>
-     * <b>Handler:</b> InboundEmailHandler (future)
+     * <b>Handler:</b> InboundEmailProcessor
      */
     INBOUND_EMAIL(JobQueue.DEFAULT, "Inbound email parsing (1 minute)"),
 
@@ -113,7 +113,7 @@ public enum JobType {
      * <p>
      * <b>Cadence:</b> On-demand (triggered by user action)
      * <p>
-     * <b>Handler:</b> MessageRelayHandler (future)
+     * <b>Handler:</b> MessageRelayJobHandler
      */
     MESSAGE_RELAY(JobQueue.HIGH, "Message relay (on-demand)"),
 

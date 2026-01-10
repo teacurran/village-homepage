@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your listing is now live</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin-bottom: 20px;">
+        <h2 style="margin-top: 0; color: #155724;">Your listing is now live!</h2>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 4px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #495057;">{listing.title}</h3>
+
+        {#if listing.price}
+        <p style="margin: 8px 0; font-size: 18px; font-weight: bold; color: #28a745;">
+            ${listing.price}
+        </p>
+        {/if}
+
+        <p style="margin: 8px 0; color: #6c757d;">
+            <strong>Category:</strong> {listing.categoryId}
+        </p>
+
+        <p style="margin: 8px 0; color: #6c757d;">
+            <strong>Posted:</strong> {listing.createdAt}
+        </p>
+
+        {#if listing.expiresAt}
+        <p style="margin: 8px 0; color: #6c757d;">
+            <strong>Expires:</strong> {listing.expiresAt} (30 days)
+        </p>
+        {/if}
+    </div>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #495057;">What happens next?</h3>
+
+        <ul style="padding-left: 20px; color: #6c757d;">
+            <li style="margin-bottom: 10px;">
+                Your listing is now visible to buyers in the marketplace
+            </li>
+            <li style="margin-bottom: 10px;">
+                Interested buyers will send inquiries via email
+            </li>
+            <li style="margin-bottom: 10px;">
+                All communication goes through our secure relay system to protect your privacy
+            </li>
+            <li style="margin-bottom: 10px;">
+                Your listing will expire in 30 days (we'll send you a reminder before then)
+            </li>
+        </ul>
+    </div>
+
+    <div style="background: #e9ecef; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #495057;">Your masked contact email</h3>
+
+        <p style="margin: 0 0 15px 0; color: #6c757d;">
+            Buyers will contact you through this private relay address:
+        </p>
+
+        <div style="background: white; padding: 15px; border: 1px solid #dee2e6; border-radius: 4px; font-family: monospace; font-size: 14px; color: #007bff; word-break: break-all;">
+            {maskedEmail}
+        </div>
+
+        <p style="margin: 15px 0 0 0; color: #6c757d; font-size: 14px;">
+            Messages sent to this address will be forwarded to your real email. Simply reply from your email client to respond.
+        </p>
+    </div>
+
+    <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 4px; padding: 15px; margin-bottom: 20px;">
+        <p style="margin: 0; color: #0c5460; font-size: 14px;">
+            <strong>Privacy Tip:</strong> Your real email address is never shared with buyers. All communication is relayed through our platform to protect your privacy.
+        </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{baseUrl}/marketplace/listings/{listing.id}" style="display: inline-block; background: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+            View Your Listing
+        </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+
+    <div style="color: #6c757d; font-size: 12px; text-align: center;">
+        <p style="margin: 5px 0;">
+            This is an automated message from <a href="{baseUrl}" style="color: #007bff; text-decoration: none;">Village Homepage</a> marketplace.
+        </p>
+        <p style="margin: 5px 0;">
+            <a href="{baseUrl}/marketplace/listings/{listing.id}" style="color: #007bff; text-decoration: none;">View listing</a> |
+            <a href="{baseUrl}/marketplace/my-listings" style="color: #007bff; text-decoration: none;">My listings</a> |
+            <a href="{baseUrl}/marketplace/my-listings/{listing.id}/edit" style="color: #007bff; text-decoration: none;">Edit listing</a>
+        </p>
+        <p style="margin: 5px 0;">
+            Need help? Visit our <a href="{baseUrl}/help/marketplace" style="color: #007bff; text-decoration: none;">help center</a>.
+        </p>
+    </div>
+</body>
+</html>
