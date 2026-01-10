@@ -197,6 +197,23 @@ public enum JobType {
      */
     LISTING_IMAGE_CLEANUP(JobQueue.BULK, "Listing image cleanup (on-demand, P1 enforced)"),
 
+    /**
+     * Processes bulk CSV imports for Good Sites directory with AI categorization.
+     * <p>
+     * Parses CSV rows, creates DirectoryAiSuggestion records, and runs LangChain4j categorization in batches (10-20
+     * items depending on budget state). Admin reviews AI suggestions before site creation.
+     * <p>
+     * <b>Cadence:</b> On-demand (triggered by admin CSV upload)
+     * <p>
+     * <b>Handler:</b> BulkImportJobHandler
+     * <p>
+     * <b>Policy P2/P10:</b> AI categorization shares $500/month budget with feed tagging and fraud detection
+     * <p>
+     * <b>Feature F13.14:</b> Bulk import with confidence scoring and admin override capability
+     */
+    DIRECTORY_BULK_IMPORT(JobQueue.BULK,
+            "Good Sites bulk import with AI categorization (on-demand, P2/P10 budget enforced)"),
+
     // ========== SCREENSHOT QUEUE ==========
 
     /**
