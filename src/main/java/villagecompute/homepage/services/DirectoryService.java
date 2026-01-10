@@ -1,6 +1,7 @@
 package villagecompute.homepage.services;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.DirectorySiteType;
@@ -45,6 +46,9 @@ import java.util.UUID;
 public class DirectoryService {
 
     private static final Logger LOG = Logger.getLogger(DirectoryService.class);
+
+    @Inject
+    KarmaService karmaService;
 
     /**
      * Submits a new site to the directory.
@@ -167,6 +171,11 @@ public class DirectoryService {
 
             LOG.infof("Created DirectorySiteCategory %s for site %s in category %s (status: %s)", siteCategory.id,
                     site.id, categoryId, siteCategory.status);
+
+            // Award karma for auto-approved submissions
+            if (autoApprove) {
+                karmaService.awardForApprovedSubmission(siteCategory.id);
+            }
         }
 
         // 8. Return result
@@ -208,6 +217,88 @@ public class DirectoryService {
     public List<DirectorySiteType> getUserSubmissions(UUID userId) {
         List<DirectorySite> sites = DirectorySite.findByUserId(userId);
         return sites.stream().map(DirectorySiteType::fromEntity).toList();
+    }
+
+    /**
+     * Approves a pending site-category submission (moderator action).
+     *
+     * <p>
+     * Sets DirectorySiteCategory status to approved, increments category link count, and awards karma to submitter.
+     *
+     * @param siteCategoryId
+     *            Site-category membership ID to approve
+     * @param moderatorUserId
+     *            Moderator user ID
+     * @throws ResourceNotFoundException
+     *             if site-category not found
+     * @throws ValidationException
+     *             if already approved or user not moderator
+     */
+    @Transactional
+    public void approveSiteCategory(UUID siteCategoryId, UUID moderatorUserId) {
+        DirectorySiteCategory siteCategory = DirectorySiteCategory.findById(siteCategoryId);
+        if (siteCategory == null) {
+            throw new ResourceNotFoundException("Site-category not found: " + siteCategoryId);
+        }
+
+        if (!"pending".equals(siteCategory.status)) {
+            throw new ValidationException("Site-category is not pending: " + siteCategory.status);
+        }
+
+        // Verify moderator privileges
+        User moderator = User.findById(moderatorUserId);
+        if (moderator == null || !moderator.isDirectoryModerator()) {
+            throw new ValidationException("User does not have moderator privileges");
+        }
+
+        // Approve the site-category
+        siteCategory.approve(moderatorUserId);
+
+        // Award karma to submitter
+        karmaService.awardForApprovedSubmission(siteCategoryId);
+
+        LOG.infof("Site-category %s approved by moderator %s", siteCategoryId, moderatorUserId);
+    }
+
+    /**
+     * Rejects a pending site-category submission (moderator action).
+     *
+     * <p>
+     * Sets DirectorySiteCategory status to rejected and deducts karma from submitter.
+     *
+     * @param siteCategoryId
+     *            Site-category membership ID to reject
+     * @param moderatorUserId
+     *            Moderator user ID
+     * @throws ResourceNotFoundException
+     *             if site-category not found
+     * @throws ValidationException
+     *             if already rejected or user not moderator
+     */
+    @Transactional
+    public void rejectSiteCategory(UUID siteCategoryId, UUID moderatorUserId) {
+        DirectorySiteCategory siteCategory = DirectorySiteCategory.findById(siteCategoryId);
+        if (siteCategory == null) {
+            throw new ResourceNotFoundException("Site-category not found: " + siteCategoryId);
+        }
+
+        if (!"pending".equals(siteCategory.status)) {
+            throw new ValidationException("Site-category is not pending: " + siteCategory.status);
+        }
+
+        // Verify moderator privileges
+        User moderator = User.findById(moderatorUserId);
+        if (moderator == null || !moderator.isDirectoryModerator()) {
+            throw new ValidationException("User does not have moderator privileges");
+        }
+
+        // Reject the site-category
+        siteCategory.reject();
+
+        // Deduct karma from submitter
+        karmaService.deductForRejectedSubmission(siteCategoryId);
+
+        LOG.infof("Site-category %s rejected by moderator %s", siteCategoryId, moderatorUserId);
     }
 
     /**

@@ -65,6 +65,14 @@ public class User extends PanacheEntityBase {
     public static final String ROLE_OPS = "ops";
     public static final String ROLE_READ_ONLY = "read_only";
 
+    // Directory trust levels
+    public static final String TRUST_LEVEL_UNTRUSTED = "untrusted";
+    public static final String TRUST_LEVEL_TRUSTED = "trusted";
+    public static final String TRUST_LEVEL_MODERATOR = "moderator";
+
+    // Karma thresholds aligned with RateLimitService.Tier
+    public static final int KARMA_THRESHOLD_TRUSTED = 10;
+
     public static final String QUERY_FIND_BY_EMAIL = "User.findByEmail";
     public static final String QUERY_FIND_BY_OAUTH = "User.findByOAuth";
     public static final String QUERY_FIND_PENDING_PURGE = "User.findPendingPurge";
@@ -243,7 +251,7 @@ public class User extends PanacheEntityBase {
         user.isAnonymous = true;
         user.preferences = Map.of();
         user.directoryKarma = 0;
-        user.directoryTrustLevel = "untrusted";
+        user.directoryTrustLevel = TRUST_LEVEL_UNTRUSTED;
         user.analyticsConsent = false;
         user.createdAt = Instant.now();
         user.updatedAt = Instant.now();
@@ -280,7 +288,7 @@ public class User extends PanacheEntityBase {
         user.isAnonymous = false;
         user.preferences = Map.of();
         user.directoryKarma = 0;
-        user.directoryTrustLevel = "untrusted";
+        user.directoryTrustLevel = TRUST_LEVEL_UNTRUSTED;
         user.analyticsConsent = false;
         user.createdAt = Instant.now();
         user.updatedAt = Instant.now();
@@ -476,5 +484,61 @@ public class User extends PanacheEntityBase {
 
         User user = User.findById(userId);
         return user != null && user.isBanned;
+    }
+
+    /**
+     * Checks if user is trusted (has auto-publish privileges).
+     *
+     * @return true if user trust level is trusted or moderator
+     */
+    public boolean isTrusted() {
+        return TRUST_LEVEL_TRUSTED.equals(this.directoryTrustLevel)
+                || TRUST_LEVEL_MODERATOR.equals(this.directoryTrustLevel);
+    }
+
+    /**
+     * Checks if user is a directory moderator.
+     *
+     * @return true if user has moderator trust level
+     */
+    public boolean isDirectoryModerator() {
+        return TRUST_LEVEL_MODERATOR.equals(this.directoryTrustLevel);
+    }
+
+    /**
+     * Checks if user should be auto-promoted to trusted based on current karma.
+     *
+     * @return true if karma meets or exceeds trusted threshold and user is currently untrusted
+     */
+    public boolean shouldPromoteToTrusted() {
+        return TRUST_LEVEL_UNTRUSTED.equals(this.directoryTrustLevel) && this.directoryKarma >= KARMA_THRESHOLD_TRUSTED;
+    }
+
+    /**
+     * Calculates karma needed to reach next trust level milestone.
+     *
+     * @return karma points needed for next level, or null if at max level
+     */
+    public Integer getKarmaToNextLevel() {
+        if (TRUST_LEVEL_UNTRUSTED.equals(this.directoryTrustLevel)) {
+            return Math.max(0, KARMA_THRESHOLD_TRUSTED - this.directoryKarma);
+        }
+        // Trusted and Moderator have no further karma milestones
+        return null;
+    }
+
+    /**
+     * Gets a human-readable description of current karma privileges.
+     *
+     * @return privilege description text
+     */
+    public String getKarmaPrivilegeDescription() {
+        if (TRUST_LEVEL_MODERATOR.equals(this.directoryTrustLevel)) {
+            return "Moderator: Can approve submissions, auto-publish, and edit directory sites";
+        } else if (TRUST_LEVEL_TRUSTED.equals(this.directoryTrustLevel)) {
+            return "Trusted: Submissions auto-publish without moderation";
+        } else {
+            return "Untrusted: Submissions require moderator approval";
+        }
     }
 }
