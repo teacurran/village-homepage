@@ -1,0 +1,190 @@
+{
+  "dashboard": {
+    "title": "Marketplace Overview",
+    "tags": ["marketplace", "revenue", "search", "moderation"],
+    "timezone": "utc",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Listings Over Time",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "marketplace_listings{status=\"active\"}",
+            "legendFormat": "Active Listings",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "tooltip": { "mode": "multi" },
+          "legend": { "displayMode": "list", "placement": "bottom" }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Listing Status Breakdown",
+        "type": "piechart",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "count by (status) (marketplace_listings)",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Payment Success Rate (7d avg)",
+        "type": "gauge",
+        "gridPos": { "x": 0, "y": 8, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(marketplace_payments_total{status=\"success\"}[7d]) / rate(marketplace_payments_total[7d])",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 0.95, "color": "yellow" },
+              { "value": 0.99, "color": "green" }
+            ]
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Revenue by Type (Weekly)",
+        "type": "barchart",
+        "gridPos": { "x": 6, "y": 8, "w": 18, "h": 6 },
+        "targets": [
+          {
+            "expr": "sum(increase(marketplace_payments_total{status=\"success\",type=\"posting_fee\"}[7d]))",
+            "legendFormat": "Posting Fees",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(increase(marketplace_payments_total{status=\"success\",type=\"featured\"}[7d]))",
+            "legendFormat": "Featured Promotions",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(increase(marketplace_payments_total{status=\"success\",type=\"bump\"}[7d]))",
+            "legendFormat": "Bump Promotions",
+            "refId": "C"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Search Latency (p50/p95/p99)",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(marketplace_search_latency_bucket[5m]))",
+            "legendFormat": "p50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(marketplace_search_latency_bucket[5m]))",
+            "legendFormat": "p95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(marketplace_search_latency_bucket[5m]))",
+            "legendFormat": "p99",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "axisLabel": "Latency (seconds)"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "p95" },
+              "properties": [
+                { "id": "custom.lineWidth", "value": 2 }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 6,
+        "title": "Top Search Keywords (24h)",
+        "type": "table",
+        "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "topk(20, sum by (search_query) (increase(marketplace_search_requests_total[24h])))",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Moderation Queue Depth",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 22, "w": 12, "h": 6 },
+        "targets": [
+          {
+            "expr": "marketplace_moderation_queue_depth",
+            "legendFormat": "Pending Flags",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Message Relay Success Rate (24h)",
+        "type": "gauge",
+        "gridPos": { "x": 12, "y": 22, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(marketplace_messages_relayed{success=\"true\"}[24h]) / rate(marketplace_messages_sent[24h])",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 0.95, "color": "yellow" },
+              { "value": 0.98, "color": "green" }
+            ]
+          }
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "changes(build_info[5m]) > 0",
+          "iconColor": "blue",
+          "titleFormat": "Deployment"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    }
+  }
+}

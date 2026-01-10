@@ -3,7 +3,7 @@
 .codemachine/memory
 .codemachine/prompts
 .codemachine/agents
-.codemachine/artifacts/
+.codemachine/artifacts/tasks/
 .codemachine/template.json
 
 # Maven build artifacts
@@ -84,3 +84,8 @@ service-account.json
 # Vault tokens and temporary secret files
 .vault-token
 .vault-creds
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+playwright/.cache/

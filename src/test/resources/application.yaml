@@ -55,3 +55,12 @@ quarkus:
 
 alphavantage:
   api-key: test-api-key
+
+email:
+  imap:
+    host: localhost
+    port: 1143
+    username: test@example.com
+    password: ${IMAP_PASSWORD:test_placeholder}
+    folder: INBOX
+    poll-interval-seconds: 60

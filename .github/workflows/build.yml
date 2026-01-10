@@ -139,6 +139,40 @@ jobs:
         run: ./mvnw jacoco:report ${{ env.MAVEN_CLI_OPTS }}
 
       # ================================
+      # 15a. Run E2E Tests with Playwright (I4.T9)
+      # ================================
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start Quarkus dev server for E2E tests
+        run: |
+          ./mvnw quarkus:dev -DskipTests=true &
+          # Wait for server to be ready (max 2 minutes)
+          for i in {1..24}; do
+            if curl -f http://localhost:8080/q/health/ready > /dev/null 2>&1; then
+              echo "Server is ready"
+              break
+            fi
+            echo "Waiting for server... ($i/24)"
+            sleep 5
+          done
+
+      - name: Run Playwright E2E tests
+        run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:8080
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+      # ================================
       # 16. Upload Coverage to Codecov (Optional)
       # ================================
       # Uncomment when Codecov is configured

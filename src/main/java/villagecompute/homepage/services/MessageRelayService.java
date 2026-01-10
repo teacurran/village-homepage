@@ -72,12 +72,15 @@ public class MessageRelayService {
     Mailer mailer;
 
     @Inject
+    @io.quarkus.qute.Location("email-templates/listingInquiry.html")
     Template listingInquiry;
 
     @Inject
+    @io.quarkus.qute.Location("email-templates/listingReply.html")
     Template listingReply;
 
     @Inject
+    @io.quarkus.qute.Location("email-templates/listingPublished.html")
     Template listingPublished;
 
     /**
