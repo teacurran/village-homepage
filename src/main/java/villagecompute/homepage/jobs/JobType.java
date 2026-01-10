@@ -175,11 +175,27 @@ public enum JobType {
     /**
      * Resizes and optimizes uploaded marketplace listing images.
      * <p>
+     * Generates 3 variants: thumbnail (150x150), list (300x225), full (1200x900).
+     * WebP conversion is currently stubbed - variants use original format until conversion implemented.
+     * <p>
      * <b>Cadence:</b> On-demand (triggered by upload)
      * <p>
-     * <b>Handler:</b> ImageProcessingHandler (future)
+     * <b>Handler:</b> ListingImageProcessingJobHandler
      */
-    IMAGE_PROCESSING(JobQueue.BULK, "Image processing (on-demand)"),
+    LISTING_IMAGE_PROCESSING(JobQueue.BULK, "Listing image processing (on-demand)"),
+
+    /**
+     * Cleans up listing images from R2 storage when listing is deleted or expired.
+     * <p>
+     * Deletes both database records and R2 objects for all variants (original, thumbnail, list, full).
+     * <p>
+     * <b>Cadence:</b> On-demand (triggered by listing soft-delete or expiration)
+     * <p>
+     * <b>Handler:</b> ListingImageCleanupJobHandler
+     * <p>
+     * <b>Policy P1:</b> CASCADE delete ensures GDPR compliance
+     */
+    LISTING_IMAGE_CLEANUP(JobQueue.BULK, "Listing image cleanup (on-demand, P1 enforced)"),
 
     // ========== SCREENSHOT QUEUE ==========
 

@@ -648,6 +648,368 @@ kubectl scale deployment homepage --replicas=5 -n village-homepage
 
 ---
 
+## Marketplace Listing Images
+
+### Overview
+
+**Feature:** I4.T6 - Image Upload + Processing
+
+Marketplace listings support up to 12 images per listing with automatic variant generation. Images are stored in the `LISTINGS` bucket with lifecycle-managed cleanup when listings are deleted or expired.
+
+### Image Workflow
+
+1. **Upload Flow:**
+   - User uploads image via `POST /api/marketplace/listings/{listingId}/images`
+   - API validates: ownership, 12-image limit, file size (max 10MB), content type
+   - Original uploaded to R2 via `storageGateway.upload(LISTINGS, listingId, "original", bytes, contentType)`
+   - Pending record created in `marketplace_listing_images` table
+   - `LISTING_IMAGE_PROCESSING` job enqueued to BULK queue
+   - Client receives `202 Accepted` with image ID
+
+2. **Processing Job:**
+   - `ListingImageProcessingJobHandler` downloads original from R2
+   - Generates 3 variants (currently stubbed - uses original bytes):
+     - Thumbnail: 150x150 (target size, not yet implemented)
+     - List: 300x225 (target size, not yet implemented)
+     - Full: 1200x900 (target size, not yet implemented)
+   - Uploads each variant to R2: `storageGateway.upload(LISTINGS, listingId, variant, bytes, contentType)`
+   - Creates database record for each variant with status='processed'
+   - Marks original image status='processed'
+
+3. **Retrieval Flow:**
+   - Client calls `GET /api/marketplace/listings/{listingId}/images`
+   - API queries `marketplace_listing_images` table
+   - Generates signed URLs (24-hour TTL) for all variants via `storageGateway.generateSignedUrl()`
+   - Returns `ListingImageType` DTOs with thumbnail/list/full URLs
+
+4. **Cleanup Flow:**
+   - When listing soft-deleted: `MarketplaceListing.softDelete()` enqueues `LISTING_IMAGE_CLEANUP` job
+   - When listing expires: `MarketplaceListing.markExpired()` enqueues cleanup job
+   - `ListingImageCleanupJobHandler` deletes all images from R2 via `storageGateway.delete()`
+   - Database records cascade-deleted via FK constraint
+
+### Image Specifications
+
+| Variant   | Target Dimensions | Current Status | Purpose                          |
+|-----------|-------------------|----------------|----------------------------------|
+| Original  | As uploaded       | Stored         | Source for variant generation    |
+| Thumbnail | 150x150           | Stub           | Grid view, list previews         |
+| List      | 300x225           | Stub           | Search results, browse pages     |
+| Full      | 1200x900          | Stub           | Listing detail page, lightbox    |
+
+**Note:** Actual resizing and WebP conversion not yet implemented. All variants currently store original image unchanged. See [WebP Conversion](#webp-conversion) roadmap.
+
+### Validation Rules
+
+| Rule                    | Limit/Value            | Enforcement              |
+|-------------------------|------------------------|--------------------------|
+| Max images per listing  | 12                     | API layer (count check)  |
+| Max file size           | 10 MB                  | API layer (byte check)   |
+| Allowed content types   | JPEG, PNG, WebP, GIF   | API layer (MIME check)   |
+| Min image dimensions    | None (future: 400x300) | Not enforced (roadmap)   |
+| Listing ownership       | User ID match          | API layer (FK check)     |
+| Listing status          | active, draft only     | API layer (status check) |
+
+### Database Schema
+
+**Table: `marketplace_listing_images`**
+
+```sql
+CREATE TABLE marketplace_listing_images (
+    id UUID PRIMARY KEY,
+    listing_id UUID NOT NULL REFERENCES marketplace_listings(id) ON DELETE CASCADE,
+    storage_key TEXT NOT NULL,                -- R2 object key
+    variant TEXT NOT NULL CHECK (variant IN ('original', 'thumbnail', 'list', 'full')),
+    original_filename TEXT,                    -- User's filename
+    content_type TEXT NOT NULL,                -- MIME type
+    size_bytes BIGINT NOT NULL,                -- File size
+    display_order INTEGER DEFAULT 0,           -- Sort order (1-12)
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processed', 'failed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_listing_images_listing_id ON marketplace_listing_images(listing_id);
+CREATE INDEX idx_listing_images_variant ON marketplace_listing_images(listing_id, variant);
+CREATE UNIQUE INDEX idx_listing_images_unique_variant ON marketplace_listing_images(listing_id, variant, display_order);
+```
+
+**Cascade Delete Policy:**
+- When `marketplace_listings.id` deleted → all associated images deleted automatically
+- Cleanup job still enqueued to delete R2 objects (database CASCADE only removes records)
+- Policy P1 GDPR compliance: user deletion cascades to listings → images
+
+### Job Handlers
+
+**ListingImageProcessingJobHandler:**
+- **Queue:** BULK
+- **Retry:** 3 attempts with exponential backoff
+- **Payload:** `{imageId, listingId, originalKey, originalFilename, displayOrder}`
+- **Duration:** ~500ms per image (target, not measured yet due to stub)
+- **Metrics:**
+  - `marketplace.images.processed.total` (counter)
+  - `marketplace.images.processing.duration` (histogram)
+  - `marketplace.images.processing.errors.total` (counter)
+
+**ListingImageCleanupJobHandler:**
+- **Queue:** BULK
+- **Retry:** 1 attempt (best-effort cleanup)
+- **Payload:** `{listingId}`
+- **Metrics:**
+  - `marketplace.images.cleaned.total` (counter)
+  - `marketplace.storage.bytes.freed` (counter)
+  - `marketplace.images.cleanup.failures.total` (counter)
+
+### API Endpoints
+
+**POST `/api/marketplace/listings/{listingId}/images`**
+- **Auth:** Required (user, super_admin, support, ops)
+- **Content-Type:** `multipart/form-data`
+- **Form Fields:**
+  - `file` (InputStream) - Image binary data
+  - `fileName` (String) - Original filename
+  - `contentType` (String) - MIME type
+  - `displayOrder` (Integer, optional) - Sort position
+- **Response:** `202 Accepted`
+  ```json
+  {
+    "image_id": "uuid",
+    "listing_id": "uuid",
+    "status": "processing",
+    "display_order": 1,
+    "original_filename": "photo.jpg",
+    "size_bytes": 1024
+  }
+  ```
+- **Errors:**
+  - `400 Bad Request` - File too large, invalid type, limit exceeded
+  - `403 Forbidden` - Not listing owner
+  - `404 Not Found` - Listing not found
+  - `409 Conflict` - Listing removed/expired
+
+**GET `/api/marketplace/listings/{listingId}/images`**
+- **Auth:** Required (can be public in future)
+- **Response:** `200 OK`
+  ```json
+  [
+    {
+      "image_id": "uuid",
+      "listing_id": "uuid",
+      "display_order": 1,
+      "original_filename": "photo.jpg",
+      "status": "processed",
+      "created_at": "2026-01-09T10:30:00Z",
+      "thumbnail_url": "https://cdn.example.com/...?signature=...",
+      "list_url": "https://cdn.example.com/...?signature=...",
+      "full_url": "https://cdn.example.com/...?signature=..."
+    }
+  ]
+  ```
+- **Signed URL TTL:** 24 hours (refresh on each page load)
+
+**DELETE `/api/marketplace/listings/{listingId}/images/{imageId}`**
+- **Auth:** Required (owner only)
+- **Response:** `204 No Content`
+- **Behavior:** Deletes all variants (original + thumbnail + list + full) from both R2 and database
+- **Errors:**
+  - `403 Forbidden` - Not listing owner
+  - `404 Not Found` - Image not found
+
+### Troubleshooting
+
+#### Images Stuck in "pending" Status
+
+**Symptoms:**
+- Images uploaded successfully but never show processed variants
+- `marketplace_listing_images` records have `status='pending'`
+- No error logs in job handler
+
+**Diagnosis:**
+- `LISTING_IMAGE_PROCESSING` job not executing
+- Job failed after max retries (3)
+- DelayedJobService not running (currently stub implementation)
+
+**Resolution:**
+```bash
+# Check pending images
+SELECT id, listing_id, created_at, status
+FROM marketplace_listing_images
+WHERE status = 'pending'
+ORDER BY created_at DESC;
+
+# Manually mark as failed for investigation
+UPDATE marketplace_listing_images
+SET status = 'failed'
+WHERE id = 'uuid-here';
+
+# Re-enqueue job (once DelayedJobService implemented)
+# INSERT INTO delayed_jobs (job_type, queue, payload, ...)
+```
+
+#### Image Cleanup Not Running
+
+**Symptoms:**
+- Listing deleted but images still in R2 bucket
+- `marketplace.storage.bytes.freed` metric not incrementing
+- Storage costs higher than expected
+
+**Diagnosis:**
+- `LISTING_IMAGE_CLEANUP` job not executing
+- Job failed silently (best-effort, only 1 retry)
+- R2 credentials invalid (delete permission denied)
+
+**Resolution:**
+```bash
+# List orphaned images (listing deleted but images remain)
+SELECT li.*
+FROM marketplace_listing_images li
+LEFT JOIN marketplace_listings l ON li.listing_id = l.id
+WHERE l.id IS NULL;
+
+# Manually trigger cleanup via job
+# Enqueue LISTING_IMAGE_CLEANUP job with payload: {listingId: "uuid"}
+
+# Verify R2 delete permissions
+aws s3api delete-object \
+  --bucket village-homepage-listings \
+  --key test-delete-key \
+  --endpoint-url https://[account-id].r2.cloudflarestorage.com
+```
+
+#### High Storage Costs
+
+**Symptoms:**
+- R2 storage usage growing unexpectedly
+- `marketplace.storage.bytes.freed` low relative to deletions
+
+**Diagnosis:**
+- Cleanup jobs not running (see above)
+- Listings soft-deleted but images retained (cleanup not triggered)
+- Failed uploads leaving orphaned objects
+
+**Resolution:**
+```bash
+# Audit total storage usage
+SELECT
+  variant,
+  COUNT(*) as count,
+  SUM(size_bytes) / 1024 / 1024 / 1024 as total_gb
+FROM marketplace_listing_images
+GROUP BY variant;
+
+# Identify large images
+SELECT id, listing_id, variant, size_bytes / 1024 / 1024 as size_mb
+FROM marketplace_listing_images
+ORDER BY size_bytes DESC
+LIMIT 20;
+
+# Manually cleanup orphaned images (no matching listing)
+DELETE FROM marketplace_listing_images
+WHERE listing_id NOT IN (SELECT id FROM marketplace_listings);
+```
+
+### Monitoring & Alerts
+
+**Key Metrics:**
+```promql
+# Upload rate
+rate(marketplace_images_uploaded_total[5m])
+
+# Processing success rate
+rate(marketplace_images_processed_total[5m])
+/ rate(marketplace_images_uploaded_total[5m])
+
+# Cleanup effectiveness
+rate(marketplace_images_cleaned_total[1h])
+
+# Storage freed
+rate(marketplace_storage_bytes_freed{bucket="listings"}[1h])
+
+# Processing latency (P95)
+histogram_quantile(0.95, marketplace_images_processing_duration{status="success"})
+```
+
+**Recommended Alerts:**
+```yaml
+- alert: HighImageUploadFailureRate
+  expr: rate(marketplace_images_upload_rejected_total[5m]) > 0.1
+  for: 10m
+  annotations:
+    summary: "High image upload rejection rate"
+
+- alert: ImageProcessingBacklog
+  expr: |
+    (
+      count(marketplace_listing_images{status="pending"})
+      / count(marketplace_listing_images)
+    ) > 0.1
+  for: 30m
+  annotations:
+    summary: "More than 10% of images stuck in pending status"
+
+- alert: CleanupJobFailures
+  expr: rate(marketplace_images_cleanup_failures_total[1h]) > 0.05
+  for: 1h
+  annotations:
+    summary: "High cleanup job failure rate"
+```
+
+### Future Enhancements
+
+#### 1. Actual Image Resizing (Priority: High)
+
+**Status:** Currently stubbed - all variants store original bytes unchanged
+
+**Implementation:**
+- Add Thumbnailator or ImageMagick dependency
+- Implement resize logic in `ListingImageProcessingJobHandler`
+- Target dimensions: 150x150 (thumbnail), 300x225 (list), 1200x900 (full)
+- Maintain aspect ratio with letterboxing or crop
+- Add unit tests for various aspect ratios
+
+**Acceptance Criteria:**
+- Thumbnail variant actually 150x150 pixels
+- WebP format conversion applied
+- 95th percentile processing time < 1 second
+
+#### 2. Image Reordering API
+
+**Endpoint:** `PUT /api/marketplace/listings/{listingId}/images/reorder`
+
+**Payload:**
+```json
+{
+  "image_ids": ["uuid1", "uuid2", "uuid3"]
+}
+```
+
+**Behavior:**
+- Updates `display_order` field based on array position
+- Validates all image IDs belong to listing
+- Returns updated image list
+
+#### 3. Image Quality Variants
+
+**Add additional variants:**
+- `thumbnail_2x` (300x300) - Retina displays
+- `list_2x` (600x450) - High-DPI search results
+- `original_compressed` (original dimensions, 80% quality)
+
+#### 4. Direct S3 Upload (Bypass API)
+
+**Flow:**
+1. Client calls `POST /api/marketplace/listings/{listingId}/images/presigned-url`
+2. API generates pre-signed POST URL (S3Presigner)
+3. Client uploads directly to R2 (bypasses app servers)
+4. Client notifies API: `POST /api/marketplace/listings/{listingId}/images/confirm`
+5. API enqueues processing job
+
+**Benefits:**
+- Reduces app server load
+- Faster uploads (direct to R2)
+- Supports larger files without proxy buffering
+
+---
+
 ## Future Roadmap
 
 ### Planned Enhancements

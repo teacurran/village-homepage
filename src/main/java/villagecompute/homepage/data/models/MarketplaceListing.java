@@ -391,6 +391,10 @@ public class MarketplaceListing extends PanacheEntityBase {
      * Preserves audit trail and prevents referential integrity issues with images/flags/analytics. Per Policy P14,
      * soft-deleted listings retained for 90 days before hard purge.
      *
+     * <p>
+     * <b>Image Cleanup:</b> Enqueues LISTING_IMAGE_CLEANUP job to delete associated images from R2 storage
+     * (Policy P1 GDPR compliance).
+     *
      * @param listingId
      *            the listing UUID to soft-delete
      */
@@ -406,6 +410,19 @@ public class MarketplaceListing extends PanacheEntityBase {
             listing.persist();
 
             LOG.infof("Soft-deleted marketplace listing: id=%s, userId=%s", listing.id, listing.userId);
+
+            // Enqueue image cleanup job (P1 GDPR compliance)
+            try {
+                villagecompute.homepage.services.DelayedJobService jobService =
+                    jakarta.enterprise.inject.spi.CDI.current().select(villagecompute.homepage.services.DelayedJobService.class).get();
+                jobService.enqueue(
+                    villagecompute.homepage.jobs.JobType.LISTING_IMAGE_CLEANUP,
+                    java.util.Map.of("listingId", listingId.toString())
+                );
+                LOG.infof("Enqueued image cleanup job for listing: id=%s", listingId);
+            } catch (Exception e) {
+                LOG.warnf(e, "Failed to enqueue image cleanup job for listing %s (images may remain in R2)", listingId);
+            }
         });
     }
 
@@ -415,6 +432,10 @@ public class MarketplaceListing extends PanacheEntityBase {
      * <p>
      * Called by {@link villagecompute.homepage.jobs.ListingExpirationJobHandler} to transition active listings past
      * their expires_at timestamp to 'expired' status.
+     *
+     * <p>
+     * <b>Image Cleanup:</b> Enqueues LISTING_IMAGE_CLEANUP job to delete associated images from R2 storage
+     * after expiration (Policy P4 storage cost control).
      *
      * @param listingId
      *            the listing UUID to mark as expired
@@ -433,6 +454,19 @@ public class MarketplaceListing extends PanacheEntityBase {
 
             LOG.infof("Marked listing as expired: id=%s, userId=%s, categoryId=%s", listing.id, listing.userId,
                     listing.categoryId);
+
+            // Enqueue image cleanup job (P4 storage cost control)
+            try {
+                villagecompute.homepage.services.DelayedJobService jobService =
+                    jakarta.enterprise.inject.spi.CDI.current().select(villagecompute.homepage.services.DelayedJobService.class).get();
+                jobService.enqueue(
+                    villagecompute.homepage.jobs.JobType.LISTING_IMAGE_CLEANUP,
+                    java.util.Map.of("listingId", listingId.toString())
+                );
+                LOG.infof("Enqueued image cleanup job for expired listing: id=%s", listingId);
+            } catch (Exception e) {
+                LOG.warnf(e, "Failed to enqueue image cleanup job for listing %s (images may remain in R2)", listingId);
+            }
         });
     }
 
