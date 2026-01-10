@@ -8,6 +8,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.search.engine.backend.types.Sortable;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.DocumentId;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.GenericField;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.Indexed;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.KeywordField;
 import org.hibernate.type.SqlTypes;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.ContactInfoType;
@@ -117,6 +123,7 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "marketplace_listings")
+@Indexed
 public class MarketplaceListing extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(MarketplaceListing.class);
@@ -133,6 +140,7 @@ public class MarketplaceListing extends PanacheEntityBase {
 
     @Id
     @GeneratedValue
+    @DocumentId
     @Column(
             nullable = false)
     public UUID id;
@@ -145,6 +153,7 @@ public class MarketplaceListing extends PanacheEntityBase {
     @Column(
             name = "category_id",
             nullable = false)
+    @GenericField
     public UUID categoryId;
 
     @Column(
@@ -153,13 +162,23 @@ public class MarketplaceListing extends PanacheEntityBase {
 
     @Column(
             nullable = false)
+    @FullTextField(
+            analyzer = "english")
+    @KeywordField(
+            name = "title_keyword",
+            normalizer = "lowercase",
+            sortable = Sortable.YES)
     public String title;
 
     @Column(
             nullable = false)
+    @FullTextField(
+            analyzer = "english")
     public String description;
 
     @Column
+    @GenericField(
+            sortable = Sortable.YES)
     public BigDecimal price;
 
     @Column(
@@ -193,6 +212,8 @@ public class MarketplaceListing extends PanacheEntityBase {
     @Column(
             name = "created_at",
             nullable = false)
+    @GenericField(
+            sortable = Sortable.YES)
     public Instant createdAt;
 
     @Column(

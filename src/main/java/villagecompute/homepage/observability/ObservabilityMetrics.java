@@ -41,6 +41,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <li><b>Histograms:</b> Screenshot capture duration (future - requires screenshot service integration)</li>
  * <li><b>Counters:</b> {@code homepage_rate_limit_checks_total{action,tier,result}} - Rate limit check outcomes</li>
  * <li><b>Counters:</b> {@code homepage_rate_limit_violations_total{action,tier}} - Rate limit violations</li>
+ * <li><b>Counters:</b> {@code marketplace.search.requests.total{has_radius,has_category,has_filters}} - Marketplace
+ * search requests</li>
+ * <li><b>Counters:</b> {@code marketplace.search.elasticsearch.errors.total} - Elasticsearch search failures</li>
+ * <li><b>Timers:</b> {@code marketplace.search.duration} - Search query latency (targets <200ms p99 per P11)</li>
+ * <li><b>Summaries:</b> {@code marketplace.search.results.count} - Search result set sizes</li>
  * </ul>
  *
  * <p>

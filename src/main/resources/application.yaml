@@ -75,6 +75,26 @@ quarkus:
         # Ignore format mapper warnings - we use standard ObjectMapper for database JSON
         global: ignore
 
+  # Hibernate Search + Elasticsearch Configuration (Policy P11, Feature F12.2)
+  hibernate-search-orm:
+    elasticsearch:
+      # Dev: localhost, Prod: ES cluster endpoint
+      hosts: ${ELASTICSEARCH_HOSTS:localhost:9200}
+      protocol: http
+      # Automatic indexing: sync updates to ES on entity persist/update
+      automatic-indexing:
+        enabled: true
+        synchronization-strategy: sync
+      # Schema management: create-or-update for migrations, validate in prod
+      schema-management:
+        strategy: ${ELASTICSEARCH_SCHEMA_STRATEGY:create-or-update}
+      # Indexing queue configuration for async operations
+      indexing:
+        queue-count: 4
+        queue-size: 50
+      # Request timeout for ES operations
+      request-timeout: 10s
+
   # OIDC Multi-Tenant Configuration (Policy P1, P9, F1)
   # Supports Google, Facebook, and Apple OAuth providers
   oidc:
@@ -255,6 +275,13 @@ villagecompute:
       # Suppress unnecessary warnings in tests
       log:
         sql: false
+    # Disable Elasticsearch in tests (use in-memory indexing)
+    hibernate-search-orm:
+      elasticsearch:
+        schema-management:
+          strategy: drop-and-create
+      backend:
+        type: lucene
 
 "%prod":
   quarkus:
