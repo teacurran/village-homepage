@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{data.viewData.category().description()}">
+    <title>{data.viewData.category().name()} - Good Sites Directory</title>
+    <link rel="canonical" href="https://homepage.villagecompute.com/good-sites/{data.viewData.category().slug()}">
+
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <link rel="stylesheet" href="/assets/css/good-sites.css">
+
+    <!-- React islands for voting -->
+    <script type="module" src="/assets/js/good-sites.js" defer></script>
+
+    <!-- JSON-LD structured data for breadcrumbs -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Good Sites",
+          "item": "https://homepage.villagecompute.com/good-sites"
+        }
+        {#for breadcrumb in data.breadcrumbs}
+        ,{
+          "@type": "ListItem",
+          "position": {breadcrumb_count + 2},
+          "name": "{breadcrumb.name()}",
+          "item": "https://homepage.villagecompute.com/good-sites/{breadcrumb.slug()}"
+        }
+        {/for}
+      ]
+    }
+    </script>
+</head>
+<body class="good-sites-page category-page">
+    <header class="good-sites-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="site-title">
+                    <a href="/">Village Homepage</a> / <a href="/good-sites">Good Sites</a>
+                </h1>
+                <nav class="header-nav">
+                    {#if data.userId.isPresent()}
+                    <a href="/good-sites/submit" class="btn-submit">Submit Site</a>
+                    {#else}
+                    <a href="/api/auth/login/google" class="btn-login">Login to Submit</a>
+                    {/if}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="good-sites-main">
+        <div class="container">
+            <!-- Breadcrumb navigation -->
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <ol class="breadcrumb-list">
+                    <li><a href="/good-sites">Home</a></li>
+                    {#for breadcrumb in data.breadcrumbs}
+                    <li>
+                        {#if breadcrumb.slug() == data.viewData.category().slug()}
+                        <span aria-current="page">{breadcrumb.name()}</span>
+                        {#else}
+                        <a href="/good-sites/{breadcrumb.slug()}">{breadcrumb.name()}</a>
+                        {/if}
+                    </li>
+                    {/for}
+                </ol>
+            </nav>
+
+            <!-- Category header -->
+            <section class="category-header">
+                <h2 class="category-title">{data.viewData.category().name()}</h2>
+                {#if data.viewData.category().description()}
+                <p class="category-description">{data.viewData.category().description()}</p>
+                {/if}
+                <p class="category-stats">{data.viewData.totalSites()} sites in this category</p>
+            </section>
+
+            <!-- Subcategories -->
+            {#if data.subcategories && !data.subcategories.isEmpty()}
+            <section class="subcategories">
+                <h3 class="subcategories-title">Subcategories</h3>
+                <div class="subcategory-list">
+                    {#for subcat in data.subcategories}
+                    <a href="/good-sites/{subcat.slug()}" class="subcategory-link">
+                        {subcat.name()} ({subcat.linkCount()})
+                    </a>
+                    {/for}
+                </div>
+            </section>
+            {/if}
+
+            <!-- Filter/Sort controls -->
+            <section class="site-controls">
+                <div class="sort-controls">
+                    <label for="sort">Sort by:</label>
+                    <select id="sort" name="sort" class="sort-select">
+                        <option value="score">Highest Score</option>
+                        <option value="date">Most Recent</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Direct sites in category -->
+            {#if data.viewData.directSites() && !data.viewData.directSites().isEmpty()}
+            <section class="direct-sites">
+                <h3 class="section-title">Sites in {data.viewData.category().name()}</h3>
+                <div class="site-list">
+                    {#for site in data.viewData.directSites()}
+                    <article class="site-row">
+                        <div class="site-vote" data-mount="VoteButtons"
+                             data-props='{"siteCategoryId":"{site.siteCategoryId()}","score":{site.score()},"upvotes":{site.upvotes()},"downvotes":{site.downvotes()},"userVote":{data.viewData.userVotes().get(site.siteCategoryId())},"isAuthenticated":{data.isAuthenticated}}'>
+                            <!-- Vote buttons will be hydrated by React -->
+                            <div class="vote-placeholder">
+                                <button class="vote-btn vote-up" aria-label="Upvote {site.site().title()}" disabled>
+                                    <span class="vote-icon">▲</span>
+                                </button>
+                                <div class="vote-score">{site.score()}</div>
+                                <button class="vote-btn vote-down" aria-label="Downvote {site.site().title()}" disabled>
+                                    <span class="vote-icon">▼</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="site-content">
+                            <div class="site-main">
+                                <h4 class="site-title">
+                                    <a href="/track/click?url={site.site().url()}&source=good_sites_category&metadata={categoryId:{data.viewData.category().id()},siteId:{site.site().id()},rank:{site.rank()}}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="site-link">
+                                        {site.site().title()}
+                                    </a>
+                                    {#if site.rank() != null && site.rank() <= 3}
+                                    <span class="rank-badge" aria-label="Rank {site.rank()} in category">#{site.rank()}</span>
+                                    {/if}
+                                    {#if site.site().isDead()}
+                                    <span class="dead-badge" aria-label="Link may be broken">⚠ Dead Link</span>
+                                    {/if}
+                                </h4>
+                                <p class="site-description">{site.site().description()}</p>
+                                <div class="site-meta">
+                                    <span class="site-domain">{site.site().domain()}</span>
+                                    <span class="site-votes">{site.upvotes()} ↑ / {site.downvotes()} ↓</span>
+                                </div>
+                            </div>
+                            {#if site.site().screenshotUrl()}
+                            <div class="site-thumbnail">
+                                <img src="{site.site().screenshotUrl()}" alt="{site.site().title()} screenshot" loading="lazy">
+                            </div>
+                            {#else if site.site().ogImageUrl()}
+                            <div class="site-thumbnail">
+                                <img src="{site.site().ogImageUrl()}" alt="{site.site().title()}" loading="lazy">
+                            </div>
+                            {/if}
+                        </div>
+                    </article>
+                    {/for}
+                </div>
+            </section>
+            {/if}
+
+            <!-- Bubbled sites from child categories -->
+            {#if data.viewData.bubbledSites() && !data.viewData.bubbledSites().isEmpty()}
+            <section class="bubbled-sites">
+                <h3 class="section-title">Top Sites from Subcategories</h3>
+                <p class="bubbled-description">These high-ranked sites from subcategories are bubbling up here.</p>
+                <div class="site-list">
+                    {#for site in data.viewData.bubbledSites()}
+                    <article class="site-row bubbled">
+                        <div class="site-vote" data-mount="VoteButtons"
+                             data-props='{"siteCategoryId":"{site.siteCategoryId()}","score":{site.score()},"upvotes":{site.upvotes()},"downvotes":{site.downvotes()},"userVote":{data.viewData.userVotes().get(site.siteCategoryId())},"isAuthenticated":{data.isAuthenticated}}'>
+                            <div class="vote-placeholder">
+                                <button class="vote-btn vote-up" disabled>▲</button>
+                                <div class="vote-score">{site.score()}</div>
+                                <button class="vote-btn vote-down" disabled>▼</button>
+                            </div>
+                        </div>
+                        <div class="site-content">
+                            <div class="site-main">
+                                <h4 class="site-title">
+                                    <a href="/track/click?url={site.site().url()}&source=good_sites_bubbled&metadata={categoryId:{data.viewData.category().id()},siteId:{site.site().id()}}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="site-link">
+                                        {site.site().title()}
+                                    </a>
+                                    <span class="bubble-badge" title="Top-ranked site from {site.bubbledFromCategory()}">
+                                        From {site.bubbledFromCategory()}
+                                    </span>
+                                </h4>
+                                <p class="site-description">{site.site().description()}</p>
+                                <div class="site-meta">
+                                    <span class="site-domain">{site.site().domain()}</span>
+                                    <span class="site-votes">{site.upvotes()} ↑ / {site.downvotes()} ↓</span>
+                                </div>
+                            </div>
+                            {#if site.site().screenshotUrl()}
+                            <div class="site-thumbnail">
+                                <img src="{site.site().screenshotUrl()}" alt="{site.site().title()} screenshot" loading="lazy">
+                            </div>
+                            {/if}
+                        </div>
+                    </article>
+                    {/for}
+                </div>
+            </section>
+            {/if}
+
+            <!-- Pagination -->
+            {#if data.viewData.totalPages() > 1}
+            <nav class="pagination" aria-label="Pagination">
+                <div class="pagination-controls">
+                    {#if data.viewData.page() > 1}
+                    <a href="/good-sites/{data.viewData.category().slug()}?page={data.viewData.page() - 1}" class="pagination-link pagination-prev">
+                        ← Previous
+                    </a>
+                    {/if}
+
+                    <span class="pagination-info">
+                        Page {data.viewData.page()} of {data.viewData.totalPages()}
+                    </span>
+
+                    {#if data.viewData.page() < data.viewData.totalPages()}
+                    <a href="/good-sites/{data.viewData.category().slug()}?page={data.viewData.page() + 1}" class="pagination-link pagination-next">
+                        Next →
+                    </a>
+                    {/if}
+                </div>
+            </nav>
+            {/if}
+
+            <!-- Login prompt for anonymous users -->
+            {#if !data.isAuthenticated}
+            <section class="login-prompt">
+                <p>
+                    <a href="/api/auth/login/google" class="login-link">Login</a> to vote on sites and track your submissions.
+                </p>
+            </section>
+            {/if}
+        </div>
+    </main>
+
+    <footer class="good-sites-footer">
+        <div class="container">
+            <p>&copy; 2026 Village Homepage. <a href="/about">About</a> | <a href="/terms">Terms</a></p>
+        </div>
+    </footer>
+</body>
+</html>

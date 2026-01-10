@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{data.detailData.site().description()}">
+    <title>{data.detailData.site().title()} - Good Sites Directory</title>
+
+    <!-- Open Graph tags -->
+    <meta property="og:title" content="{data.detailData.site().title()}">
+    <meta property="og:description" content="{data.detailData.site().description()}">
+    {#if data.detailData.site().ogImageUrl()}
+    <meta property="og:image" content="{data.detailData.site().ogImageUrl()}">
+    {/if}
+    <meta property="og:url" content="https://homepage.villagecompute.com/good-sites/site/{data.detailData.site().id()}">
+
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <link rel="stylesheet" href="/assets/css/good-sites.css">
+
+    <script type="module" src="/assets/js/good-sites.js" defer></script>
+</head>
+<body class="good-sites-page site-detail-page">
+    <header class="good-sites-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="site-title">
+                    <a href="/">Village Homepage</a> / <a href="/good-sites">Good Sites</a>
+                </h1>
+                <nav class="header-nav">
+                    <a href="/good-sites" class="btn-back">← Back to Directory</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="good-sites-main">
+        <div class="container">
+            <article class="site-detail">
+                <!-- Site header -->
+                <header class="site-detail-header">
+                    <h2 class="site-detail-title">{data.detailData.site().title()}</h2>
+                    <a href="{data.detailData.site().url()}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="site-detail-url">
+                        {data.detailData.site().url()} ↗
+                    </a>
+                    {#if data.detailData.site().isDead()}
+                    <div class="dead-warning">
+                        <strong>⚠ Warning:</strong> This link may be broken. Last checked: {data.detailData.site().updatedAt()}
+                    </div>
+                    {/if}
+                </header>
+
+                <!-- Site screenshot -->
+                {#if data.detailData.site().screenshotUrl()}
+                <div class="site-screenshot">
+                    <img src="{data.detailData.site().screenshotUrl()}" alt="{data.detailData.site().title()} screenshot">
+                    {#if data.detailData.site().screenshotCapturedAt()}
+                    <p class="screenshot-meta">Screenshot captured: {data.detailData.site().screenshotCapturedAt()}</p>
+                    {/if}
+                </div>
+                {#else if data.detailData.site().ogImageUrl()}
+                <div class="site-screenshot">
+                    <img src="{data.detailData.site().ogImageUrl()}" alt="{data.detailData.site().title()}">
+                </div>
+                {/if}
+
+                <!-- Site description -->
+                <div class="site-detail-description">
+                    <h3>Description</h3>
+                    <p>{data.detailData.site().description()}</p>
+                </div>
+
+                <!-- Categories this site is in -->
+                <div class="site-categories">
+                    <h3>Categories</h3>
+                    <div class="category-list">
+                        {#for category in data.detailData.categories()}
+                        <div class="category-membership">
+                            <div class="category-info">
+                                <h4>
+                                    <a href="/good-sites/{category.category().slug()}">{category.category().name()}</a>
+                                </h4>
+                                <div class="category-stats">
+                                    <span class="stat">Score: {category.score()}</span>
+                                    <span class="stat">{category.upvotes()} ↑</span>
+                                    <span class="stat">{category.downvotes()} ↓</span>
+                                    {#if category.rank()}
+                                    <span class="stat">Rank: #{category.rank()}</span>
+                                    {/if}
+                                </div>
+                            </div>
+                            <div class="category-vote" data-mount="VoteButtons"
+                                 data-props='{"siteCategoryId":"{category.siteCategoryId()}","score":{category.score()},"upvotes":{category.upvotes()},"downvotes":{category.downvotes()},"userVote":{data.detailData.userVotes().get(category.siteCategoryId())},"isAuthenticated":{data.isAuthenticated}}'>
+                                <div class="vote-placeholder">
+                                    <button class="vote-btn vote-up" disabled>▲</button>
+                                    <div class="vote-score">{category.score()}</div>
+                                    <button class="vote-btn vote-down" disabled>▼</button>
+                                </div>
+                            </div>
+                        </div>
+                        {/for}
+                    </div>
+                </div>
+
+                <!-- Site metadata -->
+                <div class="site-metadata">
+                    <h3>Metadata</h3>
+                    <dl class="metadata-list">
+                        <dt>Domain:</dt>
+                        <dd>{data.detailData.site().domain()}</dd>
+
+                        <dt>Submitted:</dt>
+                        <dd>{data.detailData.site().createdAt()}</dd>
+
+                        <dt>Status:</dt>
+                        <dd class="status-{data.detailData.site().status()}">{data.detailData.site().status()}</dd>
+                    </dl>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <footer class="good-sites-footer">
+        <div class="container">
+            <p>&copy; 2026 Village Homepage.</p>
+        </div>
+    </footer>
+</body>
+</html>

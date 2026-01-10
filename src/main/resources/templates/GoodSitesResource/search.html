@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Search results for Good Sites directory">
+    <title>Search: {data.query} - Good Sites Directory</title>
+
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <link rel="stylesheet" href="/assets/css/good-sites.css">
+
+    <script type="module" src="/assets/js/good-sites.js" defer></script>
+</head>
+<body class="good-sites-page search-page">
+    <header class="good-sites-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="site-title">
+                    <a href="/">Village Homepage</a> / <a href="/good-sites">Good Sites</a> / Search
+                </h1>
+                <nav class="header-nav">
+                    <a href="/good-sites" class="btn-back">← Back to Directory</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="good-sites-main">
+        <div class="container">
+            <!-- Search form -->
+            <section class="search-section">
+                <form action="/good-sites/search" method="get" class="search-form">
+                    <input
+                        type="search"
+                        name="q"
+                        value="{data.query}"
+                        placeholder="Search sites..."
+                        class="search-input"
+                        aria-label="Search Good Sites directory"
+                        autofocus
+                    >
+                    <button type="submit" class="search-button">Search</button>
+                </form>
+            </section>
+
+            <!-- Search results -->
+            <section class="search-results">
+                <h2 class="results-title">
+                    {#if data.results.isEmpty()}
+                    No results found for "{data.query}"
+                    {#else}
+                    {data.results.size()} results for "{data.query}"
+                    {/if}
+                </h2>
+
+                {#if !data.results.isEmpty()}
+                <div class="site-list">
+                    {#for site in data.results}
+                    <article class="site-row">
+                        <div class="site-content">
+                            <div class="site-main">
+                                <h3 class="site-title">
+                                    <a href="/track/click?url={site.site().url()}&source=good_sites_search&metadata={query:{data.query},siteId:{site.site().id()}}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="site-link">
+                                        {site.site().title()}
+                                    </a>
+                                </h3>
+                                <p class="site-description">{site.site().description()}</p>
+                                <div class="site-meta">
+                                    <span class="site-domain">{site.site().domain()}</span>
+                                    <span class="site-score">↑ {site.score()} points</span>
+                                    <a href="/good-sites/site/{site.site().id()}" class="site-detail-link">View details</a>
+                                </div>
+                            </div>
+                            {#if site.site().screenshotUrl()}
+                            <div class="site-thumbnail">
+                                <img src="{site.site().screenshotUrl()}" alt="{site.site().title()} screenshot" loading="lazy">
+                            </div>
+                            {#else if site.site().ogImageUrl()}
+                            <div class="site-thumbnail">
+                                <img src="{site.site().ogImageUrl()}" alt="{site.site().title()}" loading="lazy">
+                            </div>
+                            {/if}
+                        </div>
+                    </article>
+                    {/for}
+                </div>
+                {#else}
+                <div class="no-results">
+                    <p>Try different keywords or <a href="/good-sites">browse categories</a>.</p>
+                </div>
+                {/if}
+            </section>
+        </div>
+    </main>
+
+    <footer class="good-sites-footer">
+        <div class="container">
+            <p>&copy; 2026 Village Homepage.</p>
+        </div>
+    </footer>
+</body>
+</html>

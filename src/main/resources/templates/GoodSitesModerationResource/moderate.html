@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Good Sites Moderation Queue - Village Homepage</title>
+
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <link rel="stylesheet" href="/assets/css/good-sites.css">
+    <link rel="stylesheet" href="/assets/css/admin.css">
+
+    <script type="module" src="/assets/js/moderation.js" defer></script>
+</head>
+<body class="admin-page moderation-page">
+    <header class="admin-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="page-title">Good Sites Moderation Queue</h1>
+                <nav class="header-nav">
+                    <a href="/good-sites" class="btn-directory">View Directory</a>
+                    <a href="/" class="btn-home">Home</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="admin-main">
+        <div class="container">
+            <!-- Filter controls -->
+            <section class="moderation-controls">
+                <form action="/good-sites/moderate" method="get" class="filter-form">
+                    <label for="category">Filter by category:</label>
+                    <select name="category" id="category" class="filter-select" onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        {#for cat in data.categoryOptions}
+                        <option value="{cat.id()}" {#if data.selectedCategory == cat.id().toString()}selected{/if}>
+                            {cat.name()} ({cat.linkCount()})
+                        </option>
+                        {/for}
+                    </select>
+                </form>
+
+                <div class="bulk-actions">
+                    <button type="button" class="btn-bulk-approve" data-action="bulk-approve">
+                        Bulk Approve Selected
+                    </button>
+                    <button type="button" class="btn-bulk-reject" data-action="bulk-reject">
+                        Bulk Reject Selected
+                    </button>
+                </div>
+            </section>
+
+            <!-- Moderation queue -->
+            <section class="moderation-queue">
+                {#if data.queue.isEmpty()}
+                <div class="empty-state">
+                    <p>No pending submissions. Great job!</p>
+                    <a href="/good-sites" class="btn-directory">Back to Directory</a>
+                </div>
+                {#else}
+                <p class="queue-summary">{data.queue.size()} pending submissions</p>
+
+                <form id="moderation-form">
+                    <table class="moderation-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="select-all" aria-label="Select all"></th>
+                                <th>Site</th>
+                                <th>Category</th>
+                                <th>Submitted By</th>
+                                <th>Karma</th>
+                                <th>Preview</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#for item in data.queue}
+                            <tr data-site-category-id="{item.siteCategoryId()}">
+                                <td>
+                                    <input type="checkbox" name="selected[]" value="{item.siteCategoryId()}" class="row-select">
+                                </td>
+                                <td class="site-info">
+                                    <h4 class="site-title">
+                                        <a href="{item.site().url()}" target="_blank" rel="noopener noreferrer">
+                                            {item.site().title()} ↗
+                                        </a>
+                                    </h4>
+                                    <p class="site-description">{item.site().description()}</p>
+                                    <span class="site-domain">{item.site().domain()}</span>
+                                </td>
+                                <td>
+                                    <a href="/good-sites/{item.category().slug()}">{item.category().name()}</a>
+                                </td>
+                                <td class="submitter-info">
+                                    <div>{item.submitterEmail()}</div>
+                                    <div class="trust-level trust-{item.submitterTrustLevel()}">
+                                        {item.submitterTrustLevel()}
+                                    </div>
+                                    <div class="submitted-at">
+                                        {item.submittedAt()}
+                                    </div>
+                                </td>
+                                <td class="karma-info">
+                                    <span class="karma-value karma-{#if item.submitterKarma() > 50}high{#else if item.submitterKarma() > 10}medium{#else}low{/if}">
+                                        {item.submitterKarma()}
+                                    </span>
+                                </td>
+                                <td class="preview-cell">
+                                    {#if item.screenshotUrl()}
+                                    <img src="{item.screenshotUrl()}" alt="{item.site().title()} screenshot" class="preview-thumbnail" loading="lazy">
+                                    {#else if item.ogImageUrl()}
+                                    <img src="{item.ogImageUrl()}" alt="{item.site().title()}" class="preview-thumbnail" loading="lazy">
+                                    {#else}
+                                    <div class="no-preview">No preview</div>
+                                    {/if}
+                                </td>
+                                <td class="actions-cell">
+                                    <button type="button"
+                                            class="btn-approve"
+                                            data-site-category-id="{item.siteCategoryId()}"
+                                            data-action="approve">
+                                        ✓ Approve
+                                    </button>
+                                    <button type="button"
+                                            class="btn-reject"
+                                            data-site-category-id="{item.siteCategoryId()}"
+                                            data-action="reject">
+                                        ✗ Reject
+                                    </button>
+                                </td>
+                            </tr>
+                            {/for}
+                        </tbody>
+                    </table>
+                </form>
+                {/if}
+            </section>
+        </div>
+    </main>
+
+    <!-- Rejection reason modal -->
+    <dialog id="reject-modal" class="modal">
+        <div class="modal-content">
+            <h2>Reject Submission</h2>
+            <form id="reject-form">
+                <input type="hidden" name="siteCategoryId" id="reject-site-category-id">
+                <div class="form-group">
+                    <label for="reject-reason">Reason for rejection:</label>
+                    <textarea name="reason" id="reject-reason" rows="4" class="form-control" required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" onclick="document.getElementById('reject-modal').close()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-submit">
+                        Confirm Rejection
+                    </button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <footer class="admin-footer">
+        <div class="container">
+            <p>&copy; 2026 Village Homepage Admin Panel</p>
+        </div>
+    </footer>
+
+    <!-- Inline script for moderation actions -->
+    <script>
+        // Basic moderation UI interactions (will be enhanced by React in production)
+        document.addEventListener('DOMContentLoaded', () => {
+            // Select all checkbox
+            document.getElementById('select-all')?.addEventListener('change', (e) => {
+                document.querySelectorAll('.row-select').forEach(cb => {
+                    cb.checked = e.target.checked;
+                });
+            });
+
+            // Approve button click handler
+            document.querySelectorAll('.btn-approve').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.target.dataset.siteCategoryId;
+                    if (!confirm('Approve this submission?')) return;
+
+                    try {
+                        const res = await fetch(`/good-sites/moderate/api/${id}/approve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        if (res.ok) {
+                            e.target.closest('tr').remove();
+                            alert('Submission approved successfully');
+                        } else {
+                            const error = await res.json();
+                            alert(`Failed to approve: ${error.message}`);
+                        }
+                    } catch (err) {
+                        alert('Network error: ' + err.message);
+                    }
+                });
+            });
+
+            // Reject button click handler
+            document.querySelectorAll('.btn-reject').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.dataset.siteCategoryId;
+                    document.getElementById('reject-site-category-id').value = id;
+                    document.getElementById('reject-modal').showModal();
+                });
+            });
+
+            // Reject form submission
+            document.getElementById('reject-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const id = formData.get('siteCategoryId');
+                const reason = formData.get('reason');
+
+                try {
+                    const res = await fetch(`/good-sites/moderate/api/${id}/reject`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reason })
+                    });
+
+                    if (res.ok) {
+                        document.querySelector(`tr[data-site-category-id="${id}"]`).remove();
+                        document.getElementById('reject-modal').close();
+                        alert('Submission rejected successfully');
+                    } else {
+                        const error = await res.json();
+                        alert(`Failed to reject: ${error.message}`);
+                    }
+                } catch (err) {
+                    alert('Network error: ' + err.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
