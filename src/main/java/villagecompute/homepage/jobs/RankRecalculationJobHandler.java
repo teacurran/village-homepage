@@ -112,8 +112,8 @@ public class RankRecalculationJobHandler implements JobHandler {
             categoriesProcessed++;
 
             if (categoriesProcessed % 10 == 0) {
-                LOG.infof("Progress: processed %d/%d categories, ranked %d sites",
-                        categoriesProcessed, allCategories.size(), totalSitesRanked);
+                LOG.infof("Progress: processed %d/%d categories, ranked %d sites", categoriesProcessed,
+                        allCategories.size(), totalSitesRanked);
             }
 
             // Flush changes per category
@@ -126,8 +126,8 @@ public class RankRecalculationJobHandler implements JobHandler {
 
         sample.stop(Timer.builder("rank_recalculation.duration").register(meterRegistry));
 
-        LOG.infof("Rank recalculation completed: categories=%d, sites_ranked=%d",
-                categoriesProcessed, totalSitesRanked);
+        LOG.infof("Rank recalculation completed: categories=%d, sites_ranked=%d", categoriesProcessed,
+                totalSitesRanked);
     }
 
     /**
@@ -184,8 +184,8 @@ public class RankRecalculationJobHandler implements JobHandler {
      * </ul>
      *
      * <p>
-     * <b>UI Display:</b> Bubbled sites show with yellow background and badge indicating source category. They are sorted
-     * AFTER direct sites but still ordered by score DESC within the bubbled group.
+     * <b>UI Display:</b> Bubbled sites show with yellow background and badge indicating source category. They are
+     * sorted AFTER direct sites but still ordered by score DESC within the bubbled group.
      *
      * <p>
      * <b>Example Query Result:</b>

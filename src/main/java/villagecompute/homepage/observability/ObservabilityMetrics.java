@@ -149,6 +149,23 @@ public class ObservabilityMetrics {
                 .description("Age of oldest weather cache entry in minutes (alert at >90 min)").register(registry);
         LOG.debug("Registered gauge: homepage_weather_cache_staleness_minutes");
 
+        // Register Good Sites directory metrics (I5.T8 analytics)
+        Gauge.builder("homepage_directory_pending_submissions", this, m -> getDirectoryPendingSubmissions())
+                .description("Number of pending Good Sites submissions awaiting moderation").register(registry);
+        LOG.debug("Registered gauge: homepage_directory_pending_submissions");
+
+        Gauge.builder("homepage_directory_dead_sites", this, m -> getDirectoryDeadSites())
+                .description("Number of Good Sites with dead links (isDead=true)").register(registry);
+        LOG.debug("Registered gauge: homepage_directory_dead_sites");
+
+        Gauge.builder("homepage_directory_bubbled_sites", this, m -> getDirectoryBubbledSites())
+                .description("Number of Good Sites eligible for bubbling (score>=10, rank<=3)").register(registry);
+        LOG.debug("Registered gauge: homepage_directory_bubbled_sites");
+
+        Gauge.builder("homepage_directory_votes_24h", this, m -> getDirectoryVotes24h())
+                .description("Total votes cast in last 24 hours").register(registry);
+        LOG.debug("Registered gauge: homepage_directory_votes_24h");
+
         LOG.infof("Observability metrics registration complete. Access metrics at /q/metrics");
     }
 
@@ -362,5 +379,63 @@ public class ObservabilityMetrics {
     public void incrementWebhookReceived(String eventType) {
         Counter.builder("homepage_webhooks_received_total").description("Total Stripe webhook events received")
                 .tag("event_type", eventType).register(registry).increment();
+    }
+
+    /**
+     * Returns the number of pending Good Sites submissions awaiting moderation.
+     *
+     * @return pending submission count
+     */
+    private long getDirectoryPendingSubmissions() {
+        try {
+            return villagecompute.homepage.data.models.DirectorySite.count("status = 'pending'");
+        } catch (Exception e) {
+            LOG.warnf(e, "Failed to count pending directory submissions, returning 0");
+            return 0L;
+        }
+    }
+
+    /**
+     * Returns the number of dead Good Sites links.
+     *
+     * @return dead site count
+     */
+    private long getDirectoryDeadSites() {
+        try {
+            return villagecompute.homepage.data.models.DirectorySite.count("isDead = true");
+        } catch (Exception e) {
+            LOG.warnf(e, "Failed to count dead directory sites, returning 0");
+            return 0L;
+        }
+    }
+
+    /**
+     * Returns the number of Good Sites eligible for bubbling (score >= 10, rank <= 3).
+     *
+     * @return bubbled site count
+     */
+    private long getDirectoryBubbledSites() {
+        try {
+            return villagecompute.homepage.data.models.DirectorySiteCategory
+                    .count("score >= 10 AND rankInCategory <= 3 AND status = 'approved'");
+        } catch (Exception e) {
+            LOG.warnf(e, "Failed to count bubbled directory sites, returning 0");
+            return 0L;
+        }
+    }
+
+    /**
+     * Returns the number of votes cast in the last 24 hours.
+     *
+     * @return vote count (last 24h)
+     */
+    private long getDirectoryVotes24h() {
+        try {
+            Instant cutoff = Instant.now().minusSeconds(24 * 60 * 60);
+            return villagecompute.homepage.data.models.DirectoryVote.count("createdAt >= ?1", cutoff);
+        } catch (Exception e) {
+            LOG.warnf(e, "Failed to count directory votes (24h), returning 0");
+            return 0L;
+        }
     }
 }

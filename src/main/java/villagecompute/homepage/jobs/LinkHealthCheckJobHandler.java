@@ -90,10 +90,8 @@ public class LinkHealthCheckJobHandler implements JobHandler {
     @Inject
     MeterRegistry meterRegistry;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .connectTimeout(Duration.ofSeconds(TIMEOUT_SECONDS))
-            .build();
+    private final HttpClient httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(TIMEOUT_SECONDS)).build();
 
     @Override
     public JobType handlesType() {
@@ -175,10 +173,8 @@ public class LinkHealthCheckJobHandler implements JobHandler {
     private boolean isLinkAccessible(String url) {
         try {
             // First try HEAD request
-            HttpRequest headRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
+            HttpRequest headRequest = HttpRequest.newBuilder().uri(URI.create(url))
+                    .method("HEAD", HttpRequest.BodyPublishers.noBody()).timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
                     .build();
 
             HttpResponse<Void> response = httpClient.send(headRequest, HttpResponse.BodyHandlers.discarding());
@@ -214,11 +210,8 @@ public class LinkHealthCheckJobHandler implements JobHandler {
      */
     private boolean tryGetRequest(String url) {
         try {
-            HttpRequest getRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .GET()
-                    .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
-                    .build();
+            HttpRequest getRequest = HttpRequest.newBuilder().uri(URI.create(url)).GET()
+                    .timeout(Duration.ofSeconds(TIMEOUT_SECONDS)).build();
 
             HttpResponse<Void> response = httpClient.send(getRequest, HttpResponse.BodyHandlers.discarding());
             int status = response.statusCode();
@@ -246,8 +239,8 @@ public class LinkHealthCheckJobHandler implements JobHandler {
         if (accessible) {
             // Reset failure counter on success
             if (site.healthCheckFailures > 0) {
-                LOG.infof("Site recovered: %s (site_id=%s, previous_failures=%d)",
-                        site.url, site.id, site.healthCheckFailures);
+                LOG.infof("Site recovered: %s (site_id=%s, previous_failures=%d)", site.url, site.id,
+                        site.healthCheckFailures);
 
                 site.healthCheckFailures = 0;
                 site.lastCheckedAt = Instant.now();
@@ -268,15 +261,15 @@ public class LinkHealthCheckJobHandler implements JobHandler {
             // Mark dead after threshold
             if (site.healthCheckFailures >= FAILURE_THRESHOLD && !site.isDead) {
                 site.markDead();
-                LOG.warnf("Site marked dead after %d consecutive failures: %s (site_id=%s)",
-                        site.healthCheckFailures, site.url, site.id);
+                LOG.warnf("Site marked dead after %d consecutive failures: %s (site_id=%s)", site.healthCheckFailures,
+                        site.url, site.id);
 
                 // TODO: Notify moderators (F13.5 requirement)
                 notifyModerators(site);
             } else {
                 site.persist();
-                LOG.warnf("Site health check failed (%d/%d): %s (site_id=%s)",
-                        site.healthCheckFailures, FAILURE_THRESHOLD, site.url, site.id);
+                LOG.warnf("Site health check failed (%d/%d): %s (site_id=%s)", site.healthCheckFailures,
+                        FAILURE_THRESHOLD, site.url, site.id);
             }
         }
     }
@@ -291,8 +284,8 @@ public class LinkHealthCheckJobHandler implements JobHandler {
      *            Site that was marked dead
      */
     private void notifyModerators(DirectorySite site) {
-        LOG.infof("TODO: Notify moderators about dead link: %s (site_id=%s, title=%s, failures=%d)",
-                site.url, site.id, site.title, site.healthCheckFailures);
+        LOG.infof("TODO: Notify moderators about dead link: %s (site_id=%s, title=%s, failures=%d)", site.url, site.id,
+                site.title, site.healthCheckFailures);
 
         // Stub for future email notification
         // String subject = "Dead link detected: " + site.title;

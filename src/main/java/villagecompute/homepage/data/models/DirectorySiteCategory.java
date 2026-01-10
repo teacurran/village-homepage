@@ -246,8 +246,8 @@ public class DirectorySiteCategory extends PanacheEntityBase {
      * </ul>
      *
      * <p>
-     * <b>UI Display:</b> Bubbled sites show with yellow background (#fff9e6) and green badge indicating source category.
-     * They are sorted AFTER direct sites but still ordered by score DESC within the bubbled group.
+     * <b>UI Display:</b> Bubbled sites show with yellow background (#fff9e6) and green badge indicating source
+     * category. They are sorted AFTER direct sites but still ordered by score DESC within the bubbled group.
      *
      * @param parentCategoryId
      *            Parent category UUID

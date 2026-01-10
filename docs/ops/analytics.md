@@ -462,6 +462,371 @@ ORDER BY month DESC;
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2026-01-10
-**Task:** I4.T9
+# Good Sites Analytics Documentation
+
+This section describes analytics dashboards, KPIs, data collection, and monitoring for the Good Sites directory module (Task I5.T8).
+
+## Key Performance Indicators (KPIs)
+
+### Submission KPIs
+
+| Metric | Target | Measurement | Source |
+|--------|--------|-------------|--------|
+| Submission Approval Rate | >80% | Approved / Total Submissions | `SELECT COUNT(*) FROM directory_sites WHERE status='approved' / COUNT(*)` |
+| Pending Submissions | <50 | Count of status='pending' sites | `homepage_directory_pending_submissions` gauge |
+| Avg Time to Approval | <24h | Time from submission to approval | Application logs |
+| AI Categorization Accuracy | >85% | AI suggestions accepted / total | Bulk import job metrics |
+
+### Engagement KPIs
+
+| Metric | Target | Measurement | Source |
+|--------|--------|-------------|--------|
+| Vote Activity | >100/day | Total votes cast per day | `homepage_directory_votes_24h` gauge |
+| Upvote Ratio | >70% | Upvotes / (Upvotes + Downvotes) | `SELECT COUNT(*) WHERE vote=1 / COUNT(*)` |
+| Click-Through Rate | N/A | Clicks / Views per site | `click_stats_daily_items` table |
+| Category Engagement | N/A | Clicks per category per day | `click_stats_daily` table |
+
+### Quality KPIs
+
+| Metric | Target | Measurement | Source |
+|--------|--------|-------------|--------|
+| Dead Link Rate | <5% | Dead sites / Total sites | `homepage_directory_dead_sites` / total sites |
+| Bubbling Effectiveness | N/A | Clicks on bubbled sites / total bubbled | `click_stats_daily_items.bubbled_clicks` |
+| Top Sites Contribution | N/A | Clicks from top 10% sites | `click_stats_daily_items` aggregation |
+
+## Dashboards
+
+### Good Sites Overview Dashboard
+
+**File:** `docs/ops/dashboards/good-sites.json`
+
+**Panels:**
+- **Good Sites Clicks Over Time** (time series): Rate of directory click events by type
+- **Directory Metrics Overview** (stat): Pending submissions, dead links, bubbled sites, votes (24h)
+- **Top Sites by Clicks (30 days)** (table): Top 20 most-clicked sites with total clicks
+- **Category Engagement Heatmap** (heatmap): Click activity by category over time
+- **Bubbled Site Contribution** (bar chart): Top 10 source categories for bubbled clicks
+- **Vote Activity Over Time** (time series): Upvote/downvote rates
+- **Submission Queue Depth** (gauge): Pending submissions with threshold alerts
+- **Dead Link Rate** (gauge): Percentage of dead sites with threshold alerts
+- **Click Rollup Job Duration** (time series): p50/p99 rollup job latency
+
+**Queries:**
+```promql
+# Good Sites clicks rate
+rate(homepage_link_clicks_total{click_type=~"directory_.*"}[5m])
+
+# Pending submissions count
+homepage_directory_pending_submissions
+
+# Dead link rate (%)
+100 * homepage_directory_dead_sites / (count(homepage_directory_sites_total))
+
+# Top sites by clicks (30d)
+topk(20, sum by (target_id) (increase(homepage_link_clicks_total{click_type="directory_site_click"}[30d])))
+
+# Bubbled site contribution
+sum by (source_category) (increase(homepage_link_clicks_total{click_type="directory_bubbled_click"}[30d]))
+
+# Vote activity rate
+rate(homepage_directory_votes_total[5m])
+
+# Click rollup job duration p99
+histogram_quantile(0.99, rate(click_tracking_rollup_duration_bucket[5m]))
+```
+
+## Data Collection
+
+### Click Tracking Implementation
+
+Good Sites click tracking uses the unified `/track/click` endpoint with directory-specific metadata.
+
+**Tracked Events:**
+- `directory_site_click` - Click on site link from category page
+- `directory_category_view` - Category page view
+- `directory_site_view` - Site detail page view
+- `directory_vote` - Vote cast on site
+- `directory_search` - Search query
+- `directory_bubbled_click` - Click on bubbled site from parent category
+
+**Metadata Fields (JSONB):**
+```json
+{
+  "category_id": "uuid",
+  "category_slug": "string",
+  "is_bubbled": "boolean",
+  "source_category_id": "uuid",
+  "rank_in_category": "integer",
+  "score": "integer",
+  "search_query": "string"
+}
+```
+
+**Frontend Integration:**
+Good Sites Qute templates include JavaScript to track clicks:
+
+```javascript
+// Track site click from category page
+fetch('/track/click', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    clickType: 'directory_site_click',
+    targetId: siteId,
+    targetUrl: siteUrl,
+    metadata: {
+      category_id: categoryId,
+      is_bubbled: isBubbled,
+      source_category_id: sourceCategoryId,
+      rank_in_category: rank,
+      score: score
+    }
+  }),
+  keepalive: true
+});
+```
+
+### Daily Rollup Aggregation
+
+Raw click events are aggregated hourly into rollup tables for efficient dashboard queries.
+
+**Aggregation Query (Category Stats):**
+```sql
+INSERT INTO click_stats_daily (stat_date, click_type, category_id, category_name, total_clicks, unique_users, unique_sessions)
+SELECT
+  DATE(click_timestamp) AS stat_date,
+  click_type,
+  category_id,
+  (SELECT name FROM directory_categories WHERE id = category_id),
+  COUNT(*) AS total_clicks,
+  COUNT(DISTINCT COALESCE(user_id, session_id)) AS unique_users,
+  COUNT(DISTINCT session_id) AS unique_sessions
+FROM link_clicks
+WHERE click_date = :targetDate
+  AND click_type LIKE 'directory_%'
+GROUP BY DATE(click_timestamp), click_type, category_id
+ON CONFLICT (stat_date, click_type, category_id)
+DO UPDATE SET
+  total_clicks = EXCLUDED.total_clicks,
+  unique_users = EXCLUDED.unique_users,
+  unique_sessions = EXCLUDED.unique_sessions;
+```
+
+**Aggregation Query (Item Stats with Bubbling):**
+```sql
+INSERT INTO click_stats_daily_items (stat_date, click_type, target_id, total_clicks, unique_users, avg_rank, avg_score, bubbled_clicks)
+SELECT
+  DATE(click_timestamp) AS stat_date,
+  click_type,
+  target_id,
+  COUNT(*) AS total_clicks,
+  COUNT(DISTINCT COALESCE(user_id, session_id)) AS unique_users,
+  AVG((metadata->>'rank_in_category')::NUMERIC) AS avg_rank,
+  AVG((metadata->>'score')::NUMERIC) AS avg_score,
+  COUNT(*) FILTER (WHERE (metadata->>'is_bubbled')::BOOLEAN = true) AS bubbled_clicks
+FROM link_clicks
+WHERE click_date = :targetDate
+  AND click_type = 'directory_site_click'
+  AND target_id IS NOT NULL
+GROUP BY DATE(click_timestamp), click_type, target_id
+ON CONFLICT (stat_date, click_type, target_id)
+DO UPDATE SET
+  total_clicks = EXCLUDED.total_clicks,
+  unique_users = EXCLUDED.unique_users,
+  avg_rank = EXCLUDED.avg_rank,
+  avg_score = EXCLUDED.avg_score,
+  bubbled_clicks = EXCLUDED.bubbled_clicks;
+```
+
+### Data Retention
+
+- **Raw Click Logs:** 90-day retention via partitioned `link_clicks` table (Policy F14.9)
+- **Rollup Tables:** Indefinite retention for historical analytics
+- **Partition Cleanup:** Daily job drops expired partitions at 4am UTC
+
+## Dashboard Queries
+
+### Top Sites by Clicks (Last 30 Days)
+
+```sql
+SELECT
+  ds.id,
+  ds.title,
+  ds.url,
+  ds.domain,
+  SUM(csd.total_clicks) AS total_clicks,
+  SUM(csd.unique_users) AS unique_visitors,
+  AVG(csd.avg_score) AS avg_score
+FROM click_stats_daily_items csd
+JOIN directory_sites ds ON csd.target_id = ds.id
+WHERE csd.click_type = 'directory_site_click'
+  AND csd.stat_date >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY ds.id, ds.title, ds.url, ds.domain
+ORDER BY total_clicks DESC
+LIMIT 20;
+```
+
+### Bubbled Site Effectiveness (Source Category Contribution)
+
+```sql
+SELECT
+  dc.name AS source_category,
+  dc.slug,
+  COUNT(DISTINCT csd.target_id) AS unique_sites_clicked,
+  SUM(csd.bubbled_clicks) AS total_bubbled_clicks,
+  SUM(csd.total_clicks) AS total_clicks,
+  ROUND(100.0 * SUM(csd.bubbled_clicks) / NULLIF(SUM(csd.total_clicks), 0), 2) AS bubbled_click_ratio
+FROM click_stats_daily_items csd
+JOIN directory_sites ds ON csd.target_id = ds.id
+JOIN directory_site_categories dsc ON dsc.site_id = ds.id
+JOIN directory_categories dc ON dsc.category_id = dc.id
+WHERE csd.click_type = 'directory_site_click'
+  AND csd.stat_date >= CURRENT_DATE - INTERVAL '30 days'
+  AND csd.bubbled_clicks > 0
+GROUP BY dc.name, dc.slug
+ORDER BY total_bubbled_clicks DESC
+LIMIT 10;
+```
+
+### Category Engagement Heatmap
+
+```sql
+SELECT
+  dc.name AS category,
+  dc.slug,
+  DATE(csd.stat_date) AS day,
+  SUM(csd.total_clicks) AS clicks,
+  SUM(csd.unique_users) AS unique_visitors
+FROM click_stats_daily csd
+JOIN directory_categories dc ON csd.category_id = dc.id
+WHERE csd.click_type IN ('directory_category_view', 'directory_site_click')
+  AND csd.stat_date >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY dc.name, dc.slug, DATE(csd.stat_date)
+ORDER BY day DESC, clicks DESC;
+```
+
+### Submission Funnel (Last 30 Days)
+
+```sql
+SELECT
+  status,
+  COUNT(*) AS count,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS percentage
+FROM directory_sites
+WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY status
+ORDER BY
+  CASE status
+    WHEN 'pending' THEN 1
+    WHEN 'approved' THEN 2
+    WHEN 'rejected' THEN 3
+    ELSE 4
+  END;
+```
+
+### Vote Activity Analysis
+
+```sql
+SELECT
+  DATE_TRUNC('hour', created_at) AS hour,
+  CASE WHEN vote = 1 THEN 'upvote' ELSE 'downvote' END AS vote_type,
+  COUNT(*) AS votes
+FROM directory_votes
+WHERE created_at >= NOW() - INTERVAL '7 days'
+GROUP BY DATE_TRUNC('hour', created_at), vote_type
+ORDER BY hour DESC;
+```
+
+## Monitoring & Alerting
+
+### Prometheus Alert Rules
+
+**File:** `docs/ops/alerts/good-sites.yaml`
+
+```yaml
+groups:
+  - name: good-sites
+    interval: 30s
+    rules:
+      - alert: GoodSitesSubmissionBacklog
+        expr: homepage_directory_pending_submissions > 50
+        for: 1h
+        labels:
+          severity: warning
+          component: good-sites
+        annotations:
+          summary: "Good Sites submission queue backlog >50"
+          description: "Pending submissions: {{ $value }}. Review moderation queue."
+
+      - alert: GoodSitesDeadLinkRateHigh
+        expr: 100 * homepage_directory_dead_sites / (homepage_directory_dead_sites + on() (count(homepage_directory_sites_total) - homepage_directory_dead_sites)) > 10
+        for: 6h
+        labels:
+          severity: warning
+          component: good-sites
+        annotations:
+          summary: "Good Sites dead link rate >10%"
+          description: "Dead link rate: {{ $value | humanizePercentage }}. Run link health check job."
+
+      - alert: GoodSitesVoteActivityLow
+        expr: rate(homepage_directory_votes_24h[1h]) < (10 / 3600)
+        for: 4h
+        labels:
+          severity: info
+          component: good-sites
+        annotations:
+          summary: "Good Sites vote activity <10 votes/hour"
+          description: "Recent vote rate: {{ $value }} votes/sec. Check user engagement."
+
+      - alert: ClickRollupJobSlow
+        expr: histogram_quantile(0.99, rate(click_tracking_rollup_duration_bucket[5m])) > 60
+        for: 15m
+        labels:
+          severity: warning
+          component: analytics
+        annotations:
+          summary: "Click rollup job p99 latency >60s"
+          description: "Rollup job duration p99: {{ $value }}s. Check database performance."
+```
+
+### Runbook: High Submission Backlog
+
+**Symptom:** `homepage_directory_pending_submissions` gauge >50 for 1+ hour
+
+**Diagnosis:**
+1. Check moderation queue: `SELECT COUNT(*) FROM directory_sites WHERE status='pending'`
+2. Review recent submissions: `SELECT * FROM directory_sites WHERE status='pending' ORDER BY created_at DESC LIMIT 10`
+3. Check karma audit for trusted user promotion: `SELECT * FROM karma_audit ORDER BY created_at DESC LIMIT 20`
+
+**Remediation:**
+- Assign moderators to review pending submissions
+- Promote high-karma users to trusted status (auto-approve submissions)
+- Run bulk import with AI categorization for quick review
+
+### Runbook: High Dead Link Rate
+
+**Symptom:** Dead link rate >10% for 6+ hours
+
+**Diagnosis:**
+1. Count dead sites: `SELECT COUNT(*) FROM directory_sites WHERE isDead=true`
+2. Review recent link health check results: Check LinkHealthCheckJobHandler logs
+3. Identify failing domains: `SELECT domain, COUNT(*) FROM directory_sites WHERE isDead=true GROUP BY domain ORDER BY COUNT(*) DESC`
+
+**Remediation:**
+- Run manual link health check: Trigger LinkHealthCheckJobHandler
+- Contact site maintainers for affected sites
+- Consider removing consistently dead sites after review
+
+## Implementation References
+
+- **Click Tracking Endpoint:** `src/main/java/villagecompute/homepage/api/rest/ClickTrackingResource.java`
+- **Rollup Job Handler:** `src/main/java/villagecompute/homepage/jobs/ClickRollupJobHandler.java`
+- **Metrics Registration:** `src/main/java/villagecompute/homepage/observability/ObservabilityMetrics.java`
+- **Database Schema:** `migrations/scripts/20250111000700_create_link_clicks.sql`, `migrations/scripts/20250111000800_create_click_stats_rollup.sql`
+- **Grafana Dashboard:** `docs/ops/dashboards/good-sites.json`
+
+---
+
+**Document Version:** 1.1
+**Last Updated:** 2026-01-11
+**Tasks:** I4.T9 (Marketplace), I5.T8 (Good Sites)

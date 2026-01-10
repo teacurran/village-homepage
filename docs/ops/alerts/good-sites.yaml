@@ -1,0 +1,163 @@
+# Prometheus Alert Rules for Good Sites Directory (Task I5.T8)
+#
+# These alerts monitor the health and performance of the Good Sites directory module,
+# including submission queues, link health, user engagement, and analytics jobs.
+#
+# Integration: Deploy to Prometheus via ConfigMap or file mount
+# Dashboard: See docs/ops/dashboards/good-sites.json for matching Grafana dashboard
+# Runbooks: See docs/ops/analytics.md for remediation procedures
+
+groups:
+  - name: good-sites
+    interval: 30s
+    rules:
+      # Submission Queue Alerts
+      - alert: GoodSitesSubmissionBacklog
+        expr: homepage_directory_pending_submissions > 50
+        for: 1h
+        labels:
+          severity: warning
+          component: good-sites
+          category: submission-queue
+        annotations:
+          summary: "Good Sites submission queue backlog exceeds 50"
+          description: "Pending submissions: {{ $value }}. Review moderation queue and consider promoting high-karma users to trusted status."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/good-sites#high-submission-backlog"
+
+      - alert: GoodSitesSubmissionBacklogCritical
+        expr: homepage_directory_pending_submissions > 100
+        for: 2h
+        labels:
+          severity: critical
+          component: good-sites
+          category: submission-queue
+        annotations:
+          summary: "Good Sites submission queue backlog exceeds 100"
+          description: "Pending submissions: {{ $value }}. Urgent: Assign additional moderators or enable AI-assisted bulk approval."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/good-sites#high-submission-backlog"
+
+      # Link Health Alerts
+      - alert: GoodSitesDeadLinkRateHigh
+        expr: 100 * homepage_directory_dead_sites / (count(homepage_directory_sites_total) or vector(1)) > 10
+        for: 6h
+        labels:
+          severity: warning
+          component: good-sites
+          category: link-health
+        annotations:
+          summary: "Good Sites dead link rate exceeds 10%"
+          description: "Dead link rate: {{ $value | humanizePercentage }}. Run link health check job to update site statuses."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/good-sites#high-dead-link-rate"
+
+      - alert: GoodSitesDeadLinkRateCritical
+        expr: 100 * homepage_directory_dead_sites / (count(homepage_directory_sites_total) or vector(1)) > 20
+        for: 12h
+        labels:
+          severity: critical
+          component: good-sites
+          category: link-health
+        annotations:
+          summary: "Good Sites dead link rate exceeds 20%"
+          description: "Dead link rate: {{ $value | humanizePercentage }}. Critical: Investigate link health check job failures."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/good-sites#high-dead-link-rate"
+
+      # User Engagement Alerts
+      - alert: GoodSitesVoteActivityLow
+        expr: rate(homepage_directory_votes_24h[1h]) < (10 / 3600)
+        for: 4h
+        labels:
+          severity: info
+          component: good-sites
+          category: engagement
+        annotations:
+          summary: "Good Sites vote activity below 10 votes/hour"
+          description: "Recent vote rate: {{ $value | humanize }} votes/sec. Monitor user engagement trends."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/good-sites#low-vote-activity"
+
+      - alert: GoodSitesNoVotesRecent
+        expr: homepage_directory_votes_24h == 0
+        for: 8h
+        labels:
+          severity: warning
+          component: good-sites
+          category: engagement
+        annotations:
+          summary: "Good Sites has received zero votes in last 24 hours"
+          description: "No voting activity detected. Check if voting feature is functional and accessible to users."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/good-sites#zero-vote-activity"
+
+      # Analytics Job Alerts
+      - alert: ClickRollupJobSlow
+        expr: histogram_quantile(0.99, rate(click_tracking_rollup_duration_bucket[5m])) > 60
+        for: 15m
+        labels:
+          severity: warning
+          component: analytics
+          category: click-tracking
+        annotations:
+          summary: "Click rollup job p99 latency exceeds 60 seconds"
+          description: "Rollup job duration p99: {{ $value | humanizeDuration }}. Check database performance and click volume."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/analytics#slow-rollup-job"
+
+      - alert: ClickRollupJobFailed
+        expr: increase(click_tracking_rollup_errors_total[1h]) > 3
+        for: 15m
+        labels:
+          severity: critical
+          component: analytics
+          category: click-tracking
+        annotations:
+          summary: "Click rollup job failures detected"
+          description: "Rollup job errors in last hour: {{ $value }}. Check ClickRollupJobHandler logs for details."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/analytics#rollup-job-failures"
+
+      # Bubbling Feature Alerts
+      - alert: GoodSitesBubblingStalled
+        expr: changes(homepage_directory_bubbled_sites[1h]) == 0 and homepage_directory_bubbled_sites > 0
+        for: 6h
+        labels:
+          severity: info
+          component: good-sites
+          category: bubbling
+        annotations:
+          summary: "Good Sites bubbling count unchanged for 6 hours"
+          description: "Bubbled sites: {{ $value }}. Check if rank recalculation job is running correctly."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/good-sites#bubbling-stalled"
+
+      # Click Tracking Volume Alerts
+      - alert: ClickTrackingVolumeSpike
+        expr: rate(homepage_link_clicks_total{click_type=~"directory_.*"}[5m]) > 100
+        for: 10m
+        labels:
+          severity: warning
+          component: analytics
+          category: click-tracking
+        annotations:
+          summary: "Directory click tracking volume spike detected"
+          description: "Click rate: {{ $value | humanize }} clicks/sec. Monitor for potential abuse or bot traffic."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/analytics#click-volume-spike"
+
+      - alert: ClickTrackingVolumeDrop
+        expr: rate(homepage_link_clicks_total{click_type=~"directory_.*"}[5m]) < 0.01
+        for: 30m
+        labels:
+          severity: warning
+          component: analytics
+          category: click-tracking
+        annotations:
+          summary: "Directory click tracking volume unusually low"
+          description: "Click rate: {{ $value | humanize }} clicks/sec. Check if tracking endpoint is accessible."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/analytics#click-volume-drop"
+
+      # Database Health Alerts
+      - alert: LinkClicksPartitionMissing
+        expr: (day_of_month() + 1) > 25 and absent(link_clicks_partition_created{month=string(month() + 1)})
+        for: 24h
+        labels:
+          severity: critical
+          component: analytics
+          category: database
+        annotations:
+          summary: "Next month's link_clicks partition not created"
+          description: "Create partition for upcoming month to avoid insert failures at month boundary."
+          runbook_url: "https://homepage.villagecompute.com/docs/ops/runbooks/analytics#missing-partition"

@@ -153,11 +153,22 @@ public enum JobType {
      * <p>
      * <b>Cadence:</b> Hourly
      * <p>
-     * <b>Handler:</b> ClickRollupHandler (future)
+     * <b>Handler:</b> ClickRollupJobHandler
      * <p>
      * <b>Policy P14:</b> Consent-gated, 90-day retention enforced
      */
     CLICK_ROLLUP(JobQueue.LOW, "Click rollup (hourly)"),
+
+    /**
+     * Drops expired partitions from link_clicks table to enforce 90-day retention.
+     * <p>
+     * <b>Cadence:</b> Daily at 4am UTC
+     * <p>
+     * <b>Handler:</b> PartitionCleanupJobHandler
+     * <p>
+     * <b>Policy F14.9:</b> 90-day retention for raw click logs
+     */
+    PARTITION_CLEANUP(JobQueue.LOW, "Partition cleanup (daily, F14.9 enforced)"),
 
     // ========== BULK QUEUE ==========
 

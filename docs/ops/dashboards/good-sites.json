@@ -1,0 +1,251 @@
+{
+  "dashboard": {
+    "title": "Good Sites Analytics",
+    "tags": ["good-sites", "directory", "analytics"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "1m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Good Sites Clicks Over Time",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(homepage_link_clicks_total{click_type=~\"directory_.*\"}[5m])",
+            "legendFormat": "{{click_type}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "unit": "reqps"
+          }
+        },
+        "options": {
+          "legend": {"displayMode": "table", "placement": "right"}
+        }
+      },
+      {
+        "id": 2,
+        "title": "Directory Metrics Overview",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "homepage_directory_pending_submissions",
+            "legendFormat": "Pending Submissions",
+            "refId": "A"
+          },
+          {
+            "expr": "homepage_directory_dead_sites",
+            "legendFormat": "Dead Links",
+            "refId": "B"
+          },
+          {
+            "expr": "homepage_directory_bubbled_sites",
+            "legendFormat": "Bubbled Sites",
+            "refId": "C"
+          },
+          {
+            "expr": "homepage_directory_votes_24h",
+            "legendFormat": "Votes (24h)",
+            "refId": "D"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "orientation": "auto"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Top Sites by Clicks (30 days)",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 10},
+        "targets": [
+          {
+            "expr": "topk(20, sum by (target_id) (increase(homepage_link_clicks_total{click_type=\"directory_site_click\"}[30d])))",
+            "format": "table",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Value", "desc": true}]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "target_id": "Site ID",
+                "Value": "Total Clicks"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Category Engagement Heatmap",
+        "type": "heatmap",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 10},
+        "targets": [
+          {
+            "expr": "sum by (category_id) (rate(homepage_link_clicks_total{click_type=~\"directory_.*\",category_id!=\"\"}[1h]))",
+            "legendFormat": "{{category_id}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "calculate": true,
+          "calculation": {
+            "xBuckets": {"mode": "size", "value": "1h"}
+          },
+          "color": {
+            "mode": "spectrum",
+            "scheme": "Viridis"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Bubbled Site Contribution by Source Category",
+        "type": "barchart",
+        "gridPos": {"x": 0, "y": 18, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (source_category) (increase(homepage_link_clicks_total{click_type=\"directory_bubbled_click\"}[30d])))",
+            "legendFormat": "{{source_category}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "xTickLabelRotation": 0,
+          "showValue": "always"
+        }
+      },
+      {
+        "id": 6,
+        "title": "Vote Activity Over Time",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 18, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(homepage_directory_votes_total{vote_type=\"upvote\"}[5m])",
+            "legendFormat": "Upvotes",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(homepage_directory_votes_total{vote_type=\"downvote\"}[5m])",
+            "legendFormat": "Downvotes",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20,
+              "stacking": {"mode": "normal"}
+            },
+            "unit": "vps"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Submission Queue Depth",
+        "type": "gauge",
+        "gridPos": {"x": 0, "y": 26, "w": 6, "h": 6},
+        "targets": [
+          {
+            "expr": "homepage_directory_pending_submissions",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 20, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            },
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Dead Link Rate (%)",
+        "type": "gauge",
+        "gridPos": {"x": 6, "y": 26, "w": 6, "h": 6},
+        "targets": [
+          {
+            "expr": "100 * homepage_directory_dead_sites / (homepage_directory_dead_sites + on() (count(homepage_directory_sites_total) - homepage_directory_dead_sites))",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "max": 20,
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Click Rollup Job Duration",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 26, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, rate(click_tracking_rollup_duration_bucket[5m]))",
+            "legendFormat": "p99",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(click_tracking_rollup_duration_bucket[5m]))",
+            "legendFormat": "p50",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      }
+    ]
+  }
+}

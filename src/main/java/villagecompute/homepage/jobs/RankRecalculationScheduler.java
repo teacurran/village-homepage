@@ -45,7 +45,8 @@ public class RankRecalculationScheduler {
      * Runs at the top of every hour (0 minutes past the hour). Enqueues a single job that processes all active
      * categories and updates site rankings.
      */
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(
+            cron = "0 0 * * * ?")
     void scheduleRankRecalculation() {
         Map<String, Object> payload = Map.of();
         jobService.enqueue(JobType.RANK_RECALCULATION, payload);

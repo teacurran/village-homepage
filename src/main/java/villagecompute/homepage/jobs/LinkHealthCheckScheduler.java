@@ -44,7 +44,8 @@ public class LinkHealthCheckScheduler {
      * <p>
      * Runs every Sunday at 3am UTC. Enqueues a single job that processes all approved sites in the directory.
      */
-    @Scheduled(cron = "0 0 3 ? * SUN")
+    @Scheduled(
+            cron = "0 0 3 ? * SUN")
     void scheduleLinkHealthCheck() {
         Map<String, Object> payload = Map.of();
         jobService.enqueue(JobType.LINK_HEALTH_CHECK, payload);
