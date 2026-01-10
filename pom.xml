@@ -226,6 +226,13 @@
             <version>${rome.version}</version>
         </dependency>
 
+        <!-- jvppeteer for Screenshot Capture (Policy P12, Feature F13.3) -->
+        <dependency>
+            <groupId>io.github.fanyong920</groupId>
+            <artifactId>jvppeteer</artifactId>
+            <version>3.4.1</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>io.quarkus</groupId>

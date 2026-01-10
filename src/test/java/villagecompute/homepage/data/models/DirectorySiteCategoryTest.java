@@ -17,13 +17,14 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests for DirectorySiteCategory junction entity covering site-category memberships and voting.
  *
- * <p>Test coverage:
+ * <p>
+ * Test coverage:
  * <ul>
- *   <li>Site can exist in multiple categories</li>
- *   <li>Each site-category has separate status/voting</li>
- *   <li>Approval increments category link count</li>
- *   <li>Vote aggregate updates (upvotes, downvotes, score)</li>
- *   <li>Moderation queue per category</li>
+ * <li>Site can exist in multiple categories</li>
+ * <li>Each site-category has separate status/voting</li>
+ * <li>Approval increments category link count</li>
+ * <li>Vote aggregate updates (upvotes, downvotes, score)</li>
+ * <li>Moderation queue per category</li>
  * </ul>
  */
 @QuarkusTest

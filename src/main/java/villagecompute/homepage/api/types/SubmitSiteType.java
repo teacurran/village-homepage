@@ -9,12 +9,14 @@ import java.util.UUID;
 /**
  * Request type for submitting a site to the Good Sites directory.
  *
- * <p>Supports submission to multiple categories simultaneously (common for
- * cross-cutting sites like news portals or developer tools). Title and
- * description are optional - if not provided, they will be fetched from
- * OpenGraph metadata.</p>
+ * <p>
+ * Supports submission to multiple categories simultaneously (common for cross-cutting sites like news portals or
+ * developer tools). Title and description are optional - if not provided, they will be fetched from OpenGraph metadata.
+ * </p>
  *
- * <p>Example request:
+ * <p>
+ * Example request:
+ *
  * <pre>{@code
  * {
  *   "url": "https://news.ycombinator.com",
@@ -25,39 +27,33 @@ import java.util.UUID;
  * }
  * }</pre>
  */
-public record SubmitSiteType(
-        @JsonProperty("url")
-        @NotBlank(message = "URL is required")
-        @Pattern(
+public record SubmitSiteType(@JsonProperty("url") @NotBlank(
+        message = "URL is required") @Pattern(
                 regexp = "^https?://.+",
-                message = "URL must start with http:// or https://"
-        )
-        String url,
+                message = "URL must start with http:// or https://") String url,
 
-        @JsonProperty("category_ids")
-        @NotEmpty(message = "At least one category is required")
-        @Size(min = 1, max = 3, message = "Must specify 1-3 categories")
-        List<UUID> categoryIds,
+        @JsonProperty("category_ids") @NotEmpty(
+                message = "At least one category is required") @Size(
+                        min = 1,
+                        max = 3,
+                        message = "Must specify 1-3 categories") List<UUID> categoryIds,
 
-        @JsonProperty("title")
-        @Size(max = 200, message = "Title must not exceed 200 characters")
-        String title,
+        @JsonProperty("title") @Size(
+                max = 200,
+                message = "Title must not exceed 200 characters") String title,
 
-        @JsonProperty("description")
-        @Size(max = 2000, message = "Description must not exceed 2000 characters")
-        String description,
+        @JsonProperty("description") @Size(
+                max = 2000,
+                message = "Description must not exceed 2000 characters") String description,
 
-        @JsonProperty("custom_image_url")
-        @Pattern(
+        @JsonProperty("custom_image_url") @Pattern(
                 regexp = "^https://.+",
-                message = "Custom image URL must be HTTPS"
-        )
-        String customImageUrl
-) {
+                message = "Custom image URL must be HTTPS") String customImageUrl) {
     /**
      * Validates category count constraints.
      *
-     * @throws IllegalArgumentException if validation fails
+     * @throws IllegalArgumentException
+     *             if validation fails
      */
     public void validate() {
         if (categoryIds == null || categoryIds.isEmpty()) {

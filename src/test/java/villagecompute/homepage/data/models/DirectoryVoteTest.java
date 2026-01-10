@@ -2,7 +2,6 @@ package villagecompute.homepage.data.models;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,13 +16,14 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests for DirectoryVote entity covering voting mechanics and constraints.
  *
- * <p>Test coverage:
+ * <p>
+ * Test coverage:
  * <ul>
- *   <li>One vote per user per site+category (unique constraint)</li>
- *   <li>Vote value must be +1 or -1</li>
- *   <li>Vote aggregates update correctly</li>
- *   <li>Users can change their vote</li>
- *   <li>Cascade delete when user or site-category deleted</li>
+ * <li>One vote per user per site+category (unique constraint)</li>
+ * <li>Vote value must be +1 or -1</li>
+ * <li>Vote aggregates update correctly</li>
+ * <li>Users can change their vote</li>
+ * <li>Cascade delete when user or site-category deleted</li>
  * </ul>
  */
 @QuarkusTest
@@ -208,10 +208,10 @@ class DirectoryVoteTest {
         User user3 = createUser("user3@example.com");
         User user4 = createUser("user4@example.com");
 
-        createVote(testUserId, (short) 1);   // +1
-        createVote(user2.id, (short) 1);     // +1
-        createVote(user3.id, (short) 1);     // +1
-        createVote(user4.id, (short) -1);    // -1
+        createVote(testUserId, (short) 1); // +1
+        createVote(user2.id, (short) 1); // +1
+        createVote(user3.id, (short) 1); // +1
+        createVote(user4.id, (short) -1); // -1
 
         int score = DirectoryVote.calculateScore(testSiteCategoryId);
         assertEquals(2, score); // 3 upvotes - 1 downvote = 2
@@ -254,8 +254,7 @@ class DirectoryVoteTest {
     }
 
     /**
-     * Test: Cascade delete when user deleted.
-     * Note: Skipped because cascade behavior may vary in H2 vs PostgreSQL
+     * Test: Cascade delete when user deleted. Note: Skipped because cascade behavior may vary in H2 vs PostgreSQL
      */
     @Test
     @org.junit.jupiter.api.Disabled("Cascade delete behavior varies by database")
@@ -270,8 +269,8 @@ class DirectoryVoteTest {
     }
 
     /**
-     * Test: Cascade delete when site-category deleted.
-     * Note: Skipped because cascade behavior may vary in H2 vs PostgreSQL
+     * Test: Cascade delete when site-category deleted. Note: Skipped because cascade behavior may vary in H2 vs
+     * PostgreSQL
      */
     @Test
     @org.junit.jupiter.api.Disabled("Cascade delete behavior varies by database")

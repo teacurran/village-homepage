@@ -24,17 +24,22 @@ import java.util.UUID;
 /**
  * DirectoryService handles business logic for Good Sites directory.
  *
- * <p>Primary responsibilities:
+ * <p>
+ * Primary responsibilities:
  * <ul>
- *   <li>Site submission with metadata fetching</li>
- *   <li>Duplicate detection</li>
- *   <li>Karma-based auto-approval</li>
- *   <li>Content sanitization</li>
- *   <li>Moderation queue management</li>
+ * <li>Site submission with metadata fetching</li>
+ * <li>Duplicate detection</li>
+ * <li>Karma-based auto-approval</li>
+ * <li>Content sanitization</li>
+ * <li>Moderation queue management</li>
  * </ul>
  *
- * <p>Feature: F13.2 - Hand-curated web directory</p>
- * <p>Policy: P13 - User-generated content moderation</p>
+ * <p>
+ * Feature: F13.2 - Hand-curated web directory
+ * </p>
+ * <p>
+ * Policy: P13 - User-generated content moderation
+ * </p>
  */
 @ApplicationScoped
 public class DirectoryService {
@@ -44,31 +49,38 @@ public class DirectoryService {
     /**
      * Submits a new site to the directory.
      *
-     * <p>Flow:
+     * <p>
+     * Flow:
      * <ol>
-     *   <li>Normalize and validate URL</li>
-     *   <li>Check for duplicate (same URL already submitted)</li>
-     *   <li>Fetch OpenGraph metadata (title/description/image)</li>
-     *   <li>Sanitize user-provided overrides</li>
-     *   <li>Check user's karma trust level</li>
-     *   <li>Create DirectorySite with appropriate status</li>
-     *   <li>Create DirectorySiteCategory entries for each category</li>
-     *   <li>Return submission result with moderation status</li>
+     * <li>Normalize and validate URL</li>
+     * <li>Check for duplicate (same URL already submitted)</li>
+     * <li>Fetch OpenGraph metadata (title/description/image)</li>
+     * <li>Sanitize user-provided overrides</li>
+     * <li>Check user's karma trust level</li>
+     * <li>Create DirectorySite with appropriate status</li>
+     * <li>Create DirectorySiteCategory entries for each category</li>
+     * <li>Return submission result with moderation status</li>
      * </ol>
      *
-     * <p>Auto-approval logic (karma-based):
+     * <p>
+     * Auto-approval logic (karma-based):
      * <ul>
-     *   <li>untrusted → pending (requires moderation)</li>
-     *   <li>trusted → approved (auto-approve)</li>
-     *   <li>moderator → approved (auto-approve)</li>
+     * <li>untrusted → pending (requires moderation)</li>
+     * <li>trusted → approved (auto-approve)</li>
+     * <li>moderator → approved (auto-approve)</li>
      * </ul>
      *
-     * @param userId User submitting the site
-     * @param request Submission request with URL and categories
+     * @param userId
+     *            User submitting the site
+     * @param request
+     *            Submission request with URL and categories
      * @return Submission result with status
-     * @throws DuplicateResourceException if URL already submitted
-     * @throws ResourceNotFoundException if category doesn't exist
-     * @throws ValidationException if validation fails
+     * @throws DuplicateResourceException
+     *             if URL already submitted
+     * @throws ResourceNotFoundException
+     *             if category doesn't exist
+     * @throws ValidationException
+     *             if validation fails
      */
     @Transactional
     public SiteSubmissionResultType submitSite(UUID userId, SubmitSiteType request) {
@@ -82,8 +94,7 @@ public class DirectoryService {
         Optional<DirectorySite> existingOpt = DirectorySite.findByUrl(normalizedUrl);
         if (existingOpt.isPresent()) {
             throw new DuplicateResourceException(
-                    "Site already submitted: " + normalizedUrl + " (ID: " + existingOpt.get().id + ")"
-            );
+                    "Site already submitted: " + normalizedUrl + " (ID: " + existingOpt.get().id + ")");
         }
 
         // 3. Validate categories exist
@@ -106,8 +117,7 @@ public class DirectoryService {
         boolean autoApprove = "trusted".equals(user.directoryTrustLevel)
                 || "moderator".equals(user.directoryTrustLevel);
 
-        LOG.infof("User %s trust level: %s, auto-approve: %s",
-                userId, user.directoryTrustLevel, autoApprove);
+        LOG.infof("User %s trust level: %s, auto-approve: %s", userId, user.directoryTrustLevel, autoApprove);
 
         // 6. Create DirectorySite
         DirectorySite site = new DirectorySite();
@@ -155,34 +165,28 @@ public class DirectoryService {
 
             siteCategory.persist();
 
-            LOG.infof("Created DirectorySiteCategory %s for site %s in category %s (status: %s)",
-                    siteCategory.id, site.id, categoryId, siteCategory.status);
+            LOG.infof("Created DirectorySiteCategory %s for site %s in category %s (status: %s)", siteCategory.id,
+                    site.id, categoryId, siteCategory.status);
         }
 
         // 8. Return result
         if (autoApprove) {
-            return SiteSubmissionResultType.approved(
-                    site.id,
-                    metadata.title(),
-                    metadata.description(),
-                    approvedCategories
-            );
+            return SiteSubmissionResultType.approved(site.id, metadata.title(), metadata.description(),
+                    approvedCategories);
         } else {
-            return SiteSubmissionResultType.pending(
-                    site.id,
-                    metadata.title(),
-                    metadata.description(),
-                    pendingCategories
-            );
+            return SiteSubmissionResultType.pending(site.id, metadata.title(), metadata.description(),
+                    pendingCategories);
         }
     }
 
     /**
      * Retrieves a site by ID.
      *
-     * @param siteId Site ID
+     * @param siteId
+     *            Site ID
      * @return Site data
-     * @throws ResourceNotFoundException if site not found
+     * @throws ResourceNotFoundException
+     *             if site not found
      */
     @Transactional
     public DirectorySiteType getSite(UUID siteId) {
@@ -196,27 +200,32 @@ public class DirectoryService {
     /**
      * Lists sites submitted by a user.
      *
-     * @param userId User ID
+     * @param userId
+     *            User ID
      * @return List of user's submitted sites
      */
     @Transactional
     public List<DirectorySiteType> getUserSubmissions(UUID userId) {
         List<DirectorySite> sites = DirectorySite.findByUserId(userId);
-        return sites.stream()
-                .map(DirectorySiteType::fromEntity)
-                .toList();
+        return sites.stream().map(DirectorySiteType::fromEntity).toList();
     }
 
     /**
      * Deletes a site submission.
      *
-     * <p>Can only be deleted by the submitting user or an admin.
-     * Cascade deletes DirectorySiteCategory and DirectoryVote records.</p>
+     * <p>
+     * Can only be deleted by the submitting user or an admin. Cascade deletes DirectorySiteCategory and DirectoryVote
+     * records.
+     * </p>
      *
-     * @param siteId Site ID to delete
-     * @param userId User requesting deletion
-     * @throws ResourceNotFoundException if site not found
-     * @throws ValidationException if user not authorized
+     * @param siteId
+     *            Site ID to delete
+     * @param userId
+     *            User requesting deletion
+     * @throws ResourceNotFoundException
+     *             if site not found
+     * @throws ValidationException
+     *             if user not authorized
      */
     @Transactional
     public void deleteSite(UUID siteId, UUID userId) {
@@ -254,11 +263,15 @@ public class DirectoryService {
     /**
      * Fetches OpenGraph metadata from URL.
      *
-     * <p>For I5.T2: Simple implementation using user-provided overrides.
-     * TODO (I5.T3): Enhance with actual HTTP fetch and OpenGraph parsing.</p>
+     * <p>
+     * For I5.T2: Simple implementation using user-provided overrides. TODO (I5.T3): Enhance with actual HTTP fetch and
+     * OpenGraph parsing.
+     * </p>
      *
-     * @param url Normalized URL
-     * @param request User submission request
+     * @param url
+     *            Normalized URL
+     * @param request
+     *            User submission request
      * @return Site metadata
      */
     private SiteMetadata fetchMetadata(String url, SubmitSiteType request) {
@@ -291,7 +304,8 @@ public class DirectoryService {
     /**
      * Extracts a title from URL (fallback when metadata fetch fails).
      *
-     * @param url URL to extract title from
+     * @param url
+     *            URL to extract title from
      * @return Extracted title (domain name)
      */
     private String extractTitleFromUrl(String url) {
@@ -308,10 +322,13 @@ public class DirectoryService {
     /**
      * Sanitizes user-provided content to prevent XSS.
      *
-     * <p>Removes all HTML tags while preserving text content.
-     * Simple implementation using regex. TODO: Use Jsoup for more robust sanitization.</p>
+     * <p>
+     * Removes all HTML tags while preserving text content. Simple implementation using regex. TODO: Use Jsoup for more
+     * robust sanitization.
+     * </p>
      *
-     * @param input User input
+     * @param input
+     *            User input
      * @return Sanitized output
      */
     private String sanitize(String input) {
@@ -325,12 +342,7 @@ public class DirectoryService {
     /**
      * Internal DTO for site metadata.
      */
-    private record SiteMetadata(
-            String title,
-            String description,
-            String ogImageUrl,
-            String faviconUrl,
-            String customImageUrl
-    ) {
+    private record SiteMetadata(String title, String description, String ogImageUrl, String faviconUrl,
+            String customImageUrl) {
     }
 }

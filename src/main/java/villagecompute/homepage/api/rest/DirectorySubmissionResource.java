@@ -22,32 +22,36 @@ import java.util.UUID;
 /**
  * User-facing REST endpoints for Good Sites directory submissions (Feature F13.2).
  *
- * <p>Responsibilities:
+ * <p>
+ * Responsibilities:
  * <ul>
- *   <li>POST /api/good-sites/submissions – Submit site to directory</li>
- *   <li>GET /api/good-sites/submissions – List user's submissions</li>
- *   <li>GET /api/good-sites/submissions/{id} – Get submission status</li>
- *   <li>DELETE /api/good-sites/submissions/{id} – Remove own submission</li>
+ * <li>POST /api/good-sites/submissions – Submit site to directory</li>
+ * <li>GET /api/good-sites/submissions – List user's submissions</li>
+ * <li>GET /api/good-sites/submissions/{id} – Get submission status</li>
+ * <li>DELETE /api/good-sites/submissions/{id} – Remove own submission</li>
  * </ul>
  *
- * <p>Security: All endpoints require authentication. Users can only view/modify
- * their own submissions (ownership enforced via user_id check). Moderators can
- * approve/reject submissions via separate admin endpoints.</p>
+ * <p>
+ * Security: All endpoints require authentication. Users can only view/modify their own submissions (ownership enforced
+ * via user_id check). Moderators can approve/reject submissions via separate admin endpoints.
+ * </p>
  *
- * <p>Karma-based auto-approval:
+ * <p>
+ * Karma-based auto-approval:
  * <ul>
- *   <li>untrusted → pending (requires moderation)</li>
- *   <li>trusted → approved (auto-approve)</li>
- *   <li>moderator → approved (auto-approve)</li>
+ * <li>untrusted → pending (requires moderation)</li>
+ * <li>trusted → approved (auto-approve)</li>
+ * <li>moderator → approved (auto-approve)</li>
  * </ul>
  *
- * <p>Error codes:
+ * <p>
+ * Error codes:
  * <ul>
- *   <li>400 Bad Request – Validation failure (invalid URL, missing category, etc.)</li>
- *   <li>403 Forbidden – User not authenticated or not authorized</li>
- *   <li>404 Not Found – Site or category not found</li>
- *   <li>409 Conflict – Duplicate URL already submitted</li>
- *   <li>500 Internal Server Error – Unexpected exception</li>
+ * <li>400 Bad Request – Validation failure (invalid URL, missing category, etc.)</li>
+ * <li>403 Forbidden – User not authenticated or not authorized</li>
+ * <li>404 Not Found – Site or category not found</li>
+ * <li>409 Conflict – Duplicate URL already submitted</li>
+ * <li>500 Internal Server Error – Unexpected exception</li>
  * </ul>
  */
 @Path("/api/good-sites/submissions")
@@ -67,17 +71,20 @@ public class DirectorySubmissionResource {
     /**
      * Submits a new site to the Good Sites directory.
      *
-     * <p>Flow:
+     * <p>
+     * Flow:
      * <ol>
-     *   <li>Validates URL and categories</li>
-     *   <li>Checks for duplicates</li>
-     *   <li>Fetches metadata (OpenGraph)</li>
-     *   <li>Determines auto-approval based on user karma</li>
-     *   <li>Creates site and site-category entries</li>
-     *   <li>Returns submission result with status</li>
+     * <li>Validates URL and categories</li>
+     * <li>Checks for duplicates</li>
+     * <li>Fetches metadata (OpenGraph)</li>
+     * <li>Determines auto-approval based on user karma</li>
+     * <li>Creates site and site-category entries</li>
+     * <li>Returns submission result with status</li>
      * </ol>
      *
-     * <p>Example request:
+     * <p>
+     * Example request:
+     *
      * <pre>{@code
      * POST /api/good-sites/submissions
      * {
@@ -88,14 +95,14 @@ public class DirectorySubmissionResource {
      * }
      * }</pre>
      *
-     * @param request Submission request with URL and categories
+     * @param request
+     *            Submission request with URL and categories
      * @return 201 Created with submission result
      */
     @POST
     public Response submitSite(@Valid SubmitSiteType request) {
         if (request == null) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorResponse("Request body required"))
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
                     .build();
         }
 
@@ -110,43 +117,37 @@ public class DirectorySubmissionResource {
 
             LOG.infof("User %s submitted site %s (status: %s)", userId, result.siteId(), result.status());
 
-            return Response.status(Response.Status.CREATED)
-                    .entity(result)
-                    .build();
+            return Response.status(Response.Status.CREATED).entity(result).build();
 
         } catch (DuplicateResourceException e) {
             LOG.warnf("Duplicate site submission: %s", e.getMessage());
-            return Response.status(Response.Status.CONFLICT)
-                    .entity(new ErrorResponse(e.getMessage()))
-                    .build();
+            return Response.status(Response.Status.CONFLICT).entity(new ErrorResponse(e.getMessage())).build();
 
         } catch (ResourceNotFoundException e) {
             LOG.warnf("Resource not found during submission: %s", e.getMessage());
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ErrorResponse(e.getMessage()))
-                    .build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new ErrorResponse(e.getMessage())).build();
 
         } catch (ValidationException e) {
             LOG.warnf("Validation failed: %s", e.getMessage());
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorResponse(e.getMessage()))
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse(e.getMessage())).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Failed to submit site: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Failed to submit site: " + e.getMessage()))
-                    .build();
+                    .entity(new ErrorResponse("Failed to submit site: " + e.getMessage())).build();
         }
     }
 
     /**
      * Lists current user's directory submissions.
      *
-     * <p>Returns submissions in all statuses (pending, approved, rejected)
-     * ordered by creation date descending.</p>
+     * <p>
+     * Returns submissions in all statuses (pending, approved, rejected) ordered by creation date descending.
+     * </p>
      *
-     * <p>Example response:
+     * <p>
+     * Example response:
+     *
      * <pre>{@code
      * [
      *   {
@@ -175,18 +176,19 @@ public class DirectorySubmissionResource {
         } catch (Exception e) {
             LOG.errorf(e, "Failed to list user submissions: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Failed to list submissions: " + e.getMessage()))
-                    .build();
+                    .entity(new ErrorResponse("Failed to list submissions: " + e.getMessage())).build();
         }
     }
 
     /**
      * Retrieves a single directory submission by ID.
      *
-     * <p>Returns submission if user is owner. Draft/pending/rejected submissions
-     * only visible to owner.</p>
+     * <p>
+     * Returns submission if user is owner. Draft/pending/rejected submissions only visible to owner.
+     * </p>
      *
-     * @param id Site UUID
+     * @param id
+     *            Site UUID
      * @return Submission details or 404 if not found / 403 if not owner
      */
     @GET
@@ -200,34 +202,35 @@ public class DirectorySubmissionResource {
             // Check ownership (or admin)
             if (!site.submittedByUserId().equals(userId) && !isAdmin()) {
                 return Response.status(Response.Status.FORBIDDEN)
-                        .entity(new ErrorResponse("Not authorized to view this submission"))
-                        .build();
+                        .entity(new ErrorResponse("Not authorized to view this submission")).build();
             }
 
             return Response.ok(site).build();
 
         } catch (ResourceNotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ErrorResponse(e.getMessage()))
-                    .build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new ErrorResponse(e.getMessage())).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Failed to get submission: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Failed to get submission: " + e.getMessage()))
-                    .build();
+                    .entity(new ErrorResponse("Failed to get submission: " + e.getMessage())).build();
         }
     }
 
     /**
      * Deletes a directory submission.
      *
-     * <p>Soft-deletes the site and cascades to site-category and vote records.
-     * Decrements category link counts for approved categories.</p>
+     * <p>
+     * Soft-deletes the site and cascades to site-category and vote records. Decrements category link counts for
+     * approved categories.
+     * </p>
      *
-     * <p>Can only be deleted by the submitting user or an admin.</p>
+     * <p>
+     * Can only be deleted by the submitting user or an admin.
+     * </p>
      *
-     * @param id Site UUID to delete
+     * @param id
+     *            Site UUID to delete
      * @return 204 No Content on success
      */
     @DELETE
@@ -243,20 +246,15 @@ public class DirectorySubmissionResource {
             return Response.noContent().build();
 
         } catch (ResourceNotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ErrorResponse(e.getMessage()))
-                    .build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new ErrorResponse(e.getMessage())).build();
 
         } catch (ValidationException e) {
-            return Response.status(Response.Status.FORBIDDEN)
-                    .entity(new ErrorResponse(e.getMessage()))
-                    .build();
+            return Response.status(Response.Status.FORBIDDEN).entity(new ErrorResponse(e.getMessage())).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Failed to delete submission: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Failed to delete submission: " + e.getMessage()))
-                    .build();
+                    .entity(new ErrorResponse("Failed to delete submission: " + e.getMessage())).build();
         }
     }
 
@@ -276,8 +274,7 @@ public class DirectorySubmissionResource {
      * @return true if user has admin role
      */
     private boolean isAdmin() {
-        return securityIdentity.hasRole("super_admin")
-                || securityIdentity.hasRole("support")
+        return securityIdentity.hasRole("super_admin") || securityIdentity.hasRole("support")
                 || securityIdentity.hasRole("ops");
     }
 

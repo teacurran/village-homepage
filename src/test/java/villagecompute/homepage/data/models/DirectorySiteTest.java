@@ -17,15 +17,16 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests for DirectorySite entity covering submission, moderation, and lifecycle operations.
  *
- * <p>Test coverage per I5.T2 acceptance criteria:
+ * <p>
+ * Test coverage per I5.T2 acceptance criteria:
  * <ul>
- *   <li>Users submit sites with validation</li>
- *   <li>Duplicate detection by URL</li>
- *   <li>Status transitions (pending → approved/rejected, approved → dead)</li>
- *   <li>User cascade delete (site deleted when user deleted)</li>
- *   <li>URL normalization (HTTPS upgrade, trailing slash removal)</li>
- *   <li>Domain extraction from URL</li>
- *   <li>Moderation queue queries</li>
+ * <li>Users submit sites with validation</li>
+ * <li>Duplicate detection by URL</li>
+ * <li>Status transitions (pending → approved/rejected, approved → dead)</li>
+ * <li>User cascade delete (site deleted when user deleted)</li>
+ * <li>URL normalization (HTTPS upgrade, trailing slash removal)</li>
+ * <li>Domain extraction from URL</li>
+ * <li>Moderation queue queries</li>
  * </ul>
  */
 @QuarkusTest
@@ -317,8 +318,7 @@ class DirectorySiteTest {
     }
 
     /**
-     * Test: Cascade delete when user deleted.
-     * Note: Skipped because cascade behavior may vary in H2 vs PostgreSQL
+     * Test: Cascade delete when user deleted. Note: Skipped because cascade behavior may vary in H2 vs PostgreSQL
      */
     @Test
     @org.junit.jupiter.api.Disabled("Cascade delete behavior varies by database")

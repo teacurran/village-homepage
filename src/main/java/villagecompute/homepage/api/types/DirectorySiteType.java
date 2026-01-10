@@ -9,10 +9,13 @@ import java.util.UUID;
 /**
  * Response type for directory site data.
  *
- * <p>Used when returning site information to clients. Includes all public
- * fields plus submission metadata.</p>
+ * <p>
+ * Used when returning site information to clients. Includes all public fields plus submission metadata.
+ * </p>
  *
- * <p>Example response:
+ * <p>
+ * Example response:
+ *
  * <pre>{@code
  * {
  *   "id": "550e8400-e29b-41d4-a716-446655440001",
@@ -30,75 +33,45 @@ import java.util.UUID;
  * }
  * }</pre>
  */
-public record DirectorySiteType(
-        @JsonProperty("id")
-        UUID id,
+public record DirectorySiteType(@JsonProperty("id") UUID id,
 
-        @JsonProperty("url")
-        String url,
+        @JsonProperty("url") String url,
 
-        @JsonProperty("domain")
-        String domain,
+        @JsonProperty("domain") String domain,
 
-        @JsonProperty("title")
-        String title,
+        @JsonProperty("title") String title,
 
-        @JsonProperty("description")
-        String description,
+        @JsonProperty("description") String description,
 
-        @JsonProperty("screenshot_url")
-        String screenshotUrl,
+        @JsonProperty("screenshot_url") String screenshotUrl,
 
-        @JsonProperty("screenshot_captured_at")
-        Instant screenshotCapturedAt,
+        @JsonProperty("screenshot_captured_at") Instant screenshotCapturedAt,
 
-        @JsonProperty("og_image_url")
-        String ogImageUrl,
+        @JsonProperty("og_image_url") String ogImageUrl,
 
-        @JsonProperty("favicon_url")
-        String faviconUrl,
+        @JsonProperty("favicon_url") String faviconUrl,
 
-        @JsonProperty("custom_image_url")
-        String customImageUrl,
+        @JsonProperty("custom_image_url") String customImageUrl,
 
-        @JsonProperty("submitted_by_user_id")
-        UUID submittedByUserId,
+        @JsonProperty("submitted_by_user_id") UUID submittedByUserId,
 
-        @JsonProperty("status")
-        String status,
+        @JsonProperty("status") String status,
 
-        @JsonProperty("is_dead")
-        boolean isDead,
+        @JsonProperty("is_dead") boolean isDead,
 
-        @JsonProperty("created_at")
-        Instant createdAt,
+        @JsonProperty("created_at") Instant createdAt,
 
-        @JsonProperty("updated_at")
-        Instant updatedAt
-) {
+        @JsonProperty("updated_at") Instant updatedAt) {
     /**
      * Converts a DirectorySite entity to a response DTO.
      *
-     * @param site Site entity to convert
+     * @param site
+     *            Site entity to convert
      * @return Response DTO
      */
     public static DirectorySiteType fromEntity(DirectorySite site) {
-        return new DirectorySiteType(
-                site.id,
-                site.url,
-                site.domain,
-                site.title,
-                site.description,
-                site.screenshotUrl,
-                site.screenshotCapturedAt,
-                site.ogImageUrl,
-                site.faviconUrl,
-                site.customImageUrl,
-                site.submittedByUserId,
-                site.status,
-                site.isDead,
-                site.createdAt,
-                site.updatedAt
-        );
+        return new DirectorySiteType(site.id, site.url, site.domain, site.title, site.description, site.screenshotUrl,
+                site.screenshotCapturedAt, site.ogImageUrl, site.faviconUrl, site.customImageUrl,
+                site.submittedByUserId, site.status, site.isDead, site.createdAt, site.updatedAt);
     }
 }

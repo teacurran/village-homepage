@@ -15,42 +15,52 @@ import java.util.UUID;
 /**
  * DirectorySite entity represents a website submitted to the Good Sites directory.
  *
- * <p>Database mapping: directory_sites table</p>
+ * <p>
+ * Database mapping: directory_sites table
+ * </p>
  *
- * <p>Status lifecycle:
+ * <p>
+ * Status lifecycle:
  * <ul>
- *   <li>pending → approved (moderator approval or auto-approve for trusted users)</li>
- *   <li>pending → rejected (moderator rejection)</li>
- *   <li>approved → dead (link health check failure)</li>
+ * <li>pending → approved (moderator approval or auto-approve for trusted users)</li>
+ * <li>pending → rejected (moderator rejection)</li>
+ * <li>approved → dead (link health check failure)</li>
  * </ul>
  *
- * <p>Duplicate detection: Enforced via unique index on URL (normalized to
- * lowercase HTTPS with trailing slash removed).</p>
+ * <p>
+ * Duplicate detection: Enforced via unique index on URL (normalized to lowercase HTTPS with trailing slash removed).
+ * </p>
  *
- * <p>Relationship to categories: Sites can exist in multiple categories via
- * the directory_site_categories junction table.</p>
+ * <p>
+ * Relationship to categories: Sites can exist in multiple categories via the directory_site_categories junction table.
+ * </p>
  *
  * @see DirectorySiteCategory
  * @see DirectoryVote
  */
 @Entity
-@Table(name = "directory_sites")
+@Table(
+        name = "directory_sites")
 @Indexed
 public class DirectorySite extends PanacheEntityBase {
 
     @Id
     @GeneratedValue
-    @Column(nullable = false)
+    @Column(
+            nullable = false)
     public UUID id;
 
-    @Column(nullable = false)
+    @Column(
+            nullable = false)
     @FullTextField
     public String url;
 
-    @Column(nullable = false)
+    @Column(
+            nullable = false)
     public String domain;
 
-    @Column(nullable = false)
+    @Column(
+            nullable = false)
     @FullTextField
     public String title;
 
@@ -58,43 +68,59 @@ public class DirectorySite extends PanacheEntityBase {
     @FullTextField
     public String description;
 
-    @Column(name = "screenshot_url")
+    @Column(
+            name = "screenshot_url")
     public String screenshotUrl;
 
-    @Column(name = "screenshot_captured_at")
+    @Column(
+            name = "screenshot_captured_at")
     public Instant screenshotCapturedAt;
 
-    @Column(name = "og_image_url")
+    @Column(
+            name = "og_image_url")
     public String ogImageUrl;
 
-    @Column(name = "favicon_url")
+    @Column(
+            name = "favicon_url")
     public String faviconUrl;
 
-    @Column(name = "custom_image_url")
+    @Column(
+            name = "custom_image_url")
     public String customImageUrl;
 
-    @Column(name = "submitted_by_user_id", nullable = false)
+    @Column(
+            name = "submitted_by_user_id",
+            nullable = false)
     public UUID submittedByUserId;
 
-    @Column(nullable = false)
+    @Column(
+            nullable = false)
     public String status;
 
-    @Column(name = "last_checked_at")
+    @Column(
+            name = "last_checked_at")
     public Instant lastCheckedAt;
 
-    @Column(name = "is_dead", nullable = false)
+    @Column(
+            name = "is_dead",
+            nullable = false)
     public boolean isDead;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(
+            name = "created_at",
+            nullable = false)
     public Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(
+            name = "updated_at",
+            nullable = false)
     public Instant updatedAt;
 
     /**
      * Find a site by its normalized URL.
      *
-     * @param url Normalized URL to search for
+     * @param url
+     *            Normalized URL to search for
      * @return Optional containing the site if found
      */
     public static Optional<DirectorySite> findByUrl(String url) {
@@ -104,7 +130,8 @@ public class DirectorySite extends PanacheEntityBase {
     /**
      * Find all sites submitted by a specific user.
      *
-     * @param userId User ID to search for
+     * @param userId
+     *            User ID to search for
      * @return List of sites submitted by the user
      */
     public static List<DirectorySite> findByUserId(UUID userId) {
@@ -114,7 +141,8 @@ public class DirectorySite extends PanacheEntityBase {
     /**
      * Find all sites with a specific status.
      *
-     * @param status Status to filter by (pending, approved, rejected, dead)
+     * @param status
+     *            Status to filter by (pending, approved, rejected, dead)
      * @return List of sites with the given status
      */
     public static List<DirectorySite> findByStatus(String status) {
@@ -133,7 +161,8 @@ public class DirectorySite extends PanacheEntityBase {
     /**
      * Find all sites by domain (for duplicate detection).
      *
-     * @param domain Domain to search for
+     * @param domain
+     *            Domain to search for
      * @return List of sites from the same domain
      */
     public static List<DirectorySite> findByDomain(String domain) {
@@ -152,9 +181,11 @@ public class DirectorySite extends PanacheEntityBase {
     /**
      * Extracts the domain from a URL.
      *
-     * @param url URL to extract domain from
+     * @param url
+     *            URL to extract domain from
      * @return Domain (host) extracted from URL
-     * @throws IllegalArgumentException if URL is malformed
+     * @throws IllegalArgumentException
+     *             if URL is malformed
      */
     public static String extractDomain(String url) {
         try {
@@ -167,15 +198,17 @@ public class DirectorySite extends PanacheEntityBase {
     /**
      * Normalizes a URL for duplicate detection and storage.
      *
-     * <p>Normalization rules:
+     * <p>
+     * Normalization rules:
      * <ul>
-     *   <li>Converts to lowercase</li>
-     *   <li>Forces HTTPS protocol (upgrades HTTP)</li>
-     *   <li>Removes trailing slash</li>
-     *   <li>Preserves path and query parameters</li>
+     * <li>Converts to lowercase</li>
+     * <li>Forces HTTPS protocol (upgrades HTTP)</li>
+     * <li>Removes trailing slash</li>
+     * <li>Preserves path and query parameters</li>
      * </ul>
      *
-     * @param url URL to normalize
+     * @param url
+     *            URL to normalize
      * @return Normalized URL
      */
     public static String normalizeUrl(String url) {
