@@ -1,0 +1,243 @@
+package villagecompute.homepage.data.models;
+
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import jakarta.persistence.*;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.Indexed;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * DirectorySite entity represents a website submitted to the Good Sites directory.
+ *
+ * <p>Database mapping: directory_sites table</p>
+ *
+ * <p>Status lifecycle:
+ * <ul>
+ *   <li>pending → approved (moderator approval or auto-approve for trusted users)</li>
+ *   <li>pending → rejected (moderator rejection)</li>
+ *   <li>approved → dead (link health check failure)</li>
+ * </ul>
+ *
+ * <p>Duplicate detection: Enforced via unique index on URL (normalized to
+ * lowercase HTTPS with trailing slash removed).</p>
+ *
+ * <p>Relationship to categories: Sites can exist in multiple categories via
+ * the directory_site_categories junction table.</p>
+ *
+ * @see DirectorySiteCategory
+ * @see DirectoryVote
+ */
+@Entity
+@Table(name = "directory_sites")
+@Indexed
+public class DirectorySite extends PanacheEntityBase {
+
+    @Id
+    @GeneratedValue
+    @Column(nullable = false)
+    public UUID id;
+
+    @Column(nullable = false)
+    @FullTextField
+    public String url;
+
+    @Column(nullable = false)
+    public String domain;
+
+    @Column(nullable = false)
+    @FullTextField
+    public String title;
+
+    @Column
+    @FullTextField
+    public String description;
+
+    @Column(name = "screenshot_url")
+    public String screenshotUrl;
+
+    @Column(name = "screenshot_captured_at")
+    public Instant screenshotCapturedAt;
+
+    @Column(name = "og_image_url")
+    public String ogImageUrl;
+
+    @Column(name = "favicon_url")
+    public String faviconUrl;
+
+    @Column(name = "custom_image_url")
+    public String customImageUrl;
+
+    @Column(name = "submitted_by_user_id", nullable = false)
+    public UUID submittedByUserId;
+
+    @Column(nullable = false)
+    public String status;
+
+    @Column(name = "last_checked_at")
+    public Instant lastCheckedAt;
+
+    @Column(name = "is_dead", nullable = false)
+    public boolean isDead;
+
+    @Column(name = "created_at", nullable = false)
+    public Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    public Instant updatedAt;
+
+    /**
+     * Find a site by its normalized URL.
+     *
+     * @param url Normalized URL to search for
+     * @return Optional containing the site if found
+     */
+    public static Optional<DirectorySite> findByUrl(String url) {
+        return find("url", url).firstResultOptional();
+    }
+
+    /**
+     * Find all sites submitted by a specific user.
+     *
+     * @param userId User ID to search for
+     * @return List of sites submitted by the user
+     */
+    public static List<DirectorySite> findByUserId(UUID userId) {
+        return find("submittedByUserId", userId).list();
+    }
+
+    /**
+     * Find all sites with a specific status.
+     *
+     * @param status Status to filter by (pending, approved, rejected, dead)
+     * @return List of sites with the given status
+     */
+    public static List<DirectorySite> findByStatus(String status) {
+        return find("status", status).list();
+    }
+
+    /**
+     * Find all sites in the moderation queue (status = pending).
+     *
+     * @return List of pending sites ordered by creation date
+     */
+    public static List<DirectorySite> findPendingModeration() {
+        return find("status = 'pending' ORDER BY createdAt ASC").list();
+    }
+
+    /**
+     * Find all sites by domain (for duplicate detection).
+     *
+     * @param domain Domain to search for
+     * @return List of sites from the same domain
+     */
+    public static List<DirectorySite> findByDomain(String domain) {
+        return find("domain", domain).list();
+    }
+
+    /**
+     * Find dead sites that need cleanup or re-checking.
+     *
+     * @return List of dead sites ordered by last check date
+     */
+    public static List<DirectorySite> findDeadSites() {
+        return find("isDead = true ORDER BY lastCheckedAt DESC").list();
+    }
+
+    /**
+     * Extracts the domain from a URL.
+     *
+     * @param url URL to extract domain from
+     * @return Domain (host) extracted from URL
+     * @throws IllegalArgumentException if URL is malformed
+     */
+    public static String extractDomain(String url) {
+        try {
+            return new URL(url).getHost();
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Invalid URL: " + url, e);
+        }
+    }
+
+    /**
+     * Normalizes a URL for duplicate detection and storage.
+     *
+     * <p>Normalization rules:
+     * <ul>
+     *   <li>Converts to lowercase</li>
+     *   <li>Forces HTTPS protocol (upgrades HTTP)</li>
+     *   <li>Removes trailing slash</li>
+     *   <li>Preserves path and query parameters</li>
+     * </ul>
+     *
+     * @param url URL to normalize
+     * @return Normalized URL
+     */
+    public static String normalizeUrl(String url) {
+        String normalized = url.trim();
+
+        // Force HTTPS
+        if (normalized.toLowerCase().startsWith("http://")) {
+            normalized = "https://" + normalized.substring(7);
+        } else if (!normalized.toLowerCase().startsWith("https://")) {
+            normalized = "https://" + normalized;
+        }
+
+        // Remove trailing slash (but only if no path parameters)
+        if (normalized.endsWith("/") && normalized.indexOf("?") == -1) {
+            // Only remove trailing slash from base path, not query string
+            int lastSlash = normalized.lastIndexOf("/");
+            String beforeSlash = normalized.substring(0, lastSlash);
+            // Count slashes - if only protocol slashes, keep the trailing one
+            long slashCount = beforeSlash.chars().filter(ch -> ch == '/').count();
+            if (slashCount > 2) {
+                normalized = beforeSlash;
+            }
+        }
+
+        return normalized;
+    }
+
+    /**
+     * Approves this site (changes status to approved).
+     *
+     * @return this site for method chaining
+     */
+    public DirectorySite approve() {
+        this.status = "approved";
+        this.updatedAt = Instant.now();
+        this.persist();
+        return this;
+    }
+
+    /**
+     * Rejects this site (changes status to rejected).
+     *
+     * @return this site for method chaining
+     */
+    public DirectorySite reject() {
+        this.status = "rejected";
+        this.updatedAt = Instant.now();
+        this.persist();
+        return this;
+    }
+
+    /**
+     * Marks this site as dead (failed link health check).
+     *
+     * @return this site for method chaining
+     */
+    public DirectorySite markDead() {
+        this.isDead = true;
+        this.status = "dead";
+        this.lastCheckedAt = Instant.now();
+        this.updatedAt = Instant.now();
+        this.persist();
+        return this;
+    }
+}
