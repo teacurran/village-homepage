@@ -20,11 +20,7 @@ import villagecompute.homepage.api.types.ContactInfoType;
 /**
  * Integration tests for Listing Contact/Message Relay (I4.T9).
  *
- * Tests:
- * - Sending buyer inquiries via masked email
- * - Message persistence
- * - Rate limiting
- * - Spam detection
+ * Tests: - Sending buyer inquiries via masked email - Message persistence - Rate limiting - Spam detection
  */
 @QuarkusTest
 public class ListingContactResourceTest {

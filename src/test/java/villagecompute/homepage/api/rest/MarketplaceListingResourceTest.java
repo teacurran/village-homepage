@@ -21,12 +21,8 @@ import villagecompute.homepage.api.types.ContactInfoType;
 /**
  * Integration tests for MarketplaceListingResource (I4.T9).
  *
- * Tests cover:
- * - Listing CRUD operations
- * - Payment intent creation (Stripe integration)
- * - Promotion purchases (featured, bump)
- * - Status transitions
- * - Authorization checks
+ * Tests cover: - Listing CRUD operations - Payment intent creation (Stripe integration) - Promotion purchases
+ * (featured, bump) - Status transitions - Authorization checks
  *
  * Note: Uses H2 in-memory database, some PostGIS features are mocked/skipped.
  */
@@ -120,9 +116,8 @@ public class MarketplaceListingResourceTest {
                 """;
 
         // TODO: Add JWT token for authorization
-        given().contentType(ContentType.JSON).body(updateBody).when()
-                .put("/api/marketplace/listings/{id}", listing.id).then().statusCode(200)
-                .body("title", equalTo("Updated Title")).body("price", equalTo(300.0f));
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/api/marketplace/listings/{id}", listing.id)
+                .then().statusCode(200).body("title", equalTo("Updated Title")).body("price", equalTo(300.0f));
     }
 
     @Test

@@ -21,11 +21,7 @@ import villagecompute.homepage.api.types.ContactInfoType;
 /**
  * Integration tests for Listing Flagging/Moderation (I4.T9).
  *
- * Tests:
- * - Flag submission
- * - Duplicate flag prevention
- * - Auto-ban threshold (3 flags)
- * - Moderation queue management
+ * Tests: - Flag submission - Duplicate flag prevention - Auto-ban threshold (3 flags) - Moderation queue management
  */
 @QuarkusTest
 public class ListingFlagResourceTest {

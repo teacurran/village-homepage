@@ -71,9 +71,7 @@ class ModerationServiceTest {
         listing.geoCityId = 1L;
         listing.title = "Test Listing";
         listing.description = "Test description";
-        listing.contactInfo = new villagecompute.homepage.api.types.ContactInfoType(
-                "test@example.com",
-                null,
+        listing.contactInfo = new villagecompute.homepage.api.types.ContactInfoType("test@example.com", null,
                 "masked-test@villagecompute.com");
         listing.status = "active";
         listing.flagCount = 0L;
