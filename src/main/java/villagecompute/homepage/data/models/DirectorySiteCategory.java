@@ -232,4 +232,59 @@ public class DirectorySiteCategory extends PanacheEntityBase {
         this.updatedAt = Instant.now();
         this.persist();
     }
+
+    /**
+     * Finds bubbled sites for a parent category.
+     *
+     * <p>
+     * Bubbling criteria (Feature F13.8):
+     * <ul>
+     * <li>Site must be in a child category of the specified parent</li>
+     * <li>Site must have score ≥ 10</li>
+     * <li>Site must have rank ≤ 3 in its category</li>
+     * <li>Site must have status = 'approved'</li>
+     * </ul>
+     *
+     * <p>
+     * <b>UI Display:</b> Bubbled sites show with yellow background (#fff9e6) and green badge indicating source category.
+     * They are sorted AFTER direct sites but still ordered by score DESC within the bubbled group.
+     *
+     * @param parentCategoryId
+     *            Parent category UUID
+     * @return List of bubbled sites sorted by score DESC
+     */
+    public static List<DirectorySiteCategory> findBubbledSites(UUID parentCategoryId) {
+        if (parentCategoryId == null) {
+            return List.of();
+        }
+
+        // Find all child categories
+        List<DirectoryCategory> children = DirectoryCategory.findByParentId(parentCategoryId);
+
+        if (children.isEmpty()) {
+            return List.of();
+        }
+
+        // Build query to find bubbled sites across all children
+        // Sites must meet: score >= 10 AND rank <= 3 AND status = 'approved'
+        StringBuilder query = new StringBuilder();
+        query.append("categoryId IN (");
+
+        for (int i = 0; i < children.size(); i++) {
+            if (i > 0) {
+                query.append(", ");
+            }
+            query.append("?").append(i + 1);
+        }
+
+        query.append(") AND status = 'approved' ");
+        query.append("AND score >= 10 ");
+        query.append("AND rankInCategory <= 3 ");
+        query.append("ORDER BY score DESC, createdAt DESC");
+
+        // Extract child IDs as parameters
+        Object[] params = children.stream().map(c -> c.id).toArray();
+
+        return find(query.toString(), params).list();
+    }
 }

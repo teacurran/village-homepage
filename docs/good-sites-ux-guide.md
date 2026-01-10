@@ -163,6 +163,42 @@ This ensures users see category-specific content first.
 
 Badge includes `title` attribute for tooltip and is read by screen readers. Consider adding `aria-describedby` for enhanced context.
 
+### Ranking & Bubbling Operations
+
+**Background Process:** The `RankRecalculationJobHandler` runs hourly to update site rankings within each category.
+
+**Ranking Algorithm:**
+1. Query approved sites in category
+2. Order by score DESC, then createdAt DESC (ties broken by earlier submission)
+3. Assign 1-indexed rank (rank 1 = highest score)
+4. Update `directory_site_categories.rank_in_category` field
+
+**Bubbling Query:**
+- Runs when rendering parent category pages
+- Finds sites in child categories matching:
+  - `status = 'approved'`
+  - `score >= 10`
+  - `rankInCategory <= 3`
+- Orders results by score DESC
+
+**Example Bubbling Behavior:**
+
+```
+Parent: Computers & Internet
+├── Child: Programming (has 50 approved sites)
+│   ├── GitHub (score=25, rank=1) → BUBBLES to parent
+│   ├── Stack Overflow (score=18, rank=2) → BUBBLES to parent
+│   ├── LeetCode (score=12, rank=3) → BUBBLES to parent
+│   └── FreeCodeCamp (score=8, rank=4) → Does NOT bubble (score < 10)
+├── Child: Linux (has 30 approved sites)
+│   ├── Ubuntu (score=20, rank=1) → BUBBLES to parent
+│   └── Arch Wiki (score=9, rank=2) → Does NOT bubble (score < 10)
+```
+
+Result: "Computers & Internet" category page displays 4 bubbled sites (GitHub, Ubuntu, Stack Overflow, LeetCode) in addition to its directly-assigned sites.
+
+**Performance Note:** Bubbling queries are cached for 5 minutes to avoid performance impact on high-traffic parent categories.
+
 ---
 
 ## Search UX
@@ -326,6 +362,40 @@ Sites marked `isDead=true` display:
 - Red warning badge
 - Grayed-out vote buttons (disabled)
 - Strikethrough title (optional)
+
+**Health Check Process:**
+
+The `LinkHealthCheckJobHandler` runs weekly (Sundays at 3am UTC) to detect dead links:
+
+1. **Check:** Perform HTTP HEAD request to site URL (10 second timeout)
+2. **Fallback:** If HEAD returns 405 Method Not Allowed, try GET request
+3. **Pass:** Status codes 200-399 → reset failure counter
+4. **Fail:** Status codes 400-599 or timeout → increment failure counter
+5. **Dead:** After 3 consecutive failures → mark site as dead
+
+**Failure Counter:**
+- Stored in `directory_sites.health_check_failures`
+- Resets to 0 on successful check
+- Increments on each failed check
+- Threshold: 3 consecutive failures
+
+**Recovery:**
+- Dead sites continue to be checked weekly
+- If site becomes accessible, failure counter resets
+- Status remains "dead" until moderator manually restores
+- Moderators notified via email when sites marked dead (TODO: implement notification)
+
+**Example Timeline:**
+
+```
+Week 1: Check fails (404) → healthCheckFailures = 1
+Week 2: Check fails (timeout) → healthCheckFailures = 2
+Week 3: Check fails (500) → healthCheckFailures = 3, isDead = true
+Week 4: Site accessible again (200) → healthCheckFailures = 0, isDead still true
+        (Moderator manually changes status to 'approved')
+```
+
+For operational details, see `docs/ops/link-health-monitoring.md`.
 
 ### Network Errors
 

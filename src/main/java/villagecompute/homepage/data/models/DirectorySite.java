@@ -107,6 +107,11 @@ public class DirectorySite extends PanacheEntityBase {
     public boolean isDead;
 
     @Column(
+            name = "health_check_failures",
+            nullable = false)
+    public int healthCheckFailures;
+
+    @Column(
             name = "created_at",
             nullable = false)
     public Instant createdAt;

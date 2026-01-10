@@ -39,12 +39,12 @@ All async workloads are enumerated in the `JobType` enum. Each type is permanent
 | `RSS_FEED_REFRESH` | DEFAULT | 15min-daily (configurable) | `RssFeedRefreshHandler` | — |
 | `WEATHER_REFRESH` | DEFAULT | 1 hour (forecast), 15 min (alerts) | `WeatherRefreshJobHandler` | Dual cadence: hourly forecast refresh + 15-min severe weather alerts (NWS only) |
 | `LISTING_EXPIRATION` | DEFAULT | Daily @ 2am UTC | `ListingExpirationHandler` | — |
-| `RANK_RECALCULATION` | DEFAULT | Hourly | `RankRecalculationHandler` | — |
+| `RANK_RECALCULATION` | DEFAULT | Hourly | `RankRecalculationJobHandler` | Updates site rankings within categories for bubbling logic (F13.8) |
 | `INBOUND_EMAIL` | DEFAULT | 1 minute | `InboundEmailHandler` | IMAP polling for marketplace relay |
 | `STOCK_REFRESH` | HIGH | 5 min (market hours), 1hr (after hours), 6hr (weekends) | `StockRefreshJobHandler` | Alpha Vantage API: 25 req/day free tier, rate limit fallback serves stale cache, market hours: 9:30am-4pm ET Mon-Fri |
 | `MESSAGE_RELAY` | HIGH | On-demand | `MessageRelayHandler` | Marketplace inquiry relay with email masking |
 | `SOCIAL_REFRESH` | LOW | 30 minutes | `SocialFeedRefreshJobHandler` | P5/P13: Token encryption (TODO), 7-day expiry refresh, staleness banners (green/yellow/orange/red), graceful degradation on API failure, posts archived after >7 days stale |
-| `LINK_HEALTH_CHECK` | LOW | Weekly | `LinkHealthCheckHandler` | Detects dead links in Good Sites directory |
+| `LINK_HEALTH_CHECK` | LOW | Weekly (Sundays @ 3am UTC) | `LinkHealthCheckJobHandler` | Detects dead links in Good Sites directory, marks sites dead after 3 consecutive failures (F13.5) |
 | `SITEMAP_GENERATION` | LOW | Daily @ 3am UTC | `SitemapGenerationHandler` | SEO sitemap XML generation |
 | `CLICK_ROLLUP` | LOW | Hourly | `ClickRollupHandler` | P14: Consent-gated, 90-day retention |
 | `AI_TAGGING` | BULK | Hourly (scheduled) | `AiTaggingJobHandler` | P2/P10: $500/month budget ceiling with automatic throttling (see Section 13) |
