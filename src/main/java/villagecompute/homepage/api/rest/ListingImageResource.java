@@ -16,7 +16,6 @@ import villagecompute.homepage.api.types.SignedUrlType;
 import villagecompute.homepage.api.types.StorageUploadResultType;
 import villagecompute.homepage.data.models.MarketplaceListing;
 import villagecompute.homepage.data.models.MarketplaceListingImage;
-import villagecompute.homepage.jobs.JobQueue;
 import villagecompute.homepage.jobs.JobType;
 import villagecompute.homepage.services.DelayedJobService;
 import villagecompute.homepage.services.StorageGateway;
@@ -60,8 +59,8 @@ import java.util.stream.Collectors;
  * </ul>
  *
  * <p>
- * <b>Signed URLs:</b> All image URLs returned by GET endpoint are signed with 24-hour TTL.
- * Clients should request fresh URLs on each page load (do not cache URLs client-side).
+ * <b>Signed URLs:</b> All image URLs returned by GET endpoint are signed with 24-hour TTL. Clients should request fresh
+ * URLs on each page load (do not cache URLs client-side).
  *
  * <p>
  * <b>Policy References:</b>
@@ -79,9 +78,8 @@ public class ListingImageResource {
     private static final Logger LOG = Logger.getLogger(ListingImageResource.class);
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-        "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"
-    );
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/jpg", "image/png",
+            "image/webp", "image/gif");
     private static final int MAX_IMAGES_PER_LISTING = 12;
     private static final int SIGNED_URL_TTL_MINUTES = 1440; // 24 hours
 
@@ -101,19 +99,19 @@ public class ListingImageResource {
      * Upload new image for a listing.
      *
      * <p>
-     * Validates ownership, count limits, file size/type. Uploads original to R2 and enqueues
-     * processing job for variant generation.
+     * Validates ownership, count limits, file size/type. Uploads original to R2 and enqueues processing job for variant
+     * generation.
      *
-     * @param listingId the listing UUID
-     * @param form multipart form with image file
+     * @param listingId
+     *            the listing UUID
+     * @param form
+     *            multipart form with image file
      * @return 202 Accepted with image ID and processing status
      */
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Transactional
-    public Response uploadImage(
-            @PathParam("listingId") UUID listingId,
-            @MultipartForm ImageUploadForm form) {
+    public Response uploadImage(@PathParam("listingId") UUID listingId, @MultipartForm ImageUploadForm form) {
 
         UUID userId = getCurrentUserId();
 
@@ -125,28 +123,26 @@ public class ListingImageResource {
         }
 
         if (!listing.userId.equals(userId)) {
-            LOG.warnf("User %s attempted to upload image for listing %s owned by %s",
-                userId, listingId, listing.userId);
+            LOG.warnf("User %s attempted to upload image for listing %s owned by %s", userId, listingId,
+                    listing.userId);
             return Response.status(403).entity(Map.of("error", "Not authorized")).build();
         }
 
         if ("removed".equals(listing.status) || "expired".equals(listing.status)) {
             LOG.warnf("Cannot upload image to %s listing: listingId=%s", listing.status, listingId);
-            return Response.status(409).entity(Map.of("error", "Cannot upload to " + listing.status + " listing")).build();
+            return Response.status(409).entity(Map.of("error", "Cannot upload to " + listing.status + " listing"))
+                    .build();
         }
 
         // 2. Check image count limit (count originals only, not variants)
         long currentImageCount = MarketplaceListingImage.countOriginalsByListingId(listingId);
         if (currentImageCount >= MAX_IMAGES_PER_LISTING) {
-            LOG.warnf("Image limit exceeded for listing %s: current=%d, max=%d",
-                listingId, currentImageCount, MAX_IMAGES_PER_LISTING);
-            meterRegistry.counter("marketplace.images.upload.rejected.total",
-                "reason", "limit_exceeded"
-            ).increment();
-            return Response.status(400).entity(Map.of(
-                "error", "Maximum " + MAX_IMAGES_PER_LISTING + " images per listing",
-                "current_count", currentImageCount
-            )).build();
+            LOG.warnf("Image limit exceeded for listing %s: current=%d, max=%d", listingId, currentImageCount,
+                    MAX_IMAGES_PER_LISTING);
+            meterRegistry.counter("marketplace.images.upload.rejected.total", "reason", "limit_exceeded").increment();
+            return Response.status(400).entity(Map.of("error",
+                    "Maximum " + MAX_IMAGES_PER_LISTING + " images per listing", "current_count", currentImageCount))
+                    .build();
         }
 
         // 3. Validate file
@@ -155,50 +151,34 @@ public class ListingImageResource {
             fileBytes = form.file.readAllBytes();
         } catch (IOException e) {
             LOG.errorf(e, "Failed to read uploaded file for listing %s", listingId);
-            meterRegistry.counter("marketplace.images.upload.rejected.total",
-                "reason", "read_error"
-            ).increment();
+            meterRegistry.counter("marketplace.images.upload.rejected.total", "reason", "read_error").increment();
             return Response.status(400).entity(Map.of("error", "Failed to read file")).build();
         }
 
         if (fileBytes.length > MAX_FILE_SIZE) {
             LOG.warnf("File too large: %d bytes (max %d)", fileBytes.length, MAX_FILE_SIZE);
-            meterRegistry.counter("marketplace.images.upload.rejected.total",
-                "reason", "file_too_large"
-            ).increment();
-            return Response.status(400).entity(Map.of(
-                "error", "File too large (max 10MB)",
-                "file_size", fileBytes.length
-            )).build();
+            meterRegistry.counter("marketplace.images.upload.rejected.total", "reason", "file_too_large").increment();
+            return Response.status(400)
+                    .entity(Map.of("error", "File too large (max 10MB)", "file_size", fileBytes.length)).build();
         }
 
         String contentType = form.contentType != null ? form.contentType : "image/jpeg";
         if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
             LOG.warnf("Invalid content type: %s", contentType);
-            meterRegistry.counter("marketplace.images.upload.rejected.total",
-                "reason", "invalid_type"
-            ).increment();
-            return Response.status(400).entity(Map.of(
-                "error", "Invalid file type",
-                "allowed_types", ALLOWED_CONTENT_TYPES
-            )).build();
+            meterRegistry.counter("marketplace.images.upload.rejected.total", "reason", "invalid_type").increment();
+            return Response.status(400)
+                    .entity(Map.of("error", "Invalid file type", "allowed_types", ALLOWED_CONTENT_TYPES)).build();
         }
 
         // 4. Upload original to R2
         StorageUploadResultType uploadResult;
         try {
-            uploadResult = storageGateway.upload(
-                StorageGateway.BucketType.LISTINGS,
-                listingId.toString(),
-                "original",
-                fileBytes,
-                contentType
-            );
+            uploadResult = storageGateway.upload(StorageGateway.BucketType.LISTINGS, listingId.toString(), "original",
+                    fileBytes, contentType);
         } catch (Exception e) {
             LOG.errorf(e, "Failed to upload image to R2 for listing %s", listingId);
-            meterRegistry.counter("marketplace.images.upload.errors.total",
-                "error_type", e.getClass().getSimpleName()
-            ).increment();
+            meterRegistry.counter("marketplace.images.upload.errors.total", "error_type", e.getClass().getSimpleName())
+                    .increment();
             return Response.status(500).entity(Map.of("error", "Upload failed")).build();
         }
 
@@ -216,45 +196,36 @@ public class ListingImageResource {
         image.createdAt = Instant.now();
         image.persist();
 
-        LOG.infof("Created pending image record: imageId=%s, listingId=%s, storageKey=%s",
-            image.id, listingId, uploadResult.objectKey());
+        LOG.infof("Created pending image record: imageId=%s, listingId=%s, storageKey=%s", image.id, listingId,
+                uploadResult.objectKey());
 
         // 6. Enqueue processing job
-        Map<String, Object> payload = Map.of(
-            "imageId", image.id.toString(),
-            "listingId", listingId.toString(),
-            "originalKey", uploadResult.objectKey(),
-            "originalFilename", image.originalFilename,
-            "displayOrder", displayOrder
-        );
+        Map<String, Object> payload = Map.of("imageId", image.id.toString(), "listingId", listingId.toString(),
+                "originalKey", uploadResult.objectKey(), "originalFilename", image.originalFilename, "displayOrder",
+                displayOrder);
         jobService.enqueue(JobType.LISTING_IMAGE_PROCESSING, payload);
 
         LOG.infof("Enqueued image processing job: imageId=%s, listingId=%s", image.id, listingId);
 
         // 7. Export metrics
-        meterRegistry.counter("marketplace.images.uploaded.total",
-            "listing_id", listingId.toString()
-        ).increment();
+        meterRegistry.counter("marketplace.images.uploaded.total", "listing_id", listingId.toString()).increment();
 
         // 8. Return response
-        return Response.status(202).entity(Map.of(
-            "image_id", image.id,
-            "listing_id", listingId,
-            "status", "processing",
-            "display_order", displayOrder,
-            "original_filename", image.originalFilename,
-            "size_bytes", image.sizeBytes
-        )).build();
+        return Response.status(202)
+                .entity(Map.of("image_id", image.id, "listing_id", listingId, "status", "processing", "display_order",
+                        displayOrder, "original_filename", image.originalFilename, "size_bytes", image.sizeBytes))
+                .build();
     }
 
     /**
      * List all images for a listing with signed URLs.
      *
      * <p>
-     * Returns images grouped by display order with signed URLs for all variants
-     * (thumbnail, list, full). URLs have 24-hour TTL.
+     * Returns images grouped by display order with signed URLs for all variants (thumbnail, list, full). URLs have
+     * 24-hour TTL.
      *
-     * @param listingId the listing UUID
+     * @param listingId
+     *            the listing UUID
      * @return list of images with signed URLs
      */
     @GET
@@ -276,41 +247,30 @@ public class ListingImageResource {
 
         // 3. Group by display order and generate signed URLs
         Map<Integer, List<MarketplaceListingImage>> imagesByOrder = images.stream()
-            .collect(Collectors.groupingBy(img -> img.displayOrder));
+                .collect(Collectors.groupingBy(img -> img.displayOrder));
 
-        List<ListingImageType> result = imagesByOrder.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .map(entry -> {
-                int displayOrder = entry.getKey();
-                List<MarketplaceListingImage> variants = entry.getValue();
+        List<ListingImageType> result = imagesByOrder.entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .map(entry -> {
+                    int displayOrder = entry.getKey();
+                    List<MarketplaceListingImage> variants = entry.getValue();
 
-                // Find specific variants
-                MarketplaceListingImage original = findVariant(variants, "original");
-                MarketplaceListingImage thumbnail = findVariant(variants, "thumbnail");
-                MarketplaceListingImage list = findVariant(variants, "list");
-                MarketplaceListingImage full = findVariant(variants, "full");
+                    // Find specific variants
+                    MarketplaceListingImage original = findVariant(variants, "original");
+                    MarketplaceListingImage thumbnail = findVariant(variants, "thumbnail");
+                    MarketplaceListingImage list = findVariant(variants, "list");
+                    MarketplaceListingImage full = findVariant(variants, "full");
 
-                // Generate signed URLs
-                String thumbnailUrl = thumbnail != null ? generateSignedUrl(thumbnail.storageKey) : null;
-                String listUrl = list != null ? generateSignedUrl(list.storageKey) : null;
-                String fullUrl = full != null ? generateSignedUrl(full.storageKey) : null;
+                    // Generate signed URLs
+                    String thumbnailUrl = thumbnail != null ? generateSignedUrl(thumbnail.storageKey) : null;
+                    String listUrl = list != null ? generateSignedUrl(list.storageKey) : null;
+                    String fullUrl = full != null ? generateSignedUrl(full.storageKey) : null;
 
-                // Use original for metadata
-                MarketplaceListingImage metadata = original != null ? original : variants.get(0);
+                    // Use original for metadata
+                    MarketplaceListingImage metadata = original != null ? original : variants.get(0);
 
-                return new ListingImageType(
-                    metadata.id,
-                    listingId,
-                    displayOrder,
-                    metadata.originalFilename,
-                    metadata.status,
-                    metadata.createdAt,
-                    thumbnailUrl,
-                    listUrl,
-                    fullUrl
-                );
-            })
-            .toList();
+                    return new ListingImageType(metadata.id, listingId, displayOrder, metadata.originalFilename,
+                            metadata.status, metadata.createdAt, thumbnailUrl, listUrl, fullUrl);
+                }).toList();
 
         LOG.infof("Returned %d image groups for listing %s", result.size(), listingId);
 
@@ -320,16 +280,16 @@ public class ListingImageResource {
     /**
      * Delete an image and all its variants.
      *
-     * @param listingId the listing UUID
-     * @param imageId the image UUID (original variant ID)
+     * @param listingId
+     *            the listing UUID
+     * @param imageId
+     *            the image UUID (original variant ID)
      * @return 204 No Content on success
      */
     @DELETE
     @Path("/{imageId}")
     @Transactional
-    public Response deleteImage(
-            @PathParam("listingId") UUID listingId,
-            @PathParam("imageId") UUID imageId) {
+    public Response deleteImage(@PathParam("listingId") UUID listingId, @PathParam("imageId") UUID imageId) {
 
         UUID userId = getCurrentUserId();
 
@@ -354,11 +314,10 @@ public class ListingImageResource {
         }
 
         // 3. Find all variants for this display order
-        List<MarketplaceListingImage> variants = MarketplaceListingImage
-            .findByListingIdAndDisplayOrder(listingId, image.displayOrder);
+        List<MarketplaceListingImage> variants = MarketplaceListingImage.findByListingIdAndDisplayOrder(listingId,
+                image.displayOrder);
 
-        LOG.infof("Deleting %d image variants for imageId=%s, listingId=%s",
-            variants.size(), imageId, listingId);
+        LOG.infof("Deleting %d image variants for imageId=%s, listingId=%s", variants.size(), imageId, listingId);
 
         // 4. Delete from R2
         long totalBytesFreed = 0;
@@ -379,13 +338,10 @@ public class ListingImageResource {
         LOG.infof("Deleted %d image records, freed %d bytes", deletedCount, totalBytesFreed);
 
         // 6. Export metrics
-        meterRegistry.counter("marketplace.images.deleted.total",
-            "listing_id", listingId.toString()
-        ).increment(deletedCount);
+        meterRegistry.counter("marketplace.images.deleted.total", "listing_id", listingId.toString())
+                .increment(deletedCount);
 
-        meterRegistry.counter("marketplace.storage.bytes.freed",
-            "bucket", "listings"
-        ).increment(totalBytesFreed);
+        meterRegistry.counter("marketplace.storage.bytes.freed", "bucket", "listings").increment(totalBytesFreed);
 
         return Response.noContent().build();
     }
@@ -401,10 +357,7 @@ public class ListingImageResource {
      * Find specific variant from list.
      */
     private MarketplaceListingImage findVariant(List<MarketplaceListingImage> variants, String variantName) {
-        return variants.stream()
-            .filter(v -> variantName.equals(v.variant))
-            .findFirst()
-            .orElse(null);
+        return variants.stream().filter(v -> variantName.equals(v.variant)).findFirst().orElse(null);
     }
 
     /**
@@ -412,11 +365,8 @@ public class ListingImageResource {
      */
     private String generateSignedUrl(String storageKey) {
         try {
-            SignedUrlType signedUrl = storageGateway.generateSignedUrl(
-                StorageGateway.BucketType.LISTINGS,
-                storageKey,
-                SIGNED_URL_TTL_MINUTES
-            );
+            SignedUrlType signedUrl = storageGateway.generateSignedUrl(StorageGateway.BucketType.LISTINGS, storageKey,
+                    SIGNED_URL_TTL_MINUTES);
             return signedUrl.url();
         } catch (Exception e) {
             LOG.warnf(e, "Failed to generate signed URL for %s", storageKey);

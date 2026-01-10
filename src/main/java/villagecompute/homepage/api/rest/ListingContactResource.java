@@ -170,15 +170,15 @@ public class ListingContactResource {
         // Note: IP address extraction would require injecting HttpServletRequest
         // For now, rate limit by user ID only
         RateLimitService.RateLimitResult rateLimitResult = rateLimitService.checkLimit(userId, null, // IP address
-                                                                                                      // (future)
+                                                                                                     // (future)
                 "MESSAGE_SEND", tier, "/api/marketplace/listings/" + listingId + "/contact");
 
         if (!rateLimitResult.allowed()) {
             LOG.warnf("Rate limit exceeded for user %d: action=MESSAGE_SEND, tier=%s, limit=%d", userId, tier,
                     rateLimitResult.limitCount());
-            return Response.status(Response.Status.TOO_MANY_REQUESTS)
-                    .entity(Map.of("error", "Rate limit exceeded", "limit", rateLimitResult.limitCount(), "window",
-                            rateLimitResult.windowSeconds() + " seconds"))
+            return Response
+                    .status(Response.Status.TOO_MANY_REQUESTS).entity(Map.of("error", "Rate limit exceeded", "limit",
+                            rateLimitResult.limitCount(), "window", rateLimitResult.windowSeconds() + " seconds"))
                     .build();
         }
 
@@ -193,8 +193,9 @@ public class ListingContactResource {
         // Spam keyword detection
         if (MessageRelayService.containsSpamKeywords(messageBody)) {
             LOG.warnf("Potential spam detected in inquiry: userId=%d, listingId=%s", userId, listingId);
-            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error",
-                    "Message contains prohibited content. Please remove spam keywords and try again.")).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(
+                    Map.of("error", "Message contains prohibited content. Please remove spam keywords and try again."))
+                    .build();
         }
 
         // 5. Enqueue relay job
@@ -209,10 +210,8 @@ public class ListingContactResource {
             LOG.infof("Enqueued message relay job: listingId=%s, userId=%d, fromEmail=%s", listingId, userId,
                     request.email());
 
-            return Response.status(Response.Status.ACCEPTED)
-                    .entity(Map.of("status", "queued", "message", "Your inquiry will be sent shortly", "remaining",
-                            rateLimitResult.remaining()))
-                    .build();
+            return Response.status(Response.Status.ACCEPTED).entity(Map.of("status", "queued", "message",
+                    "Your inquiry will be sent shortly", "remaining", rateLimitResult.remaining())).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Failed to enqueue message relay job: listingId=%s, userId=%d", listingId, userId);

@@ -211,6 +211,11 @@ public class MarketplaceListing extends PanacheEntityBase {
     public boolean reminderSent;
 
     @Column(
+            name = "flag_count",
+            nullable = false)
+    public Long flagCount;
+
+    @Column(
             name = "created_at",
             nullable = false)
     @GenericField(
@@ -393,8 +398,8 @@ public class MarketplaceListing extends PanacheEntityBase {
      * soft-deleted listings retained for 90 days before hard purge.
      *
      * <p>
-     * <b>Image Cleanup:</b> Enqueues LISTING_IMAGE_CLEANUP job to delete associated images from R2 storage
-     * (Policy P1 GDPR compliance).
+     * <b>Image Cleanup:</b> Enqueues LISTING_IMAGE_CLEANUP job to delete associated images from R2 storage (Policy P1
+     * GDPR compliance).
      *
      * @param listingId
      *            the listing UUID to soft-delete
@@ -414,12 +419,10 @@ public class MarketplaceListing extends PanacheEntityBase {
 
             // Enqueue image cleanup job (P1 GDPR compliance)
             try {
-                villagecompute.homepage.services.DelayedJobService jobService =
-                    jakarta.enterprise.inject.spi.CDI.current().select(villagecompute.homepage.services.DelayedJobService.class).get();
-                jobService.enqueue(
-                    villagecompute.homepage.jobs.JobType.LISTING_IMAGE_CLEANUP,
-                    java.util.Map.of("listingId", listingId.toString())
-                );
+                villagecompute.homepage.services.DelayedJobService jobService = jakarta.enterprise.inject.spi.CDI
+                        .current().select(villagecompute.homepage.services.DelayedJobService.class).get();
+                jobService.enqueue(villagecompute.homepage.jobs.JobType.LISTING_IMAGE_CLEANUP,
+                        java.util.Map.of("listingId", listingId.toString()));
                 LOG.infof("Enqueued image cleanup job for listing: id=%s", listingId);
             } catch (Exception e) {
                 LOG.warnf(e, "Failed to enqueue image cleanup job for listing %s (images may remain in R2)", listingId);
@@ -435,8 +438,8 @@ public class MarketplaceListing extends PanacheEntityBase {
      * their expires_at timestamp to 'expired' status.
      *
      * <p>
-     * <b>Image Cleanup:</b> Enqueues LISTING_IMAGE_CLEANUP job to delete associated images from R2 storage
-     * after expiration (Policy P4 storage cost control).
+     * <b>Image Cleanup:</b> Enqueues LISTING_IMAGE_CLEANUP job to delete associated images from R2 storage after
+     * expiration (Policy P4 storage cost control).
      *
      * @param listingId
      *            the listing UUID to mark as expired
@@ -458,12 +461,10 @@ public class MarketplaceListing extends PanacheEntityBase {
 
             // Enqueue image cleanup job (P4 storage cost control)
             try {
-                villagecompute.homepage.services.DelayedJobService jobService =
-                    jakarta.enterprise.inject.spi.CDI.current().select(villagecompute.homepage.services.DelayedJobService.class).get();
-                jobService.enqueue(
-                    villagecompute.homepage.jobs.JobType.LISTING_IMAGE_CLEANUP,
-                    java.util.Map.of("listingId", listingId.toString())
-                );
+                villagecompute.homepage.services.DelayedJobService jobService = jakarta.enterprise.inject.spi.CDI
+                        .current().select(villagecompute.homepage.services.DelayedJobService.class).get();
+                jobService.enqueue(villagecompute.homepage.jobs.JobType.LISTING_IMAGE_CLEANUP,
+                        java.util.Map.of("listingId", listingId.toString()));
                 LOG.infof("Enqueued image cleanup job for expired listing: id=%s", listingId);
             } catch (Exception e) {
                 LOG.warnf(e, "Failed to enqueue image cleanup job for listing %s (images may remain in R2)", listingId);
@@ -535,5 +536,48 @@ public class MarketplaceListing extends PanacheEntityBase {
             return false;
         }
         return count("id = ?1 AND userId = ?2", listingId, userId) > 0;
+    }
+
+    /**
+     * Increments the flag count for this listing.
+     *
+     * <p>
+     * Called when a new flag is submitted. If flag_count reaches 3, the database trigger automatically transitions
+     * status to 'flagged'. This method only increments the counter.
+     *
+     * <p>
+     * Note: The auto-hide behavior at 3 flags is handled by the database trigger {@code check_flag_threshold} defined
+     * in migration 20250110002500_create_listing_flags.sql.
+     */
+    public void incrementFlagCount() {
+        this.flagCount = this.flagCount != null ? this.flagCount + 1 : 1;
+        this.updatedAt = Instant.now();
+        this.persist();
+    }
+
+    /**
+     * Decrements the flag count for this listing.
+     *
+     * <p>
+     * Called when a flag is dismissed by admin. Flag count cannot go below zero.
+     */
+    public void decrementFlagCount() {
+        if (this.flagCount != null && this.flagCount > 0) {
+            this.flagCount = this.flagCount - 1;
+            this.updatedAt = Instant.now();
+            this.persist();
+        }
+    }
+
+    /**
+     * Finds all flagged listings across all categories.
+     *
+     * <p>
+     * Returns listings with status='flagged' for admin moderation queue. Ordered by most recently flagged first.
+     *
+     * @return list of flagged listings
+     */
+    public static java.util.List<MarketplaceListing> findFlagged() {
+        return list("status = 'flagged' ORDER BY updatedAt DESC");
     }
 }

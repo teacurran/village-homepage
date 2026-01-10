@@ -175,8 +175,8 @@ public enum JobType {
     /**
      * Resizes and optimizes uploaded marketplace listing images.
      * <p>
-     * Generates 3 variants: thumbnail (150x150), list (300x225), full (1200x900).
-     * WebP conversion is currently stubbed - variants use original format until conversion implemented.
+     * Generates 3 variants: thumbnail (150x150), list (300x225), full (1200x900). WebP conversion is currently stubbed
+     * - variants use original format until conversion implemented.
      * <p>
      * <b>Cadence:</b> On-demand (triggered by upload)
      * <p>

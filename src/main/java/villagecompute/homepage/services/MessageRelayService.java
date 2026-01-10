@@ -10,7 +10,6 @@ import villagecompute.homepage.data.models.MarketplaceListing;
 import villagecompute.homepage.data.models.MarketplaceMessage;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -143,10 +142,10 @@ public class MessageRelayService {
 
         // Send email with proper headers
         try {
-            mailer.send(Mail.withHtml(sellerEmail, messageSubject, htmlBody)
-                    .addHeader("Message-ID", "<" + messageId + ">").addHeader("Reply-To", replyToAddress)
-                    .addHeader("X-Platform", PLATFORM_NAME).addHeader("X-Listing-ID", listingId.toString())
-                    .setFrom("noreply@" + RELAY_DOMAIN));
+            mailer.send(
+                    Mail.withHtml(sellerEmail, messageSubject, htmlBody).addHeader("Message-ID", "<" + messageId + ">")
+                            .addHeader("Reply-To", replyToAddress).addHeader("X-Platform", PLATFORM_NAME)
+                            .addHeader("X-Listing-ID", listingId.toString()).setFrom("noreply@" + RELAY_DOMAIN));
 
             // Mark as sent
             message.sentAt = Instant.now();
@@ -237,8 +236,8 @@ public class MessageRelayService {
             reply.sentAt = Instant.now();
             MarketplaceMessage.markSent(reply.id, reply.sentAt);
 
-            LOG.infof("Sent reply: messageId=%s, inReplyTo=%s, listingId=%s, fromEmail=%s, toEmail=%s",
-                    replyMessageId, originalMessageId, original.listingId, sellerEmail, buyerEmail);
+            LOG.infof("Sent reply: messageId=%s, inReplyTo=%s, listingId=%s, fromEmail=%s, toEmail=%s", replyMessageId,
+                    originalMessageId, original.listingId, sellerEmail, buyerEmail);
 
             return reply;
 
@@ -358,9 +357,9 @@ public class MessageRelayService {
         String lowerBody = messageBody.toLowerCase();
 
         // Common spam keywords
-        String[] spamKeywords = { "click here to unsubscribe", "you have won", "free money", "nigerian prince",
+        String[] spamKeywords = {"click here to unsubscribe", "you have won", "free money", "nigerian prince",
                 "weight loss", "viagra", "casino", "lottery winner", "enlarge your", "bitcoin investment",
-                "work from home guaranteed", "make money fast" };
+                "work from home guaranteed", "make money fast"};
 
         for (String keyword : spamKeywords) {
             if (lowerBody.contains(keyword)) {

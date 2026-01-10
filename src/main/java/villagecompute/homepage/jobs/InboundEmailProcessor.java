@@ -251,8 +251,8 @@ public class InboundEmailProcessor implements JobHandler {
                 LOG.errorf(e, "IMAP connection failed: %s", e.getMessage());
                 span.recordException(e);
 
-                Counter.builder("marketplace.messages.inbound.errors.total").tag("error_type", "imap_connection_failure")
-                        .register(meterRegistry).increment();
+                Counter.builder("marketplace.messages.inbound.errors.total")
+                        .tag("error_type", "imap_connection_failure").register(meterRegistry).increment();
 
                 // Fail gracefully - retry next scheduled run
                 throw e;

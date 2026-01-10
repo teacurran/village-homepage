@@ -238,12 +238,10 @@ public class MarketplaceMessageTest {
     @Test
     @Transactional
     public void testFindSpam() {
-        MarketplaceMessage msg1 = createTestMessage(testListingId, "msg-spam-1@villagecompute.com",
-                "buyer_to_seller");
+        MarketplaceMessage msg1 = createTestMessage(testListingId, "msg-spam-1@villagecompute.com", "buyer_to_seller");
         MarketplaceMessage.markSpam(msg1.id, new BigDecimal("0.99"));
 
-        MarketplaceMessage msg2 = createTestMessage(testListingId, "msg-spam-2@villagecompute.com",
-                "buyer_to_seller");
+        MarketplaceMessage msg2 = createTestMessage(testListingId, "msg-spam-2@villagecompute.com", "buyer_to_seller");
         MarketplaceMessage.markSpam(msg2.id, new BigDecimal("0.75"));
 
         // Create non-spam message

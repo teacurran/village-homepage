@@ -112,8 +112,8 @@ public class MessageRelayServiceTest {
     public void testExtractMessageIdFromInvalidReplyAddress() {
         assertNull(MessageRelayService.extractMessageIdFromReplyAddress("invalid@example.com"));
         assertNull(MessageRelayService.extractMessageIdFromReplyAddress("msg-abc@villagecompute.com")); // Should start
-                                                                                                          // with
-                                                                                                          // "reply-"
+                                                                                                        // with
+                                                                                                        // "reply-"
         assertNull(MessageRelayService.extractMessageIdFromReplyAddress(null));
         assertNull(MessageRelayService.extractMessageIdFromReplyAddress(""));
     }

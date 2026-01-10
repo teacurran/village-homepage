@@ -23,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  *
  * <p>
- * <b>Note:</b> Full job execution tests require mocking StorageGateway download/upload operations.
- * This test focuses on entity layer validation and job handler registration.
+ * <b>Note:</b> Full job execution tests require mocking StorageGateway download/upload operations. This test focuses on
+ * entity layer validation and job handler registration.
  */
 @QuarkusTest
 public class ListingImageProcessingJobHandlerTest {

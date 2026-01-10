@@ -17,23 +17,23 @@ import java.util.UUID;
  * Job handler for cleaning up listing images from R2 storage.
  *
  * <p>
- * Triggered when a listing is soft-deleted or expired. Removes both database records
- * and R2 objects for all variants (original, thumbnail, list, full).
+ * Triggered when a listing is soft-deleted or expired. Removes both database records and R2 objects for all variants
+ * (original, thumbnail, list, full).
  *
  * <p>
  * Workflow:
  * <ol>
- *   <li>Find all images for the listing (all variants)</li>
- *   <li>Delete each image from R2 storage via StorageGateway</li>
- *   <li>Delete database records via cascade or explicit delete</li>
- *   <li>Export cleanup metrics (count, bytes freed)</li>
+ * <li>Find all images for the listing (all variants)</li>
+ * <li>Delete each image from R2 storage via StorageGateway</li>
+ * <li>Delete database records via cascade or explicit delete</li>
+ * <li>Export cleanup metrics (count, bytes freed)</li>
  * </ol>
  *
  * <p>
  * <b>Policy References:</b>
  * <ul>
- *   <li>P1: GDPR compliance - hard-deletes PII when user deleted or listing removed</li>
- *   <li>P4: Storage cost control - cleanup prevents indefinite retention of removed content</li>
+ * <li>P1: GDPR compliance - hard-deletes PII when user deleted or listing removed</li>
+ * <li>P4: Storage cost control - cleanup prevents indefinite retention of removed content</li>
  * </ul>
  */
 @ApplicationScoped
@@ -67,10 +67,8 @@ public class ListingImageCleanupJobHandler implements JobHandler {
 
             if (images.isEmpty()) {
                 LOG.infof("No images to clean up for listingId=%s", listingId);
-                sample.stop(Timer.builder("marketplace.images.cleanup.duration")
-                    .tag("status", "success")
-                    .tag("image_count", "0")
-                    .register(meterRegistry));
+                sample.stop(Timer.builder("marketplace.images.cleanup.duration").tag("status", "success")
+                        .tag("image_count", "0").register(meterRegistry));
                 return;
             }
 
@@ -97,38 +95,30 @@ public class ListingImageCleanupJobHandler implements JobHandler {
             // 3. Delete database records
             long deletedCount = MarketplaceListingImage.deleteByListingId(listingId);
 
-            LOG.infof("Cleanup complete: listingId=%s, deleted=%d records, freed=%d bytes, failures=%d",
-                listingId, deletedCount, totalBytesFreed, failureCount);
+            LOG.infof("Cleanup complete: listingId=%s, deleted=%d records, freed=%d bytes, failures=%d", listingId,
+                    deletedCount, totalBytesFreed, failureCount);
 
             // 4. Export metrics
-            meterRegistry.counter("marketplace.images.cleaned.total",
-                "listing_id", listingId.toString()
-            ).increment(deletedCount);
+            meterRegistry.counter("marketplace.images.cleaned.total", "listing_id", listingId.toString())
+                    .increment(deletedCount);
 
-            meterRegistry.counter("marketplace.storage.bytes.freed",
-                "bucket", "listings"
-            ).increment(totalBytesFreed);
+            meterRegistry.counter("marketplace.storage.bytes.freed", "bucket", "listings").increment(totalBytesFreed);
 
             if (failureCount > 0) {
-                meterRegistry.counter("marketplace.images.cleanup.failures.total",
-                    "listing_id", listingId.toString()
-                ).increment(failureCount);
+                meterRegistry.counter("marketplace.images.cleanup.failures.total", "listing_id", listingId.toString())
+                        .increment(failureCount);
             }
 
             sample.stop(Timer.builder("marketplace.images.cleanup.duration")
-                .tag("status", failureCount > 0 ? "partial" : "success")
-                .tag("image_count", String.valueOf(deletedCount))
-                .register(meterRegistry));
+                    .tag("status", failureCount > 0 ? "partial" : "success")
+                    .tag("image_count", String.valueOf(deletedCount)).register(meterRegistry));
 
         } catch (Exception e) {
-            sample.stop(Timer.builder("marketplace.images.cleanup.duration")
-                .tag("status", "error")
-                .tag("image_count", "0")
-                .register(meterRegistry));
+            sample.stop(Timer.builder("marketplace.images.cleanup.duration").tag("status", "error")
+                    .tag("image_count", "0").register(meterRegistry));
 
-            meterRegistry.counter("marketplace.images.cleanup.errors.total",
-                "error_type", e.getClass().getSimpleName()
-            ).increment();
+            meterRegistry.counter("marketplace.images.cleanup.errors.total", "error_type", e.getClass().getSimpleName())
+                    .increment();
 
             LOG.errorf(e, "Failed to clean up images for jobId=%d", jobId);
             throw e;

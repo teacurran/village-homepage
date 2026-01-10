@@ -11,52 +11,63 @@ import java.util.UUID;
 /**
  * Marketplace listing image entity.
  *
- * Stores metadata for uploaded listing images and their variants (thumbnail, list, full).
- * Images are stored in R2 object storage via StorageGateway.
+ * Stores metadata for uploaded listing images and their variants (thumbnail, list, full). Images are stored in R2
+ * object storage via StorageGateway.
  *
- * Lifecycle:
- * 1. Original uploaded → status='pending'
- * 2. Job processes image → generates variants → status='processed'
+ * Lifecycle: 1. Original uploaded → status='pending' 2. Job processes image → generates variants → status='processed'
  * 3. If processing fails → status='failed' (requires manual intervention)
  *
- * Policy References:
- * - P1: GDPR compliance (CASCADE delete on listing)
- * - P4: Indefinite retention in R2 (cleanup only on listing removal/expiration)
- * - P12: Image processing uses BULK queue (no semaphore limits like SCREENSHOT queue)
+ * Policy References: - P1: GDPR compliance (CASCADE delete on listing) - P4: Indefinite retention in R2 (cleanup only
+ * on listing removal/expiration) - P12: Image processing uses BULK queue (no semaphore limits like SCREENSHOT queue)
  */
 @Entity
-@Table(name = "marketplace_listing_images")
+@Table(
+        name = "marketplace_listing_images")
 public class MarketplaceListingImage extends PanacheEntityBase {
 
     @Id
     @GeneratedValue
     public UUID id;
 
-    @Column(name = "listing_id", nullable = false)
+    @Column(
+            name = "listing_id",
+            nullable = false)
     public UUID listingId;
 
-    @Column(name = "storage_key", nullable = false)
+    @Column(
+            name = "storage_key",
+            nullable = false)
     public String storageKey;
 
-    @Column(nullable = false)
-    public String variant;  // original, thumbnail, list, full
+    @Column(
+            nullable = false)
+    public String variant; // original, thumbnail, list, full
 
-    @Column(name = "original_filename")
+    @Column(
+            name = "original_filename")
     public String originalFilename;
 
-    @Column(name = "content_type", nullable = false)
+    @Column(
+            name = "content_type",
+            nullable = false)
     public String contentType;
 
-    @Column(name = "size_bytes", nullable = false)
+    @Column(
+            name = "size_bytes",
+            nullable = false)
     public Long sizeBytes;
 
-    @Column(name = "display_order")
+    @Column(
+            name = "display_order")
     public Integer displayOrder;
 
-    @Column(nullable = false)
-    public String status;  // pending, processed, failed
+    @Column(
+            nullable = false)
+    public String status; // pending, processed, failed
 
-    @Column(name = "created_at", nullable = false)
+    @Column(
+            name = "created_at",
+            nullable = false)
     public Instant createdAt;
 
     // Static finders (Panache ActiveRecord pattern)
@@ -64,7 +75,8 @@ public class MarketplaceListingImage extends PanacheEntityBase {
     /**
      * Find all images for a listing, ordered by display order.
      *
-     * @param listingId the listing UUID
+     * @param listingId
+     *            the listing UUID
      * @return list of images ordered by display_order ASC
      */
     public static List<MarketplaceListingImage> findByListingId(UUID listingId) {
@@ -74,7 +86,8 @@ public class MarketplaceListingImage extends PanacheEntityBase {
     /**
      * Count non-failed images for a listing (for 12-image limit enforcement).
      *
-     * @param listingId the listing UUID
+     * @param listingId
+     *            the listing UUID
      * @return count of images with status != 'failed'
      */
     public static long countByListingId(UUID listingId) {
@@ -84,7 +97,8 @@ public class MarketplaceListingImage extends PanacheEntityBase {
     /**
      * Count original images for a listing (each original spawns 3 variants).
      *
-     * @param listingId the listing UUID
+     * @param listingId
+     *            the listing UUID
      * @return count of original images (not variants)
      */
     public static long countOriginalsByListingId(UUID listingId) {
@@ -94,8 +108,10 @@ public class MarketplaceListingImage extends PanacheEntityBase {
     /**
      * Find specific variant for a listing.
      *
-     * @param listingId the listing UUID
-     * @param variant the variant name (original, thumbnail, list, full)
+     * @param listingId
+     *            the listing UUID
+     * @param variant
+     *            the variant name (original, thumbnail, list, full)
      * @return list of matching images
      */
     public static List<MarketplaceListingImage> findByListingIdAndVariant(UUID listingId, String variant) {
@@ -105,7 +121,8 @@ public class MarketplaceListingImage extends PanacheEntityBase {
     /**
      * Find image by ID with validation.
      *
-     * @param imageId the image UUID
+     * @param imageId
+     *            the image UUID
      * @return optional containing the image if found
      */
     public static Optional<MarketplaceListingImage> findByIdOptional(UUID imageId) {
@@ -115,7 +132,8 @@ public class MarketplaceListingImage extends PanacheEntityBase {
     /**
      * Delete all images for a listing (used by cleanup jobs).
      *
-     * @param listingId the listing UUID
+     * @param listingId
+     *            the listing UUID
      * @return number of images deleted
      */
     public static long deleteByListingId(UUID listingId) {
@@ -123,11 +141,13 @@ public class MarketplaceListingImage extends PanacheEntityBase {
     }
 
     /**
-     * Find all images for a specific display order position.
-     * Used to find all variants (original, thumbnail, list, full) for a single uploaded image.
+     * Find all images for a specific display order position. Used to find all variants (original, thumbnail, list,
+     * full) for a single uploaded image.
      *
-     * @param listingId the listing UUID
-     * @param displayOrder the display order position
+     * @param listingId
+     *            the listing UUID
+     * @param displayOrder
+     *            the display order position
      * @return list of images (typically 4: original + 3 variants)
      */
     public static List<MarketplaceListingImage> findByListingIdAndDisplayOrder(UUID listingId, int displayOrder) {

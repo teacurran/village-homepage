@@ -26,7 +26,8 @@ import java.util.UUID;
  * <b>Email Relay Flow:</b>
  * <ol>
  * <li>Buyer sends inquiry to listing's masked email (listing-{uuid}@villagecompute.com)</li>
- * <li>MessageRelayJobHandler relays message to seller's real email with Reply-To: reply-{messageId}@villagecompute.com</li>
+ * <li>MessageRelayJobHandler relays message to seller's real email with Reply-To:
+ * reply-{messageId}@villagecompute.com</li>
  * <li>Seller replies via their email client</li>
  * <li>InboundEmailProcessor polls IMAP inbox, extracts messageId from Reply-To address</li>
  * <li>System relays seller's reply to buyer's real email</li>
@@ -151,7 +152,7 @@ public class MarketplaceMessage extends PanacheEntityBase {
 
     @Column(
             nullable = false)
-    public String direction;  // buyer_to_seller, seller_to_buyer
+    public String direction; // buyer_to_seller, seller_to_buyer
 
     @Column(
             name = "sent_at")
@@ -178,8 +179,8 @@ public class MarketplaceMessage extends PanacheEntityBase {
      * Finds all messages for a specific listing, ordered by creation date ascending (oldest first).
      *
      * <p>
-     * Used for displaying message history in admin views and user "My Listings" pages. Returns messages in chronological
-     * order to show conversation flow.
+     * Used for displaying message history in admin views and user "My Listings" pages. Returns messages in
+     * chronological order to show conversation flow.
      *
      * @param listingId
      *            the listing UUID
@@ -269,8 +270,7 @@ public class MarketplaceMessage extends PanacheEntityBase {
             message.createdAt = Instant.now();
 
             message.persist();
-            LOG.infof(
-                    "Created marketplace message: id=%s, listingId=%s, messageId=%s, direction=%s, threadId=%s",
+            LOG.infof("Created marketplace message: id=%s, listingId=%s, messageId=%s, direction=%s, threadId=%s",
                     message.id, message.listingId, message.messageId, message.direction, message.threadId);
         });
         return message;
@@ -324,8 +324,8 @@ public class MarketplaceMessage extends PanacheEntityBase {
             message.flaggedForReview = true;
             message.persist();
 
-            LOG.infof("Flagged message for review: id=%s, listingId=%s, direction=%s", message.id,
-                    message.listingId, message.direction);
+            LOG.infof("Flagged message for review: id=%s, listingId=%s, direction=%s", message.id, message.listingId,
+                    message.direction);
         });
     }
 
@@ -351,11 +351,11 @@ public class MarketplaceMessage extends PanacheEntityBase {
 
             message.isSpam = true;
             message.spamScore = spamScore;
-            message.flaggedForReview = true;  // Auto-flag spam for review
+            message.flaggedForReview = true; // Auto-flag spam for review
             message.persist();
 
-            LOG.warnf("Marked message as spam: id=%s, spamScore=%s, listingId=%s", message.id,
-                    message.spamScore, message.listingId);
+            LOG.warnf("Marked message as spam: id=%s, spamScore=%s, listingId=%s", message.id, message.spamScore,
+                    message.listingId);
         });
     }
 

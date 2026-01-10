@@ -61,7 +61,8 @@ import jakarta.validation.constraints.Size;
  */
 public record ContactInquiryRequest(@NotBlank @Size(
         min = 1,
-        max = 100) String name, @NotBlank @Email String email, @NotBlank @Size(
+        max = 100) String name, @NotBlank @Email String email,
+        @NotBlank @Size(
                 min = 10,
                 max = 10_000,
                 message = "Message must be between 10 and 10,000 characters") String message) {

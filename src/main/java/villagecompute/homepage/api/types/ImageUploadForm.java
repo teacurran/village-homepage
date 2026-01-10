@@ -9,8 +9,8 @@ import java.io.InputStream;
 /**
  * Multipart form data for listing image uploads.
  *
- * Accepts image file with optional display order specification.
- * Used by POST /api/marketplace/listings/{listingId}/images endpoint.
+ * Accepts image file with optional display order specification. Used by POST
+ * /api/marketplace/listings/{listingId}/images endpoint.
  */
 public class ImageUploadForm {
 

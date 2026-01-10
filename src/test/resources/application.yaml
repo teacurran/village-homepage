@@ -47,5 +47,11 @@ quarkus:
     jpa:
       enabled: false
 
+  # Hibernate Search Elasticsearch configuration for tests
+  hibernate-search-orm:
+    enabled: false
+    elasticsearch:
+      version: 8
+
 alphavantage:
   api-key: test-api-key

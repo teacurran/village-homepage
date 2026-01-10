@@ -41,6 +41,9 @@ import java.util.UUID;
  * <li>{@code admin_role_granted_by} (UUID) - User ID who granted the admin role</li>
  * <li>{@code admin_role_granted_at} (TIMESTAMPTZ) - When admin role was granted</li>
  * <li>{@code analytics_consent} (BOOLEAN) - Consent for analytics tracking (Policy P14)</li>
+ * <li>{@code is_banned} (BOOLEAN) - User banned from platform (typically for 2+ chargebacks per P3)</li>
+ * <li>{@code banned_at} (TIMESTAMPTZ) - Timestamp when user was banned</li>
+ * <li>{@code ban_reason} (TEXT) - Reason for ban (e.g., "Repeated chargebacks (3)")</li>
  * <li>{@code last_active_at} (TIMESTAMPTZ) - Last activity timestamp</li>
  * <li>{@code created_at} (TIMESTAMPTZ) - Record creation timestamp</li>
  * <li>{@code updated_at} (TIMESTAMPTZ) - Last modification timestamp</li>
@@ -129,6 +132,19 @@ public class User extends PanacheEntityBase {
             name = "analytics_consent",
             nullable = false)
     public boolean analyticsConsent;
+
+    @Column(
+            name = "is_banned",
+            nullable = false)
+    public boolean isBanned;
+
+    @Column(
+            name = "banned_at")
+    public Instant bannedAt;
+
+    @Column(
+            name = "ban_reason")
+    public String banReason;
 
     @Column(
             name = "last_active_at")
@@ -394,5 +410,71 @@ public class User extends PanacheEntityBase {
      */
     public boolean hasRole(String role) {
         return role != null && role.equals(this.adminRole);
+    }
+
+    /**
+     * Bans a user from the platform.
+     *
+     * <p>
+     * Per Policy P3, users are banned for repeated chargebacks (2+ threshold). Banned users are blocked from:
+     * <ul>
+     * <li>Creating marketplace listings</li>
+     * <li>Submitting flags or votes</li>
+     * <li>Posting marketplace messages</li>
+     * <li>Any marketplace actions</li>
+     * </ul>
+     *
+     * <p>
+     * Ban is recorded with timestamp and reason for audit trail. User data is NOT deleted (GDPR requires export
+     * capability).
+     *
+     * @param userId
+     *            the user UUID to ban
+     * @param reason
+     *            the ban reason (e.g., "Repeated chargebacks (3)")
+     */
+    public static void banUser(UUID userId, String reason) {
+        if (userId == null) {
+            LOG.warnf("Cannot ban user - userId is null");
+            return;
+        }
+
+        User user = User.findById(userId);
+        if (user == null) {
+            LOG.warnf("Cannot ban user %s - user not found", userId);
+            return;
+        }
+
+        if (user.isBanned) {
+            LOG.infof("User %s already banned (reason: %s)", userId, user.banReason);
+            return;
+        }
+
+        user.isBanned = true;
+        user.bannedAt = Instant.now();
+        user.banReason = reason;
+        user.updatedAt = Instant.now();
+        user.persist();
+
+        LOG.warnf("BANNED USER: userId=%s, reason=%s, bannedAt=%s", userId, reason, user.bannedAt);
+
+        // TODO: Send email notification to user explaining ban + appeal process
+        // TODO: Mark all active listings as 'removed'
+    }
+
+    /**
+     * Checks if a user is banned.
+     *
+     * @param userId
+     *            the user UUID to check
+     * @return true if user is banned, false otherwise
+     */
+    public static boolean checkIfBanned(UUID userId) {
+        if (userId == null) {
+            return false;
+        }
+
+        User user = User.findById(userId);
+        return user != null && user.isBanned;
     }
 }

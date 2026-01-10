@@ -20,8 +20,8 @@ import java.util.UUID;
  * Job handler for marketplace message relay (Features F12.6, F14.3).
  *
  * <p>
- * This handler processes MESSAGE_RELAY jobs enqueued by the listing contact REST endpoint. It relays buyer inquiries
- * to sellers via masked email addresses to protect privacy.
+ * This handler processes MESSAGE_RELAY jobs enqueued by the listing contact REST endpoint. It relays buyer inquiries to
+ * sellers via masked email addresses to protect privacy.
  *
  * <p>
  * <b>Execution Flow:</b>

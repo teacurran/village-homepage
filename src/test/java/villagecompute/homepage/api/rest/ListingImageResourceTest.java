@@ -28,8 +28,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  *
  * <p>
- * <b>Note:</b> This test focuses on entity layer validation. Full REST integration tests
- * require mocking StorageGateway and DelayedJobService.
+ * <b>Note:</b> This test focuses on entity layer validation. Full REST integration tests require mocking StorageGateway
+ * and DelayedJobService.
  */
 @QuarkusTest
 public class ListingImageResourceTest {
@@ -52,9 +52,8 @@ public class ListingImageResourceTest {
         category.slug = "for-sale";
         category.sortOrder = 1;
         category.isActive = true;
-        category.feeSchedule = new villagecompute.homepage.api.types.FeeScheduleType(
-            BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO
-        );
+        category.feeSchedule = new villagecompute.homepage.api.types.FeeScheduleType(BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO);
         category.createdAt = Instant.now();
         category.updatedAt = Instant.now();
         category.persist();
@@ -70,9 +69,8 @@ public class ListingImageResourceTest {
         listing.title = "Test Listing";
         listing.description = "Test description for image upload tests";
         listing.price = BigDecimal.valueOf(100);
-        listing.contactInfo = new villagecompute.homepage.api.types.ContactInfoType(
-            "test@example.com", null, "masked-test@villagecompute.com"
-        );
+        listing.contactInfo = new villagecompute.homepage.api.types.ContactInfoType("test@example.com", null,
+                "masked-test@villagecompute.com");
         listing.status = "active";
         listing.createdAt = Instant.now();
         listing.updatedAt = Instant.now();
@@ -168,9 +166,8 @@ public class ListingImageResourceTest {
         otherListing.title = "Other Listing";
         otherListing.description = "Another user's listing";
         otherListing.price = BigDecimal.valueOf(50);
-        otherListing.contactInfo = new villagecompute.homepage.api.types.ContactInfoType(
-            "other@example.com", null, "masked-other@villagecompute.com"
-        );
+        otherListing.contactInfo = new villagecompute.homepage.api.types.ContactInfoType("other@example.com", null,
+                "masked-other@villagecompute.com");
         otherListing.status = "active";
         otherListing.createdAt = Instant.now();
         otherListing.updatedAt = Instant.now();

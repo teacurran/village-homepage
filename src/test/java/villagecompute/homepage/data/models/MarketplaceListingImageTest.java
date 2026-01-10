@@ -111,7 +111,8 @@ public class MarketplaceListingImageTest {
         createTestImage(listingId, "thumbnail", 1, "processed");
         createTestImage(listingId, "thumbnail", 2, "processed");
 
-        List<MarketplaceListingImage> thumbnails = MarketplaceListingImage.findByListingIdAndVariant(listingId, "thumbnail");
+        List<MarketplaceListingImage> thumbnails = MarketplaceListingImage.findByListingIdAndVariant(listingId,
+                "thumbnail");
         assertEquals(2, thumbnails.size());
         assertTrue(thumbnails.stream().allMatch(img -> "thumbnail".equals(img.variant)));
     }
