@@ -72,7 +72,9 @@ public class GdprService {
     @Inject
     EntityManager entityManager;
 
-    @ConfigProperty(name = "villagecompute.gdpr.export-ttl-days", defaultValue = "7")
+    @ConfigProperty(
+            name = "villagecompute.gdpr.export-ttl-days",
+            defaultValue = "7")
     int exportTtlDays;
 
     /**
@@ -101,9 +103,11 @@ public class GdprService {
      * }
      * </pre>
      *
-     * @param userId the user's ID
+     * @param userId
+     *            the user's ID
      * @return signed URL valid for {@code export-ttl-days} days
-     * @throws Exception if export fails
+     * @throws Exception
+     *             if export fails
      */
     public String exportUserData(UUID userId) throws Exception {
         Span span = tracer.spanBuilder("gdpr.export").setAttribute("user_id", userId.toString()).startSpan();
@@ -123,11 +127,13 @@ public class GdprService {
             exportData.put("user", serializeUser(user));
 
             // Profile data
-            exportData.put("profile", queryOptional("SELECT p FROM UserProfile p WHERE p.userId = :userId",
-                    Map.of("userId", userId)));
+            exportData.put("profile",
+                    queryOptional("SELECT p FROM UserProfile p WHERE p.userId = :userId", Map.of("userId", userId)));
             exportData.put("curated_articles",
-                    queryList("SELECT ca FROM ProfileCuratedArticle ca WHERE ca.profileId IN "
-                            + "(SELECT p.id FROM UserProfile p WHERE p.userId = :userId)", Map.of("userId", userId)));
+                    queryList(
+                            "SELECT ca FROM ProfileCuratedArticle ca WHERE ca.profileId IN "
+                                    + "(SELECT p.id FROM UserProfile p WHERE p.userId = :userId)",
+                            Map.of("userId", userId)));
 
             // Social data
             exportData.put("social_tokens",
@@ -139,11 +145,13 @@ public class GdprService {
             exportData.put("marketplace_listings", queryList(
                     "SELECT ml FROM MarketplaceListing ml WHERE ml.sellerId = :userId", Map.of("userId", userId)));
             exportData.put("marketplace_messages",
-                    queryList("SELECT mm FROM MarketplaceMessage mm WHERE mm.sellerId = :userId OR mm.buyerId = :userId",
+                    queryList(
+                            "SELECT mm FROM MarketplaceMessage mm WHERE mm.sellerId = :userId OR mm.buyerId = :userId",
                             Map.of("userId", userId)));
             exportData.put("listing_promotions",
-                    queryList("SELECT lp FROM ListingPromotion lp WHERE lp.listingId IN "
-                            + "(SELECT ml.id FROM MarketplaceListing ml WHERE ml.sellerId = :userId)",
+                    queryList(
+                            "SELECT lp FROM ListingPromotion lp WHERE lp.listingId IN "
+                                    + "(SELECT ml.id FROM MarketplaceListing ml WHERE ml.sellerId = :userId)",
                             Map.of("userId", userId)));
             exportData.put("listing_flags",
                     queryList("SELECT lf FROM ListingFlag lf WHERE lf.flaggedBy = :userId", Map.of("userId", userId)));
@@ -151,9 +159,8 @@ public class GdprService {
                     queryList("SELECT pr FROM PaymentRefund pr WHERE pr.userId = :userId", Map.of("userId", userId)));
 
             // Good Sites data
-            exportData.put("directory_sites",
-                    queryList("SELECT ds FROM DirectorySite ds WHERE ds.submittedBy = :userId",
-                            Map.of("userId", userId)));
+            exportData.put("directory_sites", queryList(
+                    "SELECT ds FROM DirectorySite ds WHERE ds.submittedBy = :userId", Map.of("userId", userId)));
             exportData.put("directory_votes",
                     queryList("SELECT dv FROM DirectoryVote dv WHERE dv.userId = :userId", Map.of("userId", userId)));
             exportData.put("karma_audit",
@@ -164,9 +171,9 @@ public class GdprService {
                     .map(AccountMergeAudit::toSnapshot).toList());
             exportData.put("rate_limit_violations", queryList(
                     "SELECT rv FROM RateLimitViolation rv WHERE rv.userId = :userId", Map.of("userId", userId)));
-            exportData.put("impersonation_audit",
-                    queryList("SELECT ia FROM ImpersonationAudit ia WHERE ia.adminId = :userId OR ia.targetUserId = :userId",
-                            Map.of("userId", userId)));
+            exportData.put("impersonation_audit", queryList(
+                    "SELECT ia FROM ImpersonationAudit ia WHERE ia.adminId = :userId OR ia.targetUserId = :userId",
+                    Map.of("userId", userId)));
 
             // Analytics data (only if consent given, per Policy P14)
             if (user.analyticsConsent) {
@@ -229,8 +236,10 @@ public class GdprService {
      * <p>
      * <b>Deletion Order:</b> Child entities first (foreign key constraints), then R2 objects, finally user record.
      *
-     * @param userId the user's ID
-     * @throws Exception if deletion fails
+     * @param userId
+     *            the user's ID
+     * @throws Exception
+     *             if deletion fails
      */
     public void deleteUserData(UUID userId) throws Exception {
         Span span = tracer.spanBuilder("gdpr.deletion").setAttribute("user_id", userId.toString()).startSpan();
@@ -278,8 +287,9 @@ public class GdprService {
 
                 // Listings and related (must delete related entities first)
                 String listingIdsQuery = "SELECT id FROM marketplace_listings WHERE seller_id = :userId";
-                totalDeleted += entityManager.createNativeQuery(
-                        "DELETE FROM listing_promotions WHERE listing_id IN (" + listingIdsQuery + ")")
+                totalDeleted += entityManager
+                        .createNativeQuery(
+                                "DELETE FROM listing_promotions WHERE listing_id IN (" + listingIdsQuery + ")")
                         .setParameter("userId", userId).executeUpdate();
                 totalDeleted += entityManager
                         .createNativeQuery(
@@ -289,8 +299,9 @@ public class GdprService {
 
                 // Profiles and related
                 String profileIdsQuery = "SELECT id FROM user_profiles WHERE user_id = :userId";
-                totalDeleted += entityManager.createNativeQuery(
-                        "DELETE FROM profile_curated_articles WHERE profile_id IN (" + profileIdsQuery + ")")
+                totalDeleted += entityManager
+                        .createNativeQuery(
+                                "DELETE FROM profile_curated_articles WHERE profile_id IN (" + profileIdsQuery + ")")
                         .setParameter("userId", userId).executeUpdate();
                 totalDeleted += deleteEntity("UserProfile", "user_id = :userId", userId);
 

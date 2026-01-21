@@ -47,7 +47,8 @@ import java.util.UUID;
  * @see villagecompute.homepage.jobs.GdprDeletionJobHandler for deletion job implementation
  */
 @Entity
-@Table(name = "gdpr_requests")
+@Table(
+        name = "gdpr_requests")
 public class GdprRequest extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(GdprRequest.class);
@@ -58,48 +59,70 @@ public class GdprRequest extends PanacheEntityBase {
 
     @Id
     @GeneratedValue
-    @Column(nullable = false)
+    @Column(
+            nullable = false)
     public UUID id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(
+            name = "user_id",
+            nullable = false)
     public UUID userId;
 
-    @Column(name = "request_type", nullable = false)
+    @Column(
+            name = "request_type",
+            nullable = false)
     @Enumerated(EnumType.STRING)
     public RequestType requestType;
 
-    @Column(name = "status", nullable = false)
+    @Column(
+            name = "status",
+            nullable = false)
     @Enumerated(EnumType.STRING)
     public RequestStatus status;
 
-    @Column(name = "job_id")
+    @Column(
+            name = "job_id")
     public Long jobId;
 
-    @Column(name = "requested_at", nullable = false)
+    @Column(
+            name = "requested_at",
+            nullable = false)
     public Instant requestedAt;
 
-    @Column(name = "completed_at")
+    @Column(
+            name = "completed_at")
     public Instant completedAt;
 
-    @Column(name = "signed_url")
+    @Column(
+            name = "signed_url")
     public String signedUrl;
 
-    @Column(name = "signed_url_expires_at")
+    @Column(
+            name = "signed_url_expires_at")
     public Instant signedUrlExpiresAt;
 
-    @Column(name = "error_message")
+    @Column(
+            name = "error_message")
     public String errorMessage;
 
-    @Column(name = "ip_address", nullable = false)
+    @Column(
+            name = "ip_address",
+            nullable = false)
     public String ipAddress;
 
-    @Column(name = "user_agent", nullable = false)
+    @Column(
+            name = "user_agent",
+            nullable = false)
     public String userAgent;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(
+            name = "created_at",
+            nullable = false)
     public Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(
+            name = "updated_at",
+            nullable = false)
     public Instant updatedAt;
 
     /**
@@ -145,7 +168,8 @@ public class GdprRequest extends PanacheEntityBase {
     /**
      * Finds all GDPR requests for a specific user, ordered by most recent first.
      *
-     * @param userId the user's ID
+     * @param userId
+     *            the user's ID
      * @return list of GDPR requests for this user
      */
     public static List<GdprRequest> findByUser(UUID userId) {
@@ -158,7 +182,8 @@ public class GdprRequest extends PanacheEntityBase {
     /**
      * Finds all GDPR requests with a specific status.
      *
-     * @param status the request status
+     * @param status
+     *            the request status
      * @return list of requests with this status
      */
     public static List<GdprRequest> findByStatus(RequestStatus status) {
@@ -174,15 +199,17 @@ public class GdprRequest extends PanacheEntityBase {
      * @return list of export requests with expired signed URLs
      */
     public static List<GdprRequest> findExpiredExports() {
-        return find("#" + QUERY_FIND_PENDING_EXPORTS
-                + " WHERE request_type = ?1 AND status = ?2 AND signed_url_expires_at < NOW()", RequestType.EXPORT,
-                RequestStatus.COMPLETED).list();
+        return find(
+                "#" + QUERY_FIND_PENDING_EXPORTS
+                        + " WHERE request_type = ?1 AND status = ?2 AND signed_url_expires_at < NOW()",
+                RequestType.EXPORT, RequestStatus.COMPLETED).list();
     }
 
     /**
      * Finds the most recent export request for a user, if any.
      *
-     * @param userId the user's ID
+     * @param userId
+     *            the user's ID
      * @return the most recent export request, or empty if none exists
      */
     public static Optional<GdprRequest> findLatestExport(UUID userId) {
@@ -196,7 +223,8 @@ public class GdprRequest extends PanacheEntityBase {
     /**
      * Finds the most recent deletion request for a user, if any.
      *
-     * @param userId the user's ID
+     * @param userId
+     *            the user's ID
      * @return the most recent deletion request, or empty if none exists
      */
     public static Optional<GdprRequest> findLatestDeletion(UUID userId) {
@@ -210,11 +238,16 @@ public class GdprRequest extends PanacheEntityBase {
     /**
      * Creates a new GDPR request with PENDING status.
      *
-     * @param userId the user requesting export/deletion
-     * @param requestType EXPORT or DELETION
-     * @param ipAddress user's IP address at time of request
-     * @param userAgent user's browser/client user agent
-     * @param jobId the delayed job ID
+     * @param userId
+     *            the user requesting export/deletion
+     * @param requestType
+     *            EXPORT or DELETION
+     * @param ipAddress
+     *            user's IP address at time of request
+     * @param userAgent
+     *            user's browser/client user agent
+     * @param jobId
+     *            the delayed job ID
      * @return persisted GDPR request record
      */
     public static GdprRequest create(UUID userId, RequestType requestType, String ipAddress, String userAgent,
@@ -248,8 +281,10 @@ public class GdprRequest extends PanacheEntityBase {
     /**
      * Marks request as COMPLETED with optional signed URL for exports.
      *
-     * @param signedUrl R2 signed URL (exports only, null for deletions)
-     * @param signedUrlExpiresAt expiration timestamp for signed URL
+     * @param signedUrl
+     *            R2 signed URL (exports only, null for deletions)
+     * @param signedUrlExpiresAt
+     *            expiration timestamp for signed URL
      */
     public void markCompleted(String signedUrl, Instant signedUrlExpiresAt) {
         this.status = RequestStatus.COMPLETED;
@@ -264,7 +299,8 @@ public class GdprRequest extends PanacheEntityBase {
     /**
      * Marks request as FAILED with error message.
      *
-     * @param errorMessage the error description
+     * @param errorMessage
+     *            the error description
      */
     public void markFailed(String errorMessage) {
         this.status = RequestStatus.FAILED;
@@ -292,8 +328,7 @@ public class GdprRequest extends PanacheEntityBase {
      * @return immutable snapshot record
      */
     public RequestSnapshot toSnapshot() {
-        return new RequestSnapshot(this.id, this.userId, this.requestType.name(), this.status.name(),
-                this.requestedAt, this.completedAt, this.signedUrl, this.signedUrlExpiresAt, this.ipAddress,
-                this.errorMessage);
+        return new RequestSnapshot(this.id, this.userId, this.requestType.name(), this.status.name(), this.requestedAt,
+                this.completedAt, this.signedUrl, this.signedUrlExpiresAt, this.ipAddress, this.errorMessage);
     }
 }

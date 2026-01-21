@@ -6,8 +6,6 @@
 
 package villagecompute.homepage.services;
 
-import java.time.YearMonth;
-
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 

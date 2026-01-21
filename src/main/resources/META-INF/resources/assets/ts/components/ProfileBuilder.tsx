@@ -22,7 +22,6 @@ import { Card, Tabs, Button, Input, Select, Form, notification, ColorPicker, Swi
 import type { Color } from 'antd/es/color-picker';
 
 const { TabPane } = Tabs;
-const { TextArea } = Input;
 
 export interface ProfileBuilderProps {
   profileId: string;
@@ -35,7 +34,6 @@ export interface ProfileBuilderProps {
 type ViewportSize = 'desktop' | 'tablet' | 'mobile';
 
 const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
-  profileId,
   template,
   templateConfig,
   apiEndpoint,
@@ -73,7 +71,7 @@ const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({})) as { error?: string };
         throw new Error(errorData.error || `Save failed: ${response.statusText}`);
       }
 
@@ -99,7 +97,7 @@ const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
   };
 
   const handleSave = () => {
-    saveConfig(config);
+    void saveConfig(config);
   };
 
   if (!isOwner) {
@@ -164,7 +162,7 @@ const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
 interface EditorProps {
   config: Record<string, unknown>;
   onChange: (field: string, value: unknown) => void;
-  form: any;
+  form: ReturnType<typeof Form.useForm>[0];
 }
 
 const PublicHomepageEditor: React.FC<EditorProps> = ({ config, onChange, form }) => {
@@ -201,7 +199,7 @@ const PublicHomepageEditor: React.FC<EditorProps> = ({ config, onChange, form })
 /**
  * Your Times editor (newspaper slots)
  */
-const YourTimesEditor: React.FC<EditorProps> = ({ config, onChange, form }) => {
+const YourTimesEditor: React.FC<EditorProps> = ({ onChange, form }) => {
   const colorSchemes = [
     { label: 'Classic', value: 'classic' },
     { label: 'Modern', value: 'modern' },

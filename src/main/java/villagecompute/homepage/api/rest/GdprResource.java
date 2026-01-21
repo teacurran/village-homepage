@@ -78,7 +78,8 @@ public class GdprResource {
      * <p>
      * User will receive email with signed download URL within 24 hours (typically &lt;5 minutes).
      *
-     * @param uriInfo JAX-RS context for extracting request metadata
+     * @param uriInfo
+     *            JAX-RS context for extracting request metadata
      * @return 202 ACCEPTED with job ID, or 429 TOO_MANY_REQUESTS if duplicate request
      */
     @POST
@@ -98,9 +99,7 @@ public class GdprResource {
         User user = User.findById(userId);
         if (user == null) {
             LOG.errorf("User not found for principal: %s", principalName);
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(Map.of("error", "User not found"))
-                .build();
+            return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", "User not found")).build();
         }
 
         // Check for existing PENDING/PROCESSING export request
@@ -108,16 +107,13 @@ public class GdprResource {
         if (existingRequest.isPresent()) {
             GdprRequest request = existingRequest.get();
             if (request.status == GdprRequest.RequestStatus.PENDING
-                || request.status == GdprRequest.RequestStatus.PROCESSING) {
-                LOG.warnf("Duplicate export request for user %s (existing request: %s, status: %s)",
-                    userId, request.id, request.status);
+                    || request.status == GdprRequest.RequestStatus.PROCESSING) {
+                LOG.warnf("Duplicate export request for user %s (existing request: %s, status: %s)", userId, request.id,
+                        request.status);
                 return Response.status(Response.Status.TOO_MANY_REQUESTS)
-                    .entity(Map.of(
-                        "error", "Export request already in progress",
-                        "existing_request_id", request.id.toString(),
-                        "status", request.status.name()
-                    ))
-                    .build();
+                        .entity(Map.of("error", "Export request already in progress", "existing_request_id",
+                                request.id.toString(), "status", request.status.name()))
+                        .build();
             }
         }
 
@@ -126,20 +122,17 @@ public class GdprResource {
         String userAgent = extractUserAgent(headers);
 
         // Create GdprRequest audit record
-        GdprRequest request = GdprRequest.create(
-            userId,
-            GdprRequest.RequestType.EXPORT,
-            ipAddress,
-            userAgent,
-            null  // jobId will be set after enqueue
+        GdprRequest request = GdprRequest.create(userId, GdprRequest.RequestType.EXPORT, ipAddress, userAgent, null // jobId
+                                                                                                                    // will
+                                                                                                                    // be
+                                                                                                                    // set
+                                                                                                                    // after
+                                                                                                                    // enqueue
         );
 
         // Enqueue GDPR_EXPORT job
-        Map<String, Object> payload = Map.of(
-            "user_id", userId.toString(),
-            "email", user.email,
-            "request_id", request.id.toString()
-        );
+        Map<String, Object> payload = Map.of("user_id", userId.toString(), "email", user.email, "request_id",
+                request.id.toString());
         long jobId = jobService.enqueue(JobType.GDPR_EXPORT, payload);
 
         // Update request with job ID
@@ -149,12 +142,10 @@ public class GdprResource {
         LOG.infof("GDPR export requested for user %s (request: %s, job: %d)", userId, request.id, jobId);
 
         return Response.accepted()
-            .entity(Map.of(
-                "message", "Export requested. You will receive an email with download link within 24 hours.",
-                "request_id", request.id.toString(),
-                "job_id", jobId
-            ))
-            .build();
+                .entity(Map.of("message",
+                        "Export requested. You will receive an email with download link within 24 hours.", "request_id",
+                        request.id.toString(), "job_id", jobId))
+                .build();
     }
 
     /**
@@ -177,7 +168,8 @@ public class GdprResource {
      * <p>
      * User will receive confirmation email once deletion completes (typically within 24 hours).
      *
-     * @param uriInfo JAX-RS context for extracting request metadata
+     * @param uriInfo
+     *            JAX-RS context for extracting request metadata
      * @return 202 ACCEPTED with job ID, or 429 TOO_MANY_REQUESTS if duplicate request
      */
     @POST
@@ -197,9 +189,7 @@ public class GdprResource {
         User user = User.findById(userId);
         if (user == null) {
             LOG.errorf("User not found for principal: %s", principalName);
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(Map.of("error", "User not found"))
-                .build();
+            return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", "User not found")).build();
         }
 
         // Check for existing PENDING/PROCESSING deletion request
@@ -207,16 +197,13 @@ public class GdprResource {
         if (existingRequest.isPresent()) {
             GdprRequest request = existingRequest.get();
             if (request.status == GdprRequest.RequestStatus.PENDING
-                || request.status == GdprRequest.RequestStatus.PROCESSING) {
-                LOG.warnf("Duplicate deletion request for user %s (existing request: %s, status: %s)",
-                    userId, request.id, request.status);
+                    || request.status == GdprRequest.RequestStatus.PROCESSING) {
+                LOG.warnf("Duplicate deletion request for user %s (existing request: %s, status: %s)", userId,
+                        request.id, request.status);
                 return Response.status(Response.Status.TOO_MANY_REQUESTS)
-                    .entity(Map.of(
-                        "error", "Deletion request already in progress",
-                        "existing_request_id", request.id.toString(),
-                        "status", request.status.name()
-                    ))
-                    .build();
+                        .entity(Map.of("error", "Deletion request already in progress", "existing_request_id",
+                                request.id.toString(), "status", request.status.name()))
+                        .build();
             }
         }
 
@@ -225,20 +212,17 @@ public class GdprResource {
         String userAgent = extractUserAgent(headers);
 
         // Create GdprRequest audit record
-        GdprRequest request = GdprRequest.create(
-            userId,
-            GdprRequest.RequestType.DELETION,
-            ipAddress,
-            userAgent,
-            null  // jobId will be set after enqueue
+        GdprRequest request = GdprRequest.create(userId, GdprRequest.RequestType.DELETION, ipAddress, userAgent, null // jobId
+                                                                                                                      // will
+                                                                                                                      // be
+                                                                                                                      // set
+                                                                                                                      // after
+                                                                                                                      // enqueue
         );
 
         // Enqueue GDPR_DELETION job (HIGH priority)
-        Map<String, Object> payload = Map.of(
-            "user_id", userId.toString(),
-            "email", user.email,
-            "request_id", request.id.toString()
-        );
+        Map<String, Object> payload = Map.of("user_id", userId.toString(), "email", user.email, "request_id",
+                request.id.toString());
         long jobId = jobService.enqueue(JobType.GDPR_DELETION, payload);
 
         // Update request with job ID
@@ -247,14 +231,10 @@ public class GdprResource {
 
         LOG.infof("GDPR deletion requested for user %s (request: %s, job: %d)", userId, request.id, jobId);
 
-        return Response.accepted()
-            .entity(Map.of(
-                "message", "Deletion requested. Your account will be permanently deleted within 24 hours.",
-                "request_id", request.id.toString(),
-                "job_id", jobId,
-                "warning", "This action is permanent and cannot be undone"
-            ))
-            .build();
+        return Response.accepted().entity(Map.of("message",
+                "Deletion requested. Your account will be permanently deleted within 24 hours.", "request_id",
+                request.id.toString(), "job_id", jobId, "warning", "This action is permanent and cannot be undone"))
+                .build();
     }
 
     /**

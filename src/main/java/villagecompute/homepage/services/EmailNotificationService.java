@@ -42,8 +42,8 @@ import java.util.UUID;
  * </ul>
  *
  * <p>
- * <b>Error Handling:</b> Email failures are logged but don't throw exceptions. Notification delivery is best-effort
- * and should never break user flows.
+ * <b>Error Handling:</b> Email failures are logged but don't throw exceptions. Notification delivery is best-effort and
+ * should never break user flows.
  *
  * <p>
  * <b>Configuration:</b> Email settings loaded from application.yaml:
@@ -76,16 +76,20 @@ public class EmailNotificationService {
     @Inject
     RateLimitService rateLimitService;
 
-    @ConfigProperty(name = "email.notifications.from")
+    @ConfigProperty(
+            name = "email.notifications.from")
     String fromEmail;
 
-    @ConfigProperty(name = "email.notifications.platform-name")
+    @ConfigProperty(
+            name = "email.notifications.platform-name")
     String platformName;
 
-    @ConfigProperty(name = "email.notifications.base-url")
+    @ConfigProperty(
+            name = "email.notifications.base-url")
     String baseUrl;
 
-    @ConfigProperty(name = "email.notifications.ops-alert-email")
+    @ConfigProperty(
+            name = "email.notifications.ops-alert-email")
     String opsAlertEmail;
 
     @Inject
@@ -128,8 +132,7 @@ public class EmailNotificationService {
         // Check rate limit
         RateLimitService.RateLimitResult rateLimitResult = rateLimitService.checkLimit(userId.getMostSignificantBits(),
                 null, // No IP address needed for user-based rate limiting
-                "email.profile_notification", userTier,
-                "/api/profile/publish" // Endpoint for violation logging
+                "email.profile_notification", userTier, "/api/profile/publish" // Endpoint for violation logging
         );
 
         if (!rateLimitResult.allowed()) {
@@ -149,9 +152,8 @@ public class EmailNotificationService {
                     .data("profileUrl", profileUrl).data("editUrl", editUrl).data("baseUrl", baseUrl).render();
 
             // Send email
-            mailer.send(Mail.withHtml(email, subject, htmlBody).setFrom(fromEmail)
-                    .addHeader("X-Platform", platformName).addHeader("X-Notification-Type", "profile_published")
-                    .addHeader("X-User-ID", userId.toString()));
+            mailer.send(Mail.withHtml(email, subject, htmlBody).setFrom(fromEmail).addHeader("X-Platform", platformName)
+                    .addHeader("X-Notification-Type", "profile_published").addHeader("X-User-ID", userId.toString()));
 
             LOG.infof("Sent profile published notification: userId=%s, email=%s, username=%s, template=%s", userId,
                     email, username, templateType);
@@ -187,8 +189,7 @@ public class EmailNotificationService {
         // Check rate limit
         RateLimitService.RateLimitResult rateLimitResult = rateLimitService.checkLimit(userId.getMostSignificantBits(),
                 null, // No IP address needed for user-based rate limiting
-                "email.profile_notification", userTier,
-                "/api/profile/unpublish" // Endpoint for violation logging
+                "email.profile_notification", userTier, "/api/profile/unpublish" // Endpoint for violation logging
         );
 
         if (!rateLimitResult.allowed()) {
@@ -207,9 +208,8 @@ public class EmailNotificationService {
                     .data("baseUrl", baseUrl).render();
 
             // Send email
-            mailer.send(Mail.withHtml(email, subject, htmlBody).setFrom(fromEmail)
-                    .addHeader("X-Platform", platformName).addHeader("X-Notification-Type", "profile_unpublished")
-                    .addHeader("X-User-ID", userId.toString()));
+            mailer.send(Mail.withHtml(email, subject, htmlBody).setFrom(fromEmail).addHeader("X-Platform", platformName)
+                    .addHeader("X-Notification-Type", "profile_unpublished").addHeader("X-User-ID", userId.toString()));
 
             LOG.infof("Sent profile unpublished notification: userId=%s, email=%s, username=%s", userId, email,
                     username);
@@ -253,7 +253,7 @@ public class EmailNotificationService {
 
         // Check rate limit (use ops email as subject ID)
         RateLimitService.RateLimitResult rateLimitResult = rateLimitService.checkLimit(null, // No user ID for ops
-                                                                                              // alerts
+                                                                                             // alerts
                 opsAlertEmail, // Use ops email as rate limit subject
                 "email.analytics_alert", RateLimitService.Tier.TRUSTED, // Ops team is trusted tier
                 "/internal/ai-budget-check" // Endpoint for violation logging

@@ -23,7 +23,7 @@
  * - P14: No PII exposure, aggregated metrics only
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Card,
   Row,
@@ -51,7 +51,7 @@ export interface AnalyticsDashboardProps {
   userRole: string;
 }
 
-interface OverviewData {
+interface OverviewData extends Record<string, unknown> {
   clicks_today: number;
   clicks_range: number;
   unique_users_today: number;
@@ -61,13 +61,13 @@ interface OverviewData {
   daily_trend: Array<{ date: string; clicks: number }>;
 }
 
-interface CategoryData {
+interface CategoryData extends Record<string, unknown> {
   type: string;
   clicks: number;
   percentage: number;
 }
 
-interface JobQueueData {
+interface JobQueueData extends Record<string, unknown> {
   queue: string;
   backlog: number;
   avg_wait_seconds: number;
@@ -96,33 +96,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const sparklineChartRef = useRef<HTMLDivElement>(null);
   const sparklineChartInstance = useRef<Line | null>(null);
 
-  // Fetch all dashboard data
-  useEffect(() => {
-    fetchDashboardData();
-    // Refresh every 5 minutes
-    const interval = setInterval(fetchDashboardData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [dateRange, selectedCategories]);
-
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        fetchOverviewData(),
-        fetchCategoryData(),
-        fetchJobHealthData(),
-      ]);
-    } catch (error) {
-      notification.error({
-        message: 'Data Load Failed',
-        description: error instanceof Error ? error.message : 'Could not load analytics data.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchOverviewData = async () => {
+  const fetchOverviewData = useCallback(async () => {
     try {
       const response = await fetch(
         `${apiBaseUrl}/overview?date_range=${dateRange}`,
@@ -133,15 +107,15 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as OverviewData;
       setOverviewData(data);
     } catch (error) {
       console.error('Failed to fetch overview data:', error);
       throw error;
     }
-  };
+  }, [apiBaseUrl, dateRange]);
 
-  const fetchCategoryData = async () => {
+  const fetchCategoryData = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (selectedCategories.length > 0) {
@@ -157,15 +131,15 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { categories: CategoryData[] };
       setCategoryData(data.categories || []);
     } catch (error) {
       console.error('Failed to fetch category data:', error);
       throw error;
     }
-  };
+  }, [apiBaseUrl, selectedCategories]);
 
-  const fetchJobHealthData = async () => {
+  const fetchJobHealthData = useCallback(async () => {
     try {
       const response = await fetch(`${apiBaseUrl}/jobs/health`, {
         credentials: 'include',
@@ -175,13 +149,41 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { queues: JobQueueData[] };
       setJobHealthData(data.queues || []);
     } catch (error) {
       console.error('Failed to fetch job health data:', error);
       throw error;
     }
-  };
+  }, [apiBaseUrl]);
+
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchOverviewData(),
+        fetchCategoryData(),
+        fetchJobHealthData(),
+      ]);
+    } catch (error) {
+      notification.error({
+        message: 'Data Load Failed',
+        description: error instanceof Error ? error.message : 'Could not load analytics data.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchOverviewData, fetchCategoryData, fetchJobHealthData]);
+
+  // Fetch all dashboard data
+  useEffect(() => {
+    void fetchDashboardData();
+    // Refresh every 5 minutes
+    const interval = setInterval(() => {
+      void fetchDashboardData();
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
 
   // Render category performance chart
   useEffect(() => {
@@ -263,7 +265,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   }, [overviewData]);
 
   // Export functions
-  const exportToCSV = (data: any[], filename: string) => {
+  const exportToCSV = <T extends Record<string, unknown>>(data: T[], filename: string) => {
     if (data.length === 0) {
       notification.warning({
         message: 'No Data',
@@ -272,7 +274,9 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       return;
     }
 
-    const headers = Object.keys(data[0]).join(',');
+    const first = data[0];
+    if (!first) return;
+    const headers = Object.keys(first).join(',');
     const rows = data.map((row) => Object.values(row).join(',')).join('\n');
     const csv = `${headers}\n${rows}`;
 
@@ -290,7 +294,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     });
   };
 
-  const exportToJSON = (data: any[], filename: string) => {
+  const exportToJSON = <T extends Record<string, unknown>>(data: T[], filename: string) => {
     if (data.length === 0) {
       notification.warning({
         message: 'No Data',

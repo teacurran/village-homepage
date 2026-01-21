@@ -130,6 +130,7 @@ function parseProps<T>(
 function mountComponent(element: Element, componentName: ComponentName): void {
   const registration = COMPONENT_REGISTRY[componentName];
   if (!registration) {
+    // eslint-disable-next-line no-console
     console.error(
       `[mounts] Component "${componentName}" not found in registry`
     );
@@ -138,9 +139,10 @@ function mountComponent(element: Element, componentName: ComponentName): void {
 
   const { component: Component, propsSchema } = registration;
   const propsJson = element.getAttribute('data-props');
-  const props = parseProps(propsJson, propsSchema, componentName);
+  const props = parseProps(propsJson, propsSchema as z.ZodType<unknown>, componentName);
 
   if (props === null) {
+    // eslint-disable-next-line no-console
     console.error(
       `[mounts] Failed to parse props for ${componentName}, skipping mount`
     );
@@ -149,9 +151,12 @@ function mountComponent(element: Element, componentName: ComponentName): void {
 
   try {
     const root = createRoot(element);
-    root.render(<Component {...props} />);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    root.render(<Component {...(props as any)} />);
+    // eslint-disable-next-line no-console
     console.log(`[mounts] ✅ Mounted ${componentName}`, props);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`[mounts] Failed to mount ${componentName}:`, error);
   }
 }
@@ -163,10 +168,12 @@ function mountAll(): void {
   const mountElements = document.querySelectorAll('[data-mount]');
 
   if (mountElements.length === 0) {
+    // eslint-disable-next-line no-console
     console.log('[mounts] No React islands found in DOM');
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.log(`[mounts] Found ${mountElements.length} React island(s) to mount`);
 
   mountElements.forEach((element) => {

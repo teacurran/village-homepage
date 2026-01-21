@@ -29,8 +29,8 @@ import java.util.UUID;
  * <b>Queue Assignment:</b> HIGH (JobType.GDPR_DELETION) - prioritized over DEFAULT jobs
  *
  * <p>
- * <b>Critical Note:</b> This is a permanent, irreversible operation. All user data and related entities are hard-deleted
- * (no soft delete). Ensure request validation occurs in REST layer before enqueuing.
+ * <b>Critical Note:</b> This is a permanent, irreversible operation. All user data and related entities are
+ * hard-deleted (no soft delete). Ensure request validation occurs in REST layer before enqueuing.
  *
  * <p>
  * <b>Error Handling:</b> If deletion fails, request is marked FAILED with error message. Transaction rollback ensures
@@ -61,13 +61,11 @@ public class GdprDeletionJobHandler implements JobHandler {
         String email = (String) payload.get("email");
         UUID requestId = UUID.fromString((String) payload.get("request_id"));
 
-        Span span = tracer.spanBuilder("job.gdpr_deletion")
-            .setAttribute("job.id", jobId)
-            .setAttribute("job.type", JobType.GDPR_DELETION.name())
-            .setAttribute("job.queue", JobType.GDPR_DELETION.getQueue().name())
-            .setAttribute("user_id", userId.toString())
-            .setAttribute("request_id", requestId.toString())
-            .startSpan();
+        Span span = tracer.spanBuilder("job.gdpr_deletion").setAttribute("job.id", jobId)
+                .setAttribute("job.type", JobType.GDPR_DELETION.name())
+                .setAttribute("job.queue", JobType.GDPR_DELETION.getQueue().name())
+                .setAttribute("user_id", userId.toString()).setAttribute("request_id", requestId.toString())
+                .startSpan();
 
         try (Scope scope = span.makeCurrent()) {
             LoggingConfig.enrichWithTraceContext();

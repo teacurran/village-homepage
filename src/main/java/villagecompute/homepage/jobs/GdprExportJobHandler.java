@@ -50,7 +50,9 @@ public class GdprExportJobHandler implements JobHandler {
     Tracer tracer;
 
     @Inject
-    @ConfigProperty(name = "villagecompute.gdpr.export-ttl-days", defaultValue = "7")
+    @ConfigProperty(
+            name = "villagecompute.gdpr.export-ttl-days",
+            defaultValue = "7")
     int exportTtlDays;
 
     @Override
@@ -64,13 +66,11 @@ public class GdprExportJobHandler implements JobHandler {
         String email = (String) payload.get("email");
         UUID requestId = UUID.fromString((String) payload.get("request_id"));
 
-        Span span = tracer.spanBuilder("job.gdpr_export")
-            .setAttribute("job.id", jobId)
-            .setAttribute("job.type", JobType.GDPR_EXPORT.name())
-            .setAttribute("job.queue", JobType.GDPR_EXPORT.getQueue().name())
-            .setAttribute("user_id", userId.toString())
-            .setAttribute("request_id", requestId.toString())
-            .startSpan();
+        Span span = tracer.spanBuilder("job.gdpr_export").setAttribute("job.id", jobId)
+                .setAttribute("job.type", JobType.GDPR_EXPORT.name())
+                .setAttribute("job.queue", JobType.GDPR_EXPORT.getQueue().name())
+                .setAttribute("user_id", userId.toString()).setAttribute("request_id", requestId.toString())
+                .startSpan();
 
         try (Scope scope = span.makeCurrent()) {
             LoggingConfig.enrichWithTraceContext();
@@ -90,7 +90,7 @@ public class GdprExportJobHandler implements JobHandler {
             // Execute export
             String signedUrl = gdprService.exportUserData(userId);
             span.addEvent("export.completed",
-                Attributes.of(AttributeKey.stringKey("signed_url_length"), String.valueOf(signedUrl.length())));
+                    Attributes.of(AttributeKey.stringKey("signed_url_length"), String.valueOf(signedUrl.length())));
 
             // Calculate expiry timestamp
             Instant expiresAt = Instant.now().plusSeconds(exportTtlDays * 24 * 60 * 60);
@@ -105,8 +105,8 @@ public class GdprExportJobHandler implements JobHandler {
 
             span.addEvent("email.notification_sent");
 
-            LOG.infof("GDPR export completed for user %s (request: %s), signed URL expires at %s",
-                userId, requestId, expiresAt);
+            LOG.infof("GDPR export completed for user %s (request: %s), signed URL expires at %s", userId, requestId,
+                    expiresAt);
 
         } catch (Exception e) {
             // Mark request as FAILED

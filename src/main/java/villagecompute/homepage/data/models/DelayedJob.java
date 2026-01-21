@@ -52,7 +52,8 @@ import java.util.Map;
  * @see villagecompute.homepage.services.DelayedJobService for job orchestration
  */
 @Entity
-@Table(name = "delayed_jobs")
+@Table(
+        name = "delayed_jobs")
 public class DelayedJob extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(DelayedJob.class);
@@ -61,57 +62,85 @@ public class DelayedJob extends PanacheEntityBase {
     public static final String QUERY_FIND_BY_STATUS = "DelayedJob.findByStatus";
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
+    @GeneratedValue(
+            strategy = GenerationType.IDENTITY)
+    @Column(
+            nullable = false)
     public Long id;
 
-    @Column(name = "job_type", nullable = false)
+    @Column(
+            name = "job_type",
+            nullable = false)
     @Enumerated(EnumType.STRING)
     public JobType jobType;
 
-    @Column(name = "queue", nullable = false)
+    @Column(
+            name = "queue",
+            nullable = false)
     @Enumerated(EnumType.STRING)
     public JobQueue queue;
 
-    @Column(name = "priority", nullable = false)
+    @Column(
+            name = "priority",
+            nullable = false)
     public int priority;
 
-    @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @Column(
+            name = "payload",
+            nullable = false,
+            columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
     public Map<String, Object> payload;
 
-    @Column(name = "status", nullable = false)
+    @Column(
+            name = "status",
+            nullable = false)
     @Enumerated(EnumType.STRING)
     public JobStatus status;
 
-    @Column(name = "attempts", nullable = false)
+    @Column(
+            name = "attempts",
+            nullable = false)
     public int attempts;
 
-    @Column(name = "max_attempts", nullable = false)
+    @Column(
+            name = "max_attempts",
+            nullable = false)
     public int maxAttempts;
 
-    @Column(name = "scheduled_at", nullable = false)
+    @Column(
+            name = "scheduled_at",
+            nullable = false)
     public Instant scheduledAt;
 
-    @Column(name = "locked_at")
+    @Column(
+            name = "locked_at")
     public Instant lockedAt;
 
-    @Column(name = "locked_by")
+    @Column(
+            name = "locked_by")
     public String lockedBy;
 
-    @Column(name = "completed_at")
+    @Column(
+            name = "completed_at")
     public Instant completedAt;
 
-    @Column(name = "failed_at")
+    @Column(
+            name = "failed_at")
     public Instant failedAt;
 
-    @Column(name = "last_error")
+    @Column(
+            name = "last_error")
     public String lastError;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(
+            name = "created_at",
+            nullable = false)
     public Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(
+            name = "updated_at",
+            nullable = false)
     public Instant updatedAt;
 
     /**
@@ -150,8 +179,10 @@ public class DelayedJob extends PanacheEntityBase {
      * <li>locked_at IS NULL OR locked_at < NOW() - 5 minutes (stale lock recovery)</li>
      * </ul>
      *
-     * @param queue the queue to poll
-     * @param limit max jobs to return
+     * @param queue
+     *            the queue to poll
+     * @param limit
+     *            max jobs to return
      * @return list of ready jobs, ordered by priority DESC then scheduled_at ASC
      */
     public static List<DelayedJob> findReadyJobs(JobQueue queue, int limit) {
@@ -168,7 +199,8 @@ public class DelayedJob extends PanacheEntityBase {
     /**
      * Finds all jobs with a specific status.
      *
-     * @param status the job status
+     * @param status
+     *            the job status
      * @return list of jobs with this status
      */
     public static List<DelayedJob> findByStatus(JobStatus status) {
@@ -190,8 +222,10 @@ public class DelayedJob extends PanacheEntityBase {
     /**
      * Creates and persists a new delayed job.
      *
-     * @param jobType the job type
-     * @param payload job parameters (will be serialized as JSONB)
+     * @param jobType
+     *            the job type
+     * @param payload
+     *            job parameters (will be serialized as JSONB)
      * @return persisted DelayedJob entity
      */
     public static DelayedJob create(JobType jobType, Map<String, Object> payload) {
@@ -201,10 +235,14 @@ public class DelayedJob extends PanacheEntityBase {
     /**
      * Creates and persists a new delayed job with custom scheduled_at and max_attempts.
      *
-     * @param jobType the job type
-     * @param payload job parameters (will be serialized as JSONB)
-     * @param scheduledAt earliest execution time
-     * @param maxAttempts max retry attempts
+     * @param jobType
+     *            the job type
+     * @param payload
+     *            job parameters (will be serialized as JSONB)
+     * @param scheduledAt
+     *            earliest execution time
+     * @param maxAttempts
+     *            max retry attempts
      * @return persisted DelayedJob entity
      */
     public static DelayedJob create(JobType jobType, Map<String, Object> payload, Instant scheduledAt,
@@ -229,7 +267,8 @@ public class DelayedJob extends PanacheEntityBase {
     /**
      * Locks this job for processing by a specific worker.
      *
-     * @param workerId worker identifier (hostname:pid)
+     * @param workerId
+     *            worker identifier (hostname:pid)
      */
     public void lock(String workerId) {
         this.status = JobStatus.PROCESSING;
@@ -238,7 +277,8 @@ public class DelayedJob extends PanacheEntityBase {
         this.attempts++;
         this.updatedAt = Instant.now();
         this.persist();
-        LOG.debugf("Locked job %d for worker %s (attempt %d)", (Object) this.id, (Object) workerId, (Object) this.attempts);
+        LOG.debugf("Locked job %d for worker %s (attempt %d)", (Object) this.id, (Object) workerId,
+                (Object) this.attempts);
     }
 
     /**
@@ -255,7 +295,8 @@ public class DelayedJob extends PanacheEntityBase {
     /**
      * Marks this job as failed and records error message.
      *
-     * @param errorMessage the error description
+     * @param errorMessage
+     *            the error description
      */
     public void markFailed(String errorMessage) {
         this.status = JobStatus.FAILED;
@@ -269,7 +310,8 @@ public class DelayedJob extends PanacheEntityBase {
     /**
      * Resets job to PENDING status for retry with backoff delay.
      *
-     * @param backoffSeconds seconds to delay before next attempt
+     * @param backoffSeconds
+     *            seconds to delay before next attempt
      */
     public void scheduleRetry(long backoffSeconds) {
         this.status = JobStatus.PENDING;

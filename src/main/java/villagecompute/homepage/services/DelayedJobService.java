@@ -132,8 +132,8 @@ public class DelayedJobService {
      * Enqueues a new job for async execution.
      *
      * <p>
-     * Creates a {@code DelayedJob} Panache entity with payload serialized as JSONB, sets priority based on queue family,
-     * and persists to database for worker polling.
+     * Creates a {@code DelayedJob} Panache entity with payload serialized as JSONB, sets priority based on queue
+     * family, and persists to database for worker polling.
      *
      * @param jobType
      *            the type of job to enqueue

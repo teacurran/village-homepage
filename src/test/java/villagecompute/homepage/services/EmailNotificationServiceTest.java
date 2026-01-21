@@ -49,8 +49,8 @@ class EmailNotificationServiceTest {
         RateLimitService.Tier tier = RateLimitService.Tier.LOGGED_IN;
 
         // Mock rate limit check to allow request
-        when(rateLimitService.checkLimit(anyLong(), isNull(), eq("email.profile_notification"), eq(tier),
-                anyString())).thenReturn(RateLimitService.RateLimitResult.allowed(5, 4, 3600));
+        when(rateLimitService.checkLimit(anyLong(), isNull(), eq("email.profile_notification"), eq(tier), anyString()))
+                .thenReturn(RateLimitService.RateLimitResult.allowed(5, 4, 3600));
 
         // Act
         emailNotificationService.sendProfilePublishedNotification(userId, email, username, templateType, tier);
@@ -79,8 +79,8 @@ class EmailNotificationServiceTest {
         RateLimitService.Tier tier = RateLimitService.Tier.LOGGED_IN;
 
         // Mock rate limit check to deny request
-        when(rateLimitService.checkLimit(anyLong(), isNull(), eq("email.profile_notification"), eq(tier),
-                anyString())).thenReturn(RateLimitService.RateLimitResult.denied(5, 3600));
+        when(rateLimitService.checkLimit(anyLong(), isNull(), eq("email.profile_notification"), eq(tier), anyString()))
+                .thenReturn(RateLimitService.RateLimitResult.denied(5, 3600));
 
         // Act
         emailNotificationService.sendProfilePublishedNotification(userId, email, username, templateType, tier);
@@ -102,8 +102,8 @@ class EmailNotificationServiceTest {
         RateLimitService.Tier tier = RateLimitService.Tier.LOGGED_IN;
 
         // Mock rate limit check to allow request
-        when(rateLimitService.checkLimit(anyLong(), isNull(), eq("email.profile_notification"), eq(tier),
-                anyString())).thenReturn(RateLimitService.RateLimitResult.allowed(5, 4, 3600));
+        when(rateLimitService.checkLimit(anyLong(), isNull(), eq("email.profile_notification"), eq(tier), anyString()))
+                .thenReturn(RateLimitService.RateLimitResult.allowed(5, 4, 3600));
 
         // Act
         emailNotificationService.sendProfileUnpublishedNotification(userId, email, username, tier);
@@ -130,8 +130,8 @@ class EmailNotificationServiceTest {
         RateLimitService.Tier tier = RateLimitService.Tier.LOGGED_IN;
 
         // Mock rate limit check to deny request
-        when(rateLimitService.checkLimit(anyLong(), isNull(), eq("email.profile_notification"), eq(tier),
-                anyString())).thenReturn(RateLimitService.RateLimitResult.denied(5, 3600));
+        when(rateLimitService.checkLimit(anyLong(), isNull(), eq("email.profile_notification"), eq(tier), anyString()))
+                .thenReturn(RateLimitService.RateLimitResult.denied(5, 3600));
 
         // Act
         emailNotificationService.sendProfileUnpublishedNotification(userId, email, username, tier);
@@ -276,8 +276,8 @@ class EmailNotificationServiceTest {
         assertEquals("https://example.com/profile/edit", unpublishedData.editUrl());
 
         EmailNotificationService.AiBudgetAlertEmailData alertData = new EmailNotificationService.AiBudgetAlertEmailData(
-                "WARNING", "77.5", "387.50", "500.00", "112.50", "REDUCE",
-                "https://example.com/admin/analytics", "https://example.com");
+                "WARNING", "77.5", "387.50", "500.00", "112.50", "REDUCE", "https://example.com/admin/analytics",
+                "https://example.com");
 
         assertEquals("WARNING", alertData.level());
         assertEquals("77.5", alertData.percentUsed());

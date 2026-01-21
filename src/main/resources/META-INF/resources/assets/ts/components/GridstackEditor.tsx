@@ -17,7 +17,7 @@
  * - Layout changes trigger PUT /api/preferences with updated positions
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { notification } from 'antd';
 
 export interface GridstackEditorProps {
@@ -64,16 +64,100 @@ declare global {
 
 const GridstackEditor: React.FC<GridstackEditorProps> = ({
   gridId,
-  widgetConfigs,
   saveEndpoint,
 }) => {
   const gridRef = useRef<GridStack | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
+
+  /**
+   * Saves the current layout to the preferences API
+   */
+  const saveLayout = useCallback(async (items: GridStackNode[]) => {
+    setIsSaving(true);
+
+    try {
+      // Transform GridStackNode format to LayoutWidgetType format
+      const layout = items.map((item) => ({
+        widget_id: item.id || 'unknown',
+        widget_type: getWidgetTypeById(item.id || ''),
+        x: item.x,
+        y: item.y,
+        width: item.w,
+        height: item.h,
+      }));
+
+      // Fetch current preferences
+      const getResponse = await fetch(saveEndpoint, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!getResponse.ok) {
+        throw new Error(`Failed to fetch preferences: ${getResponse.statusText}`);
+      }
+
+      const currentPreferences = await getResponse.json() as Record<string, unknown>;
+
+      // Merge new layout with existing preferences
+      const updatedPreferences = {
+        ...currentPreferences,
+        layout,
+      };
+
+      // Save updated preferences
+      const putResponse = await fetch(saveEndpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(updatedPreferences),
+      });
+
+      if (!putResponse.ok) {
+        throw new Error(`Failed to save preferences: ${putResponse.statusText}`);
+      }
+
+      // eslint-disable-next-line no-console
+      console.log('[GridstackEditor] Layout saved successfully');
+      notification.success({
+        message: 'Layout Saved',
+        description: 'Your homepage layout has been saved.',
+        duration: 2,
+      });
+    } catch (error) {
+      console.error('[GridstackEditor] Failed to save layout:', error);
+      notification.error({
+        message: 'Save Failed',
+        description: error instanceof Error ? error.message : 'Could not save layout changes.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [saveEndpoint]);
+
+  /**
+   * Handles layout changes from gridstack drag/resize events
+   */
+  const handleLayoutChange = useCallback((_event: Event, items: GridStackNode[]) => {
+    // eslint-disable-next-line no-console
+    console.log('[GridstackEditor] Layout changed:', items);
+
+    // Debounce save to avoid excessive API calls
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = window.setTimeout(() => {
+      void saveLayout(items);
+    }, 1000); // Save 1 second after last change
+  }, [saveLayout]);
 
   useEffect(() => {
     // Wait for gridstack library to load
     if (!window.GridStack) {
+      // eslint-disable-next-line no-console
       console.error('[GridstackEditor] GridStack library not loaded');
       notification.error({
         message: 'Edit Mode Error',
@@ -85,6 +169,7 @@ const GridstackEditor: React.FC<GridstackEditorProps> = ({
     // Initialize gridstack
     const gridElement = document.getElementById(gridId);
     if (!gridElement) {
+      // eslint-disable-next-line no-console
       console.error(`[GridstackEditor] Grid element #${gridId} not found`);
       return;
     }
@@ -111,6 +196,7 @@ const GridstackEditor: React.FC<GridstackEditorProps> = ({
     // Listen for layout changes
     grid.on('change', handleLayoutChange);
 
+    // eslint-disable-next-line no-console
     console.log('[GridstackEditor] Initialized for grid:', gridId);
 
     // Cleanup on unmount
@@ -123,89 +209,7 @@ const GridstackEditor: React.FC<GridstackEditorProps> = ({
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [gridId]);
-
-  /**
-   * Handles layout changes from gridstack drag/resize events
-   */
-  const handleLayoutChange = (event: Event, items: GridStackNode[]) => {
-    console.log('[GridstackEditor] Layout changed:', items);
-
-    // Debounce save to avoid excessive API calls
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    saveTimeoutRef.current = setTimeout(() => {
-      saveLayout(items);
-    }, 1000); // Save 1 second after last change
-  };
-
-  /**
-   * Saves the current layout to the preferences API
-   */
-  const saveLayout = async (items: GridStackNode[]) => {
-    setIsSaving(true);
-
-    try {
-      // Transform GridStackNode format to LayoutWidgetType format
-      const layout = items.map((item) => ({
-        widget_id: item.id || 'unknown',
-        widget_type: getWidgetTypeById(item.id || ''),
-        x: item.x,
-        y: item.y,
-        width: item.w,
-        height: item.h,
-      }));
-
-      // Fetch current preferences
-      const getResponse = await fetch(saveEndpoint, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!getResponse.ok) {
-        throw new Error(`Failed to fetch preferences: ${getResponse.statusText}`);
-      }
-
-      const currentPreferences = await getResponse.json();
-
-      // Merge new layout with existing preferences
-      const updatedPreferences = {
-        ...currentPreferences,
-        layout,
-      };
-
-      // Save updated preferences
-      const putResponse = await fetch(saveEndpoint, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(updatedPreferences),
-      });
-
-      if (!putResponse.ok) {
-        throw new Error(`Failed to save preferences: ${putResponse.statusText}`);
-      }
-
-      console.log('[GridstackEditor] Layout saved successfully');
-      notification.success({
-        message: 'Layout Saved',
-        description: 'Your homepage layout has been saved.',
-        duration: 2,
-      });
-    } catch (error) {
-      console.error('[GridstackEditor] Failed to save layout:', error);
-      notification.error({
-        message: 'Save Failed',
-        description: error instanceof Error ? error.message : 'Could not save layout changes.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  }, [gridId, handleLayoutChange]);
 
   /**
    * Gets widget type from widget ID by reading DOM data attribute
