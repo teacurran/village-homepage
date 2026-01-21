@@ -76,36 +76,46 @@ public class ProfileResourceTest {
     // ========== Profile Creation Tests ==========
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     public void testCreateProfile_Success() {
-        given().contentType(ContentType.JSON).body(Map.of("username", "testprofile123")).when()
-                .post("/api/profiles").then().statusCode(201).body("username", equalTo("testprofile123"),
-                        "is_published", equalTo(false), "view_count", equalTo(0));
+        given().contentType(ContentType.JSON).body(Map.of("username", "testprofile123")).when().post("/api/profiles")
+                .then().statusCode(201)
+                .body("username", equalTo("testprofile123"), "is_published", equalTo(false), "view_count", equalTo(0));
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     public void testCreateProfile_InvalidUsername_TooShort() {
         given().contentType(ContentType.JSON).body(Map.of("username", "ab")).when().post("/api/profiles").then()
                 .statusCode(400).body("error", containsString("at least 3 characters"));
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     public void testCreateProfile_InvalidUsername_InvalidCharacters() {
         given().contentType(ContentType.JSON).body(Map.of("username", "test user")).when().post("/api/profiles").then()
                 .statusCode(400).body("error", containsString("letters, numbers, underscore, and dash"));
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     public void testCreateProfile_ReservedUsername() {
         given().contentType(ContentType.JSON).body(Map.of("username", "admin")).when().post("/api/profiles").then()
                 .statusCode(400).body("error", containsString("reserved"));
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testCreateProfile_DuplicateUsername() {
         // Create first profile
@@ -120,35 +130,39 @@ public class ProfileResourceTest {
         user2.updatedAt = Instant.now();
         user2.persist();
 
-        given().contentType(ContentType.JSON).body(Map.of("username", "testprofile123")).when()
-                .post("/api/profiles").then().statusCode(409).body("error", containsString("already taken"));
+        given().contentType(ContentType.JSON).body(Map.of("username", "testprofile123")).when().post("/api/profiles")
+                .then().statusCode(409).body("error", containsString("already taken"));
 
         // Clean up
         User.delete("id = ?1", user2.id);
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testCreateProfile_OnePerUser() {
         // Create first profile
         UserProfile.createProfile(testUserId, "testprofile123");
 
         // Try to create second profile for same user
-        given().contentType(ContentType.JSON).body(Map.of("username", "testprofile456")).when()
-                .post("/api/profiles").then().statusCode(409).body("error", containsString("already has a profile"));
+        given().contentType(ContentType.JSON).body(Map.of("username", "testprofile456")).when().post("/api/profiles")
+                .then().statusCode(409).body("error", containsString("already has a profile"));
     }
 
     @Test
     public void testCreateProfile_Unauthenticated() {
-        given().contentType(ContentType.JSON).body(Map.of("username", "testprofile123")).when()
-                .post("/api/profiles").then().statusCode(401);
+        given().contentType(ContentType.JSON).body(Map.of("username", "testprofile123")).when().post("/api/profiles")
+                .then().statusCode(401);
     }
 
     // ========== Profile Retrieval Tests ==========
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testGetProfile_Owner_CanSeeDraft() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -158,7 +172,9 @@ public class ProfileResourceTest {
     }
 
     @Test
-    @TestSecurity(user = "otheruser", roles = {"USER"})
+    @TestSecurity(
+            user = "otheruser",
+            roles = {"USER"})
     @Transactional
     public void testGetProfile_NonOwner_CannotSeeDraft() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -185,7 +201,9 @@ public class ProfileResourceTest {
     // ========== Profile Update Tests ==========
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testUpdateProfile_Owner() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -200,7 +218,9 @@ public class ProfileResourceTest {
     }
 
     @Test
-    @TestSecurity(user = "otheruser", roles = {"USER"})
+    @TestSecurity(
+            user = "otheruser",
+            roles = {"USER"})
     @Transactional
     public void testUpdateProfile_NonOwner() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -212,7 +232,9 @@ public class ProfileResourceTest {
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testUpdateProfile_SocialLinks() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -228,7 +250,9 @@ public class ProfileResourceTest {
     // ========== Publish/Unpublish Tests ==========
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testPublishProfile_Owner() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -239,7 +263,9 @@ public class ProfileResourceTest {
     }
 
     @Test
-    @TestSecurity(user = "otheruser", roles = {"USER"})
+    @TestSecurity(
+            user = "otheruser",
+            roles = {"USER"})
     @Transactional
     public void testPublishProfile_NonOwner() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -248,7 +274,9 @@ public class ProfileResourceTest {
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testUnpublishProfile_Owner() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -261,7 +289,9 @@ public class ProfileResourceTest {
     // ========== Soft Delete Tests ==========
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testDeleteProfile_Owner() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -274,7 +304,9 @@ public class ProfileResourceTest {
     }
 
     @Test
-    @TestSecurity(user = "otheruser", roles = {"USER"})
+    @TestSecurity(
+            user = "otheruser",
+            roles = {"USER"})
     @Transactional
     public void testDeleteProfile_NonOwner() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -320,7 +352,9 @@ public class ProfileResourceTest {
     // ========== Curated Article Tests ==========
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testAddArticle_Manual() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -335,7 +369,9 @@ public class ProfileResourceTest {
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = {"USER"})
+    @TestSecurity(
+            user = "testuser",
+            roles = {"USER"})
     @Transactional
     public void testAddArticle_BlankUrl() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");
@@ -347,7 +383,9 @@ public class ProfileResourceTest {
     }
 
     @Test
-    @TestSecurity(user = "otheruser", roles = {"USER"})
+    @TestSecurity(
+            user = "otheruser",
+            roles = {"USER"})
     @Transactional
     public void testAddArticle_NonOwner() {
         UserProfile profile = UserProfile.createProfile(testUserId, "testprofile123");

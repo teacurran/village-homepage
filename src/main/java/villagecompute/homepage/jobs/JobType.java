@@ -97,6 +97,17 @@ public enum JobType {
      */
     ACCOUNT_MERGE_CLEANUP(JobQueue.DEFAULT, "Account merge cleanup (daily, P1 enforced)"),
 
+    /**
+     * Refreshes OpenGraph metadata for manually-curated profile articles.
+     * <p>
+     * <b>Cadence:</b> Daily refresh for manual link metadata
+     * <p>
+     * <b>Handler:</b> ProfileMetadataRefreshJobHandler
+     * <p>
+     * <b>Feature F11.7:</b> Ensures curated article metadata stays current
+     */
+    PROFILE_METADATA_REFRESH(JobQueue.DEFAULT, "Profile metadata refresh (daily)"),
+
     // ========== HIGH QUEUE ==========
 
     /**

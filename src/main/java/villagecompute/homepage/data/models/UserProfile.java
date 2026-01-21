@@ -2,7 +2,6 @@ package villagecompute.homepage.data.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.smallrye.common.constraint.NotNull;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -363,8 +362,8 @@ public class UserProfile extends PanacheEntityBase {
     }
 
     /**
-     * Publishes this profile (makes it publicly accessible).
-     * The caller must be in a transaction context for the update to be persisted.
+     * Publishes this profile (makes it publicly accessible). The caller must be in a transaction context for the update
+     * to be persisted.
      */
     public void publish() {
         this.isPublished = true;
@@ -374,8 +373,8 @@ public class UserProfile extends PanacheEntityBase {
     }
 
     /**
-     * Unpublishes this profile (returns to draft, 404 on access).
-     * The caller must be in a transaction context for the update to be persisted.
+     * Unpublishes this profile (returns to draft, 404 on access). The caller must be in a transaction context for the
+     * update to be persisted.
      */
     public void unpublish() {
         this.isPublished = false;
@@ -389,8 +388,7 @@ public class UserProfile extends PanacheEntityBase {
      *
      * <p>
      * Called when public profile page is accessed. View count is cached here for fast reads; detailed analytics are
-     * tracked in link_clicks table.
-     * The caller must be in a transaction context for the update to be persisted.
+     * tracked in link_clicks table. The caller must be in a transaction context for the update to be persisted.
      */
     public void incrementViewCount() {
         this.viewCount++;
@@ -403,8 +401,8 @@ public class UserProfile extends PanacheEntityBase {
      *
      * <p>
      * Per Policy P1, soft-deleted profiles are hard-deleted after 90 days by the cleanup job. Username becomes
-     * available for re-use after soft delete.
-     * The caller must be in a transaction context for the update to be persisted.
+     * available for re-use after soft delete. The caller must be in a transaction context for the update to be
+     * persisted.
      */
     public void softDelete() {
         this.deletedAt = Instant.now();

@@ -117,9 +117,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testCreateManual_Success() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Manual Article", "Manual description",
-                "https://example.com/image.jpg");
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Manual Article", "Manual description", "https://example.com/image.jpg");
 
         assertNotNull(article.id);
         assertEquals(testProfileId, article.profileId);
@@ -149,8 +148,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testFindActive() {
-        ProfileCuratedArticle active = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/active", "Active Article", "Active description", null);
+        ProfileCuratedArticle active = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/active",
+                "Active Article", "Active description", null);
 
         ProfileCuratedArticle inactive = ProfileCuratedArticle.createManual(testProfileId,
                 "https://example.com/inactive", "Inactive Article", "Inactive description", null);
@@ -175,8 +174,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testFindByIdOptional() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Test Article", "Test description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Test Article", "Test description", null);
 
         Optional<ProfileCuratedArticle> found = ProfileCuratedArticle.findByIdOptional(article.id);
         assertTrue(found.isPresent());
@@ -193,8 +192,8 @@ public class ProfileCuratedArticleTest {
     public void testCountActive() {
         long initialCount = ProfileCuratedArticle.countActive(testProfileId);
 
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Test Article", "Test description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Test Article", "Test description", null);
 
         assertEquals(initialCount + 1, ProfileCuratedArticle.countActive(testProfileId));
 
@@ -207,8 +206,8 @@ public class ProfileCuratedArticleTest {
     public void testCountAll() {
         long initialCount = ProfileCuratedArticle.countAll(testProfileId);
 
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Test Article", "Test description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Test Article", "Test description", null);
 
         assertEquals(initialCount + 1, ProfileCuratedArticle.countAll(testProfileId));
 
@@ -221,9 +220,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testUpdateCustomization() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Original Title", "Original description",
-                "https://example.com/original.jpg");
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Original Title", "Original description", "https://example.com/original.jpg");
 
         assertNull(article.customHeadline);
         assertNull(article.customBlurb);
@@ -239,8 +237,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testUpdateCustomization_ClearFields() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Original Title", "Original description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Original Title", "Original description", null);
 
         article.updateCustomization("Custom Headline", "Custom blurb", "https://example.com/custom.jpg");
         assertNotNull(article.customHeadline);
@@ -257,8 +255,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testGetEffectiveHeadline_PreferCustom() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Original Title", "Original description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Original Title", "Original description", null);
 
         assertEquals("Original Title", article.getEffectiveHeadline());
 
@@ -269,8 +267,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testGetEffectiveHeadline_FallbackToOriginal() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Original Title", "Original description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Original Title", "Original description", null);
 
         article.customHeadline = ""; // Blank custom headline
         assertEquals("Original Title", article.getEffectiveHeadline());
@@ -279,8 +277,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testGetEffectiveDescription_PreferCustom() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Original Title", "Original description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Original Title", "Original description", null);
 
         assertEquals("Original description", article.getEffectiveDescription());
 
@@ -291,9 +289,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testGetEffectiveImageUrl_PreferCustom() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Original Title", "Original description",
-                "https://example.com/original.jpg");
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Original Title", "Original description", "https://example.com/original.jpg");
 
         assertEquals("https://example.com/original.jpg", article.getEffectiveImageUrl());
 
@@ -306,8 +303,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testActivate() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Test Article", "Test description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Test Article", "Test description", null);
         article.deactivate();
         assertFalse(article.isActive);
 
@@ -322,8 +319,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testDeactivate() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Test Article", "Test description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Test Article", "Test description", null);
         assertTrue(article.isActive);
 
         article.deactivate();
@@ -339,8 +336,8 @@ public class ProfileCuratedArticleTest {
     @Test
     @Transactional
     public void testUpdateSlotAssignment() {
-        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId,
-                "https://example.com/article", "Test Article", "Test description", null);
+        ProfileCuratedArticle article = ProfileCuratedArticle.createManual(testProfileId, "https://example.com/article",
+                "Test Article", "Test description", null);
 
         assertTrue(article.slotAssignment.isEmpty());
 

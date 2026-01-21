@@ -340,8 +340,8 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
     }
 
     /**
-     * Deactivates this curated article (removes from profile display).
-     * The caller must be in a transaction context for the update to be persisted.
+     * Deactivates this curated article (removes from profile display). The caller must be in a transaction context for
+     * the update to be persisted.
      */
     public void deactivate() {
         this.isActive = false;

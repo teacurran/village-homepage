@@ -294,8 +294,7 @@ public class ProfileServiceTest {
         UserProfile profile = profileService.createProfile(testUserId, "testservice123");
         assertEquals(0, profile.viewCount);
 
-        profileService.incrementViewCount(profile.id, testUserId, "session123", "127.0.0.1",
-                "Mozilla/5.0 Test Agent");
+        profileService.incrementViewCount(profile.id, testUserId, "session123", "127.0.0.1", "Mozilla/5.0 Test Agent");
 
         UserProfile updated = profileService.getProfile(profile.id);
         assertEquals(1, updated.viewCount);
@@ -386,10 +385,8 @@ public class ProfileServiceTest {
     @Test
     public void testListArticles_Success() {
         UserProfile profile = profileService.createProfile(testUserId, "testservice123");
-        profileService.addManualArticle(profile.id, "https://example.com/article1", "Article 1", "Description 1",
-                null);
-        profileService.addManualArticle(profile.id, "https://example.com/article2", "Article 2", "Description 2",
-                null);
+        profileService.addManualArticle(profile.id, "https://example.com/article1", "Article 1", "Description 1", null);
+        profileService.addManualArticle(profile.id, "https://example.com/article2", "Article 2", "Description 2", null);
 
         List<ProfileCuratedArticle> articles = profileService.listArticles(profile.id);
         assertTrue(articles.size() >= 2);

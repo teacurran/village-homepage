@@ -1,6 +1,7 @@
 package villagecompute.homepage.services;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.data.models.LinkClick;
@@ -10,6 +11,7 @@ import villagecompute.homepage.data.models.UserProfile;
 import villagecompute.homepage.exceptions.DuplicateResourceException;
 import villagecompute.homepage.exceptions.ResourceNotFoundException;
 import villagecompute.homepage.exceptions.ValidationException;
+import villagecompute.homepage.jobs.JobType;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,12 @@ import java.util.UUID;
 public class ProfileService {
 
     private static final Logger LOG = Logger.getLogger(ProfileService.class);
+
+    @Inject
+    DelayedJobService delayedJobService;
+
+    @Inject
+    SlotCapacityValidator slotCapacityValidator;
 
     /**
      * Creates a new profile for a user.
@@ -398,6 +406,9 @@ public class ProfileService {
     /**
      * Adds a manually-entered curated article (no feed item).
      *
+     * <p>
+     * Schedules a metadata refresh job to fetch OpenGraph data for the article.
+     *
      * @param profileId
      *            profile UUID
      * @param originalUrl
@@ -423,6 +434,9 @@ public class ProfileService {
 
         ProfileCuratedArticle article = ProfileCuratedArticle.createManual(profileId, originalUrl, originalTitle,
                 originalDescription, originalImageUrl);
+
+        // Schedule metadata refresh job
+        scheduleMetadataRefresh(article.id, originalUrl);
 
         LOG.infof("Added manual curated article %s to profile %s", article.id, profileId);
         return article;
@@ -495,5 +509,83 @@ public class ProfileService {
         getProfile(profileId);
 
         return ProfileCuratedArticle.findActive(profileId);
+    }
+
+    /**
+     * Assigns a curated article to a template slot.
+     *
+     * @param articleId
+     *            article UUID
+     * @param profileId
+     *            profile UUID (for validation)
+     * @param template
+     *            template type (public_homepage, your_times, your_report)
+     * @param slotAssignment
+     *            slot assignment map (must contain "slot" and "position" keys)
+     * @return updated article
+     * @throws ResourceNotFoundException
+     *             if article not found
+     * @throws ValidationException
+     *             if slot assignment invalid or capacity exceeded
+     */
+    @Transactional
+    public ProfileCuratedArticle assignArticleToSlot(UUID articleId, UUID profileId, String template,
+            Map<String, Object> slotAssignment) {
+
+        // Load article
+        Optional<ProfileCuratedArticle> articleOpt = ProfileCuratedArticle.findByIdOptional(articleId);
+        if (articleOpt.isEmpty()) {
+            throw new ResourceNotFoundException("Article not found: " + articleId);
+        }
+
+        ProfileCuratedArticle article = articleOpt.get();
+
+        // Verify article belongs to profile
+        if (!article.profileId.equals(profileId)) {
+            throw new ValidationException("Article does not belong to this profile");
+        }
+
+        // Validate slot assignment
+        slotCapacityValidator.validateSlotAssignment(profileId, template, slotAssignment);
+
+        // Update slot assignment
+        article.updateSlotAssignment(slotAssignment);
+
+        LOG.infof("Assigned article %s to slot: template=%s, slot=%s", articleId, template, slotAssignment.get("slot"));
+        return article;
+    }
+
+    /**
+     * Schedules a metadata refresh job for a curated article.
+     *
+     * @param articleId
+     *            article UUID
+     * @param url
+     *            article URL
+     */
+    public void scheduleMetadataRefresh(UUID articleId, String url) {
+        Map<String, Object> payload = Map.of("article_id", articleId.toString(), "url", url);
+
+        long jobId = delayedJobService.enqueue(JobType.PROFILE_METADATA_REFRESH, payload);
+
+        LOG.debugf("Scheduled metadata refresh job for article %s: jobId=%d", articleId, jobId);
+    }
+
+    /**
+     * Gets available slot information for a template.
+     *
+     * @param template
+     *            template type
+     * @return map with slot names and capacities
+     */
+    public Map<String, Object> getSlotInfo(String template) {
+        List<String> availableSlots = slotCapacityValidator.getAvailableSlots(template);
+
+        Map<String, Integer> slotCapacities = Map.of();
+        if ("your_times".equals(template)) {
+            slotCapacities = Map.of("headline", 1, "secondary", 3, "sidebar", 2);
+        }
+
+        return Map.of("template", template, "available_slots", availableSlots, "slot_capacities", slotCapacities);
     }
 }

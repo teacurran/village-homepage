@@ -163,6 +163,19 @@ public class FeedItem extends PanacheEntityBase {
     }
 
     /**
+     * Finds recent feed items with pagination.
+     *
+     * @param offset
+     *            offset (0-indexed)
+     * @param limit
+     *            page size
+     * @return List of recent feed items
+     */
+    public static List<FeedItem> findRecent(int offset, int limit) {
+        return find("#" + QUERY_FIND_RECENT + " ORDER BY published_at DESC").page(offset / limit, limit).list();
+    }
+
+    /**
      * Finds feed items not yet tagged by AI (for BULK queue job picker).
      *
      * @return List of untagged feed items

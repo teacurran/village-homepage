@@ -15,6 +15,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.*;
+import villagecompute.homepage.data.models.FeedItem;
 import villagecompute.homepage.data.models.ProfileCuratedArticle;
 import villagecompute.homepage.data.models.User;
 import villagecompute.homepage.data.models.UserProfile;
@@ -482,6 +483,143 @@ public class ProfileResource {
 
         } catch (ResourceNotFoundException e) {
             return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", "Article not found")).build();
+        }
+    }
+
+    /**
+     * Assign article to template slot.
+     *
+     * <p>
+     * Validates slot capacity and updates slot assignment for a curated article. Owner only.
+     * </p>
+     *
+     * @param id
+     *            profile UUID
+     * @param articleId
+     *            article UUID
+     * @param request
+     *            slot assignment request
+     * @return updated article
+     */
+    @PUT
+    @Path("/api/profiles/{id}/articles/{articleId}/slot")
+    @RolesAllowed({"USER", User.ROLE_SUPER_ADMIN, User.ROLE_SUPPORT})
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Transactional
+    public Response assignSlot(@PathParam("id") UUID id, @PathParam("articleId") UUID articleId,
+            @Valid SlotAssignmentType request) {
+
+        LOG.infof("Assigning article %s to slot for profile %s: template=%s, slot=%s", articleId, id,
+                request.template(), request.slot());
+
+        try {
+            UserProfile profile = profileService.getProfile(id);
+
+            if (!isOwnerOrAdmin(profile.userId)) {
+                return Response.status(Response.Status.FORBIDDEN).entity(Map.of("error", "Access denied")).build();
+            }
+
+            ProfileCuratedArticle article = profileService.assignArticleToSlot(articleId, id, request.template(),
+                    request.toMap());
+
+            return Response.ok(toArticleType(article)).build();
+
+        } catch (ResourceNotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", e.getMessage())).build();
+
+        } catch (ValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", e.getMessage())).build();
+        }
+    }
+
+    /**
+     * Get available feed items for curation (feed picker).
+     *
+     * <p>
+     * Returns paginated list of recent feed items from RSS sources. Owner only.
+     * </p>
+     *
+     * @param id
+     *            profile UUID
+     * @param offset
+     *            pagination offset (default: 0)
+     * @param limit
+     *            page size (default: 20, max: 100)
+     * @return list of feed items
+     */
+    @GET
+    @Path("/api/profiles/{id}/feed-items")
+    @RolesAllowed({"USER", User.ROLE_SUPER_ADMIN, User.ROLE_SUPPORT})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getFeedItems(@PathParam("id") UUID id, @QueryParam("offset") @DefaultValue("0") int offset,
+            @QueryParam("limit") @DefaultValue("20") int limit) {
+
+        LOG.infof("Getting feed items for profile %s: offset=%d, limit=%d", id, offset, limit);
+
+        try {
+            UserProfile profile = profileService.getProfile(id);
+
+            if (!isOwnerOrAdmin(profile.userId)) {
+                return Response.status(Response.Status.FORBIDDEN).entity(Map.of("error", "Access denied")).build();
+            }
+
+            // Validate pagination params
+            if (offset < 0) {
+                return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", "Offset must be >= 0"))
+                        .build();
+            }
+            if (limit < 1 || limit > 100) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "Limit must be between 1 and 100")).build();
+            }
+
+            // Query recent feed items
+            List<FeedItem> items = FeedItem.findRecent(offset, limit);
+            List<FeedItemType> feedItems = items.stream().map(FeedItemType::fromEntity).collect(Collectors.toList());
+
+            return Response.ok(Map.of("items", feedItems, "offset", offset, "limit", limit, "total", items.size()))
+                    .build();
+
+        } catch (ResourceNotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", "Profile not found")).build();
+        }
+    }
+
+    /**
+     * Get slot information for a template.
+     *
+     * <p>
+     * Returns available slots and their capacities for a given template type. Owner only.
+     * </p>
+     *
+     * @param id
+     *            profile UUID
+     * @param template
+     *            template type (public_homepage, your_times, your_report)
+     * @return slot information
+     */
+    @GET
+    @Path("/api/profiles/{id}/slots")
+    @RolesAllowed({"USER", User.ROLE_SUPER_ADMIN, User.ROLE_SUPPORT})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getSlotInfo(@PathParam("id") UUID id,
+            @QueryParam("template") @DefaultValue("your_times") String template) {
+
+        LOG.infof("Getting slot info for profile %s: template=%s", id, template);
+
+        try {
+            UserProfile profile = profileService.getProfile(id);
+
+            if (!isOwnerOrAdmin(profile.userId)) {
+                return Response.status(Response.Status.FORBIDDEN).entity(Map.of("error", "Access denied")).build();
+            }
+
+            Map<String, Object> slotInfo = profileService.getSlotInfo(template);
+            return Response.ok(slotInfo).build();
+
+        } catch (ResourceNotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", "Profile not found")).build();
         }
     }
 
