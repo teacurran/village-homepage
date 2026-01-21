@@ -330,11 +330,190 @@ kubectl logs -l app=village-homepage -n village-homepage \
 
 ---
 
+## GDPR Self-Service Portal
+
+Village Homepage provides automated self-service endpoints for users to exercise their GDPR rights without requiring manual support intervention. Implemented per Policy P1.
+
+### User-Facing API Endpoints
+
+| Endpoint | Method | Purpose | Auth Required |
+|----------|--------|---------|---------------|
+| `/api/gdpr/export` | POST | Request data export (Article 15) | Yes |
+| `/api/gdpr/delete` | POST | Request account deletion (Article 17) | Yes |
+
+### Export Request Flow
+
+**1. User Initiates Export**
+```bash
+curl -X POST https://homepage.villagecompute.com/api/gdpr/export \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response:**
+```json
+{
+  "message": "Export requested. You will receive an email with download link within 24 hours.",
+  "request_id": "a1b2c3d4-...",
+  "job_id": 12345
+}
+```
+
+**2. Background Job Execution**
+- Job enqueued to DEFAULT queue (JobType.GDPR_EXPORT)
+- GdprExportJobHandler aggregates all user data:
+  - Core: User, UserProfile, ProfileCuratedArticle
+  - Social: SocialToken, SocialPost
+  - Marketplace: Listings, Images, Messages, Promotions, Refunds
+  - Good Sites: Sites, Votes, KarmaAudit
+  - Analytics: LinkClick, FeatureFlagEvaluation (if consent given)
+  - System: AccountMergeAudit, RateLimitViolation, ImpersonationAudit
+- Data serialized to JSON, packaged as ZIP
+- ZIP uploaded to R2 bucket `gdpr-exports` with prefix `exports/`
+- Signed URL generated with 7-day TTL
+
+**3. Email Notification**
+- User receives email with download link (template: `gdprExportReady.html`)
+- Link expires after 7 days (configurable via `villagecompute.gdpr.export-ttl-days`)
+
+**4. Audit Trail**
+- Request logged to `gdpr_requests` table
+- Status transitions: PENDING → PROCESSING → COMPLETED
+- IP address and user agent recorded for compliance
+
+### Deletion Request Flow
+
+**1. User Initiates Deletion**
+```bash
+curl -X POST https://homepage.villagecompute.com/api/gdpr/delete \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response:**
+```json
+{
+  "message": "Deletion requested. Your account will be permanently deleted within 24 hours.",
+  "request_id": "e5f6g7h8-...",
+  "job_id": 12346,
+  "warning": "This action is permanent and cannot be undone"
+}
+```
+
+**2. Background Job Execution**
+- Job enqueued to HIGH queue (JobType.GDPR_DELETION) for priority processing
+- GdprDeletionJobHandler executes cascading deletion:
+  1. Delete marketplace images from R2 (thumbnails, list views, full size)
+  2. Delete database records in FK-safe order:
+     - Audit trails (AccountMergeAudit, ImpersonationAudit, RateLimitViolation, KarmaAudit)
+     - Analytics (LinkClick, FeatureFlagEvaluation - partitioned tables)
+     - Good Sites (DirectoryVote, DirectorySite)
+     - Social (SocialPost, SocialToken)
+     - Marketplace (Messages, Flags, Refunds, Promotions, Images, Listings)
+     - Profiles (CuratedArticles, Profiles)
+     - GDPR requests (GdprRequest)
+     - User record (final)
+- Transaction-wrapped for atomicity (all succeed or all rollback)
+
+**3. Email Notification**
+- User receives confirmation email (template: `gdprDeletionComplete.html`)
+- Email sent BEFORE user deletion to ensure delivery
+
+**4. Audit Trail**
+- Request logged to `gdpr_requests` table (deleted during cascade)
+- Status transitions: PENDING → PROCESSING → COMPLETED
+
+### Configuration
+
+**application.yaml:**
+```yaml
+villagecompute:
+  storage:
+    buckets:
+      gdpr-exports: ${S3_BUCKET_GDPR_EXPORTS:gdpr-exports}
+
+gdpr:
+  export-ttl-days: ${GDPR_EXPORT_TTL_DAYS:7}
+  deletion-delay-hours: ${GDPR_DELETION_DELAY_HOURS:0}  # Immediate deletion
+```
+
+**Environment Variables:**
+- `S3_BUCKET_GDPR_EXPORTS`: R2 bucket name for export ZIPs (default: `gdpr-exports`)
+- `GDPR_EXPORT_TTL_DAYS`: Signed URL validity period (default: 7 days)
+- `GDPR_DELETION_DELAY_HOURS`: Delay before deletion executes (default: 0, immediate)
+
+### Monitoring & Troubleshooting
+
+**Check Request Status:**
+```sql
+SELECT
+  id, user_id, request_type, status,
+  requested_at, completed_at,
+  signed_url, signed_url_expires_at,
+  error_message
+FROM gdpr_requests
+WHERE user_id = '<user_id>'
+ORDER BY requested_at DESC;
+```
+
+**Failed Export Job:**
+```bash
+# Check job logs
+kubectl logs -l app=village-homepage -n village-homepage \
+  | grep "GDPR export failed"
+
+# Find failed requests
+SELECT * FROM gdpr_requests WHERE status = 'FAILED' AND request_type = 'EXPORT';
+```
+
+**Resolution:**
+1. Inspect `error_message` field in `gdpr_requests` table
+2. Common issues:
+   - R2 bucket permissions (verify S3 access key has PutObject)
+   - Partition query timeout (LinkClick/FeatureFlagEvaluation tables)
+   - Out-of-memory error (user has >100K records)
+3. Re-trigger export via API (creates new request)
+
+**Failed Deletion Job:**
+```bash
+# Check job logs
+kubectl logs -l app=village-homepage -n village-homepage \
+  | grep "GDPR deletion failed"
+
+# Find failed requests
+SELECT * FROM gdpr_requests WHERE status = 'FAILED' AND request_type = 'DELETION';
+```
+
+**Resolution:**
+1. Inspect `error_message` field
+2. Common issues:
+   - Foreign key constraint violation (deletion order incorrect)
+   - R2 image deletion timeout (user has >1000 images)
+   - Transaction timeout (increase `quarkus.transaction-manager.timeout`)
+3. DO NOT manually delete user - transaction ensures atomicity
+4. Re-trigger deletion via API (creates new request)
+
+### Idempotency & Rate Limiting
+
+**Duplicate Request Protection:**
+- API checks for existing PENDING/PROCESSING requests
+- Returns 429 TOO_MANY_REQUESTS if duplicate detected
+- User must wait for current request to complete
+
+**Rate Limiting:**
+- Exports: No explicit limit (inherent throttling via job queue)
+- Deletions: No explicit limit (HIGH priority queue ensures fast processing)
+
+**Abuse Prevention:**
+- IP address logging for audit trail
+- Monitor for repeated failed requests (potential attack)
+- Consider adding rate limit policy if abuse detected
+
+---
+
 ## Compliance Auditing
 
 ### GDPR Right to Access
 
-Users can request all personal data held by Village Homepage per GDPR Article 15.
+Users can request all personal data held by Village Homepage per GDPR Article 15 via the self-service export endpoint (see [GDPR Self-Service Portal](#gdpr-self-service-portal)).
 
 **SQL Query: Export all data for user**
 ```sql

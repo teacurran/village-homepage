@@ -132,24 +132,32 @@ public class DelayedJobService {
      * Enqueues a new job for async execution.
      *
      * <p>
-     * <b>Implementation Note:</b> This is a skeleton method. Future work will:
-     * <ol>
-     * <li>Create a {@code DelayedJob} Panache entity with payload serialized as JSONB</li>
-     * <li>Set priority based on {@code jobType.getQueue().getPriority()}</li>
-     * <li>Persist to database with {@code scheduled_at} for delayed execution</li>
-     * <li>Return the generated job ID for client tracking</li>
-     * </ol>
+     * Creates a {@code DelayedJob} Panache entity with payload serialized as JSONB, sets priority based on queue family,
+     * and persists to database for worker polling.
      *
      * @param jobType
      *            the type of job to enqueue
      * @param payload
      *            job parameters (will be serialized as JSONB)
-     * @return generated job ID (currently returns -1 as placeholder)
+     * @return generated job ID for client tracking
      */
     public long enqueue(JobType jobType, Map<String, Object> payload) {
-        // TODO: Implement persistence via DelayedJob.persist()
-        LOG.infof("Would enqueue JobType.%s to queue %s with payload: %s", jobType, jobType.getQueue(), payload);
-        return -1L; // Placeholder
+        Span span = tracer.spanBuilder("job.enqueue").setAttribute("job.type", jobType.name())
+                .setAttribute("job.queue", jobType.getQueue().name()).startSpan();
+
+        try (Scope scope = span.makeCurrent()) {
+            villagecompute.homepage.data.models.DelayedJob job = villagecompute.homepage.data.models.DelayedJob
+                    .create(jobType, payload);
+
+            span.setAttribute("job.id", job.id);
+            span.addEvent("job.enqueued");
+
+            LOG.infof("Enqueued job %d (type: %s, queue: %s)", job.id, jobType, jobType.getQueue());
+            return job.id;
+
+        } finally {
+            span.end();
+        }
     }
 
     /**

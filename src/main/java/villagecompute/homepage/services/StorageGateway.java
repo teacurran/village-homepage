@@ -94,6 +94,10 @@ public class StorageGateway {
     String profilesBucket;
 
     @ConfigProperty(
+            name = "villagecompute.storage.buckets.gdpr-exports")
+    String gdprExportsBucket;
+
+    @ConfigProperty(
             name = "villagecompute.storage.webp.quality")
     Integer webpQuality;
 
@@ -117,7 +121,7 @@ public class StorageGateway {
      * Bucket types per asset domain (Policy P4).
      */
     public enum BucketType {
-        SCREENSHOTS, LISTINGS, PROFILES
+        SCREENSHOTS, LISTINGS, PROFILES, GDPR_EXPORTS
     }
 
     /**
@@ -519,6 +523,7 @@ public class StorageGateway {
             case SCREENSHOTS -> screenshotsBucket;
             case LISTINGS -> listingsBucket;
             case PROFILES -> profilesBucket;
+            case GDPR_EXPORTS -> gdprExportsBucket;
         };
     }
 

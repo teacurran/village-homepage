@@ -210,6 +210,7 @@ villagecompute:
       screenshots: ${S3_BUCKET_SCREENSHOTS:screenshots}
       listings: ${S3_BUCKET_LISTINGS:listings}
       profiles: ${S3_BUCKET_PROFILES:profiles}
+      gdpr-exports: ${S3_BUCKET_GDPR_EXPORTS:gdpr-exports}
 
     # Signed URL TTLs (Policy P4)
     signed-url-ttl:
@@ -237,6 +238,14 @@ email:
     ssl: ${EMAIL_IMAP_SSL:false}
     # In dev mode with Mailpit: host=localhost, port=1143, username=empty, password=empty, ssl=false
     # In prod with Gmail: host=imap.gmail.com, port=993, username=email@domain.com, password=${EMAIL_IMAP_PASSWORD}, ssl=true
+
+# GDPR Configuration (Policy P1: GDPR/CCPA data governance)
+gdpr:
+  # Data export settings
+  export-ttl-days: ${GDPR_EXPORT_TTL_DAYS:7}  # Signed URL validity period
+
+  # Deletion settings
+  deletion-delay-hours: ${GDPR_DELETION_DELAY_HOURS:0}  # Immediate deletion by default
 
 # Profile-specific overrides
 "%dev":

@@ -98,6 +98,17 @@ public enum JobType {
     ACCOUNT_MERGE_CLEANUP(JobQueue.DEFAULT, "Account merge cleanup (daily, P1 enforced)"),
 
     /**
+     * Exports user data to JSON and uploads to R2 with signed URL.
+     * <p>
+     * <b>Cadence:</b> On-demand (triggered by user request)
+     * <p>
+     * <b>Handler:</b> GdprExportJobHandler
+     * <p>
+     * <b>Policy P1:</b> GDPR Article 15 - Right to access personal data
+     */
+    GDPR_EXPORT(JobQueue.DEFAULT, "GDPR data export (on-demand, P1 enforced)"),
+
+    /**
      * Refreshes OpenGraph metadata for manually-curated profile articles.
      * <p>
      * <b>Cadence:</b> Daily refresh for manual link metadata
@@ -127,6 +138,17 @@ public enum JobType {
      * <b>Handler:</b> MessageRelayJobHandler
      */
     MESSAGE_RELAY(JobQueue.HIGH, "Message relay (on-demand)"),
+
+    /**
+     * Deletes all user data and cascades to related tables.
+     * <p>
+     * <b>Cadence:</b> On-demand (triggered by user request)
+     * <p>
+     * <b>Handler:</b> GdprDeletionJobHandler
+     * <p>
+     * <b>Policy P1:</b> GDPR Article 17 - Right to erasure
+     */
+    GDPR_DELETION(JobQueue.HIGH, "GDPR account deletion (on-demand, P1 enforced)"),
 
     // ========== LOW QUEUE ==========
 
