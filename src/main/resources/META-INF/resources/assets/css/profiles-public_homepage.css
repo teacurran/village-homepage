@@ -1,0 +1,155 @@
+/**
+ * Public Homepage template styles
+ * Gridstack-based widget layout similar to traditional homepage
+ */
+
+.profile-template-public_homepage .grid-stack {
+    background: #f5f5f5;
+    min-height: 400px;
+    padding: 16px;
+}
+
+.profile-template-public_homepage .grid-stack-item {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.profile-template-public_homepage .grid-stack-item-content {
+    height: 100%;
+    overflow: auto;
+}
+
+/* Widget styles */
+.widget {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.widget-header {
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    padding: 12px 16px;
+}
+
+.widget-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #262626;
+}
+
+.widget-body {
+    flex: 1;
+    padding: 16px;
+    overflow: auto;
+}
+
+.widget-empty,
+.widget-placeholder {
+    color: #8c8c8c;
+    font-size: 14px;
+    text-align: center;
+    padding: 24px 0;
+}
+
+/* News widget */
+.widget-news .news-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.widget-news .news-item:last-child {
+    border-bottom: none;
+}
+
+.widget-news .news-item h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.widget-news .news-item a {
+    color: #262626;
+    text-decoration: none;
+}
+
+.widget-news .news-item a:hover {
+    color: #1890ff;
+}
+
+/* Weather widget */
+.widget-weather {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+}
+
+.widget-weather .widget-header {
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.widget-weather .widget-header h3 {
+    color: #ffffff;
+}
+
+/* Custom blocks */
+.custom-blocks {
+    margin-top: 24px;
+}
+
+.custom-block {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.custom-block:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive gridstack */
+@media (max-width: 992px) {
+    .profile-template-public_homepage .grid-stack {
+        padding: 12px;
+    }
+
+    .widget-header {
+        padding: 10px 12px;
+    }
+
+    .widget-body {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-template-public_homepage .grid-stack {
+        padding: 8px;
+    }
+
+    /* Force single column on mobile */
+    .profile-template-public_homepage .grid-stack-item {
+        margin-bottom: 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    .custom-block {
+        padding: 16px;
+    }
+
+    .widget-header h3 {
+        font-size: 14px;
+    }
+
+    .widget-body {
+        padding: 12px;
+        font-size: 14px;
+    }
+}

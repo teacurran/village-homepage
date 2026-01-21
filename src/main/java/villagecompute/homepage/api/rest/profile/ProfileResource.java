@@ -85,6 +85,12 @@ public class ProfileResource {
             requireTypeSafeExpressions = false)
     public static class Templates {
         public static native TemplateInstance profile(ProfilePageData data);
+
+        public static native TemplateInstance publicHomepage(ProfilePageData data);
+
+        public static native TemplateInstance yourTimes(ProfilePageData data);
+
+        public static native TemplateInstance yourReport(ProfilePageData data);
     }
 
     /**
@@ -131,7 +137,59 @@ public class ProfileResource {
             ProfilePageData data = new ProfilePageData(toType(profile),
                     articles.stream().map(this::toArticleType).collect(Collectors.toList()), getCurrentUser());
 
-            return Templates.profile(data);
+            // Route to template-specific Qute template
+            return switch (profile.template) {
+                case UserProfile.TEMPLATE_PUBLIC_HOMEPAGE -> Templates.publicHomepage(data);
+                case UserProfile.TEMPLATE_YOUR_TIMES -> Templates.yourTimes(data);
+                case UserProfile.TEMPLATE_YOUR_REPORT -> Templates.yourReport(data);
+                default -> Templates.profile(data); // fallback
+            };
+
+        } catch (ResourceNotFoundException e) {
+            throw new NotFoundException("Profile not found: " + username);
+        }
+    }
+
+    /**
+     * Preview profile page (owner only, bypasses publish check).
+     *
+     * <p>
+     * Allows profile owner to preview their profile before publishing. Does not increment view count.
+     * </p>
+     *
+     * @param username
+     *            profile username
+     * @return HTML profile page
+     */
+    @GET
+    @Path("/u/{username}/preview")
+    @RolesAllowed({"USER", User.ROLE_SUPER_ADMIN, User.ROLE_SUPPORT})
+    @Produces(MediaType.TEXT_HTML)
+    public TemplateInstance getProfilePreview(@PathParam("username") String username) {
+        LOG.infof("Accessing profile preview: %s", username);
+
+        try {
+            UserProfile profile = profileService.getProfileByUsername(username);
+
+            // Access control: only owner or admin can preview
+            if (!isOwnerOrAdmin(profile.userId)) {
+                throw new ForbiddenException("Access denied to profile preview");
+            }
+
+            // Get curated articles
+            List<ProfileCuratedArticle> articles = profileService.listArticles(profile.id);
+
+            // Build page data (no view count increment for previews)
+            ProfilePageData data = new ProfilePageData(toType(profile),
+                    articles.stream().map(this::toArticleType).collect(Collectors.toList()), getCurrentUser());
+
+            // Route to template-specific Qute template
+            return switch (profile.template) {
+                case UserProfile.TEMPLATE_PUBLIC_HOMEPAGE -> Templates.publicHomepage(data);
+                case UserProfile.TEMPLATE_YOUR_TIMES -> Templates.yourTimes(data);
+                case UserProfile.TEMPLATE_YOUR_REPORT -> Templates.yourReport(data);
+                default -> Templates.profile(data); // fallback
+            };
 
         } catch (ResourceNotFoundException e) {
             throw new NotFoundException("Profile not found: " + username);
@@ -261,6 +319,46 @@ public class ProfileResource {
                 updated = profileService.updateSocialLinks(id, request.socialLinks());
             }
 
+            return Response.ok(toType(updated)).build();
+
+        } catch (ResourceNotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", "Profile not found")).build();
+
+        } catch (ValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", e.getMessage())).build();
+        }
+    }
+
+    /**
+     * Update profile template and configuration.
+     *
+     * <p>
+     * Updates the template type and template-specific configuration. Owner only.
+     * </p>
+     *
+     * @param id
+     *            profile UUID
+     * @param request
+     *            template update request
+     * @return updated profile
+     */
+    @PUT
+    @Path("/api/profiles/{id}/template")
+    @RolesAllowed({"USER", User.ROLE_SUPER_ADMIN, User.ROLE_SUPPORT})
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Transactional
+    public Response updateTemplate(@PathParam("id") UUID id, @Valid UpdateTemplateRequestType request) {
+        LOG.infof("Updating template for profile: %s", id);
+
+        try {
+            UserProfile profile = profileService.getProfile(id);
+
+            if (!isOwnerOrAdmin(profile.userId)) {
+                return Response.status(Response.Status.FORBIDDEN).entity(Map.of("error", "Access denied")).build();
+            }
+
+            UserProfile updated = profileService.updateTemplate(id, request.template(), request.templateConfig());
             return Response.ok(toType(updated)).build();
 
         } catch (ResourceNotFoundException e) {

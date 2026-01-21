@@ -40,6 +40,7 @@ import { z } from 'zod';
 import SampleWidget from './components/SampleWidget';
 import GridstackEditor from './components/GridstackEditor';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import ProfileBuilder from './components/ProfileBuilder';
 
 /**
  * Component registry mapping data-mount attribute values to React components
@@ -67,6 +68,16 @@ const COMPONENT_REGISTRY = {
       apiBaseUrl: z.string(),
       initialDateRange: z.enum(['1d', '7d', '30d']).optional(),
       userRole: z.string(),
+    }),
+  },
+  ProfileBuilder: {
+    component: ProfileBuilder,
+    propsSchema: z.object({
+      profileId: z.string().uuid(),
+      template: z.enum(['public_homepage', 'your_times', 'your_report']),
+      templateConfig: z.record(z.unknown()),
+      apiEndpoint: z.string(),
+      isOwner: z.boolean(),
     }),
   },
   // Add additional components here as they are developed:

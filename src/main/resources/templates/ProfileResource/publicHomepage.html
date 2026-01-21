@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Standard meta -->
+    <title>{data.profile.displayName ?: data.profile.username} - Village Homepage</title>
+    {#if data.profile.bio}
+    <meta name="description" content="{data.profile.bio}">
+    {#else}
+    <meta name="description" content="{data.profile.displayName} on Village Homepage">
+    {/if}
+
+    <!-- Open Graph tags -->
+    <meta property="og:type" content="profile">
+    <meta property="og:title" content="{data.profile.displayName ?: data.profile.username}">
+    {#if data.profile.bio}
+    <meta property="og:description" content="{data.profile.bio}">
+    {#else}
+    <meta property="og:description" content="{data.profile.displayName} on Village Homepage">
+    {/if}
+    {#if data.profile.avatarUrl}
+    <meta property="og:image" content="{data.profile.avatarUrl}">
+    {#else}
+    <meta property="og:image" content="https://homepage.villagecompute.com/assets/img/default-avatar.png">
+    {/if}
+    <meta property="og:url" content="https://homepage.villagecompute.com/u/{data.profile.username}">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{data.profile.displayName ?: data.profile.username}">
+    {#if data.profile.bio}
+    <meta name="twitter:description" content="{data.profile.bio}">
+    {#else}
+    <meta name="twitter:description" content="{data.profile.displayName} on Village Homepage">
+    {/if}
+    {#if data.profile.avatarUrl}
+    <meta name="twitter:image" content="{data.profile.avatarUrl}">
+    {#else}
+    <meta name="twitter:image" content="https://homepage.villagecompute.com/assets/img/default-avatar.png">
+    {/if}
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://homepage.villagecompute.com/u/{data.profile.username}">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <link rel="stylesheet" href="/assets/css/profiles.css">
+    <link rel="stylesheet" href="/assets/css/profiles-public_homepage.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.1.2/dist/gridstack.min.css">
+</head>
+<body class="profile-page profile-template-public_homepage">
+    <header class="profile-header">
+        <div class="container">
+            <div class="header-content">
+                {#if data.profile.templateConfig.header_text}
+                <h1 class="site-title">
+                    {data.profile.templateConfig.header_text}
+                </h1>
+                {#else}
+                <h1 class="site-title">
+                    {data.profile.displayName ?: data.profile.username}'s Homepage
+                </h1>
+                {/if}
+                <nav class="header-nav">
+                    {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+                    <a href="/u/{data.profile.username}/preview" class="btn-preview">Preview</a>
+                    <a href="#edit" class="btn-edit">Edit Layout</a>
+                    {/if}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="profile-main">
+        <div class="container">
+            <!-- Gridstack widget layout -->
+            <div class="grid-stack" id="profile-gridstack">
+                {#if data.profile.templateConfig.widgets}
+                {#for widget in data.profile.templateConfig.widgets}
+                <div class="grid-stack-item"
+                     gs-x="{widget.position.x}"
+                     gs-y="{widget.position.y}"
+                     gs-w="{widget.position.w}"
+                     gs-h="{widget.position.h}">
+                    <div class="grid-stack-item-content widget widget-{widget.type}">
+                        {#if widget.type == 'news'}
+                        <div class="widget-header">
+                            <h3>News</h3>
+                        </div>
+                        <div class="widget-body">
+                            {#if data.articles}
+                            {#for article in data.articles}
+                            {#if article_index < 3}
+                            <article class="news-item">
+                                <h4><a href="{article.originalUrl}" target="_blank" rel="noopener">{article.effectiveHeadline}</a></h4>
+                            </article>
+                            {/if}
+                            {/for}
+                            {#else}
+                            <p class="widget-empty">No articles yet</p>
+                            {/if}
+                        </div>
+                        {/if}
+
+                        {#if widget.type == 'weather'}
+                        <div class="widget-header">
+                            <h3>Weather</h3>
+                        </div>
+                        <div class="widget-body">
+                            <p class="widget-placeholder">Weather widget coming soon</p>
+                        </div>
+                        {/if}
+
+                        {#if widget.type == 'custom'}
+                        <div class="widget-body">
+                            {widget.content raw}
+                        </div>
+                        {/if}
+                    </div>
+                </div>
+                {/for}
+                {#else}
+                <div class="empty-layout">
+                    <p>This homepage is empty. Add widgets to get started!</p>
+                    {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+                    <a href="#edit" class="btn-primary">Edit Layout</a>
+                    {/if}
+                </div>
+                {/if}
+            </div>
+
+            <!-- Custom blocks -->
+            {#if data.profile.templateConfig.custom_blocks}
+            <div class="custom-blocks">
+                {#for block in data.profile.templateConfig.custom_blocks}
+                <div class="custom-block">
+                    {block.content raw}
+                </div>
+                {/for}
+            </div>
+            {/if}
+        </div>
+    </main>
+
+    <!-- Editor mount point (only for owner) -->
+    {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+    <div data-mount="ProfileBuilder"
+         data-props='{
+             "profileId": "{data.profile.id}",
+             "template": "public_homepage",
+             "templateConfig": {data.profile.templateConfig raw},
+             "apiEndpoint": "/api/profiles/{data.profile.id}",
+             "isOwner": true
+         }'>
+    </div>
+    {/if}
+
+    <footer class="profile-footer">
+        <div class="container">
+            <p>&copy; 2026 Village Homepage. Powered by <a href="https://villagecompute.com">Village Compute</a></p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@10.1.2/dist/gridstack-all.js"></script>
+    <script src="/assets/js/app.js"></script>
+</body>
+</html>

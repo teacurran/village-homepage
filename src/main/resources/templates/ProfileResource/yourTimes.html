@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Standard meta -->
+    {#if data.profile.templateConfig.masthead_text}
+    <title>{data.profile.templateConfig.masthead_text} - {data.profile.username}</title>
+    <meta name="description" content="{data.profile.templateConfig.tagline ?: 'Personal news curation by ' + data.profile.username}">
+    {#else}
+    <title>{data.profile.displayName ?: data.profile.username} - Village Homepage</title>
+    <meta name="description" content="{data.profile.bio ?: 'Personal news curation on Village Homepage'}">
+    {/if}
+
+    <!-- Open Graph tags -->
+    <meta property="og:type" content="profile">
+    {#if data.profile.templateConfig.masthead_text}
+    <meta property="og:title" content="{data.profile.templateConfig.masthead_text}">
+    {#else}
+    <meta property="og:title" content="{data.profile.displayName ?: data.profile.username}">
+    {/if}
+    {#if data.profile.templateConfig.tagline}
+    <meta property="og:description" content="{data.profile.templateConfig.tagline}">
+    {#else}
+    <meta property="og:description" content="Personal news curation by {data.profile.username}">
+    {/if}
+    {#if data.profile.avatarUrl}
+    <meta property="og:image" content="{data.profile.avatarUrl}">
+    {#else}
+    <meta property="og:image" content="https://homepage.villagecompute.com/assets/img/default-avatar.png">
+    {/if}
+    <meta property="og:url" content="https://homepage.villagecompute.com/u/{data.profile.username}">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    {#if data.profile.templateConfig.masthead_text}
+    <meta name="twitter:title" content="{data.profile.templateConfig.masthead_text}">
+    {#else}
+    <meta name="twitter:title" content="{data.profile.displayName ?: data.profile.username}">
+    {/if}
+    {#if data.profile.templateConfig.tagline}
+    <meta name="twitter:description" content="{data.profile.templateConfig.tagline}">
+    {#else}
+    <meta name="twitter:description" content="Personal news curation by {data.profile.username}">
+    {/if}
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://homepage.villagecompute.com/u/{data.profile.username}">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <link rel="stylesheet" href="/assets/css/profiles.css">
+    <link rel="stylesheet" href="/assets/css/profiles-your_times.css">
+</head>
+<body class="profile-page profile-template-your_times">
+    <header class="newspaper-header">
+        <div class="container">
+            <div class="masthead">
+                <h1 class="masthead-title">
+                    {data.profile.templateConfig.masthead_text ?: (data.profile.displayName + ' Times')}
+                </h1>
+                {#if data.profile.templateConfig.tagline}
+                <p class="masthead-tagline">{data.profile.templateConfig.tagline}</p>
+                {/if}
+                <div class="masthead-meta">
+                    <span class="publication-date">{java:time:LocalDate@now()}</span>
+                    <span class="curator">Curated by @{data.profile.username}</span>
+                </div>
+            </div>
+            {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+            <nav class="editor-nav">
+                <a href="/u/{data.profile.username}/preview" class="btn-preview">Preview</a>
+                <a href="#edit" class="btn-edit">Edit Slots</a>
+            </nav>
+            {/if}
+        </div>
+    </header>
+
+    <main class="newspaper-main">
+        <div class="container">
+            <div class="newspaper-grid">
+                <!-- Main headline slot -->
+                {#if data.profile.templateConfig.slots && data.profile.templateConfig.slots.main_headline}
+                {#let slot = data.profile.templateConfig.slots.main_headline}
+                {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
+                {#if article}
+                <article class="main-headline">
+                    {#if article.effectiveImageUrl}
+                    <div class="article-image">
+                        <img src="{article.effectiveImageUrl}" alt="{article.effectiveHeadline}">
+                    </div>
+                    {/if}
+                    <div class="article-content">
+                        <h2 class="article-headline">
+                            <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
+                                {slot.custom_headline ?: article.effectiveHeadline}
+                            </a>
+                        </h2>
+                        <p class="article-description">
+                            {slot.custom_blurb ?: article.effectiveDescription}
+                        </p>
+                    </div>
+                </article>
+                {#else}
+                <div class="slot-empty main-headline">
+                    <p>Add a story for the main headline</p>
+                </div>
+                {/if}
+                {/let}
+                {/let}
+                {#else}
+                <div class="slot-empty main-headline">
+                    <p>Add a story for the main headline</p>
+                </div>
+                {/if}
+
+                <!-- Secondary stories -->
+                <div class="secondary-stories">
+                    {#if data.profile.templateConfig.slots}
+                    {#for i in java:util:stream:IntStream@range(1, 3)}
+                    {#let slotKey = 'secondary_' + i}
+                    {#let slot = data.profile.templateConfig.slots.get(slotKey)}
+                    {#if slot}
+                    {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
+                    {#if article}
+                    <article class="secondary-story">
+                        {#if article.effectiveImageUrl}
+                        <div class="article-image-small">
+                            <img src="{article.effectiveImageUrl}" alt="{article.effectiveHeadline}">
+                        </div>
+                        {/if}
+                        <div class="article-content">
+                            <h3 class="article-headline">
+                                <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
+                                    {slot.custom_headline ?: article.effectiveHeadline}
+                                </a>
+                            </h3>
+                            {#if slot.custom_blurb ?: article.effectiveDescription}
+                            <p class="article-description">
+                                {slot.custom_blurb ?: article.effectiveDescription}
+                            </p>
+                            {/if}
+                        </div>
+                    </article>
+                    {#else}
+                    <div class="slot-empty secondary-story">
+                        <p>Add a story or hide slot</p>
+                    </div>
+                    {/if}
+                    {/let}
+                    {/let}
+                    {#else}
+                    <div class="slot-empty secondary-story">
+                        <p>Add a story or hide slot</p>
+                    </div>
+                    {/if}
+                    {/for}
+                    {/if}
+                </div>
+
+                <!-- Sidebar stories -->
+                <aside class="sidebar-stories">
+                    {#if data.profile.templateConfig.slots}
+                    {#for i in java:util:stream:IntStream@range(1, 3)}
+                    {#let slotKey = 'sidebar_' + i}
+                    {#let slot = data.profile.templateConfig.slots.get(slotKey)}
+                    {#if slot}
+                    {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
+                    {#if article}
+                    <article class="sidebar-story">
+                        <h4 class="article-headline">
+                            <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
+                                {slot.custom_headline ?: article.effectiveHeadline}
+                            </a>
+                        </h4>
+                    </article>
+                    {#else}
+                    <div class="slot-empty sidebar-story">
+                        <p>Add a story</p>
+                    </div>
+                    {/if}
+                    {/let}
+                    {/let}
+                    {#else}
+                    <div class="slot-empty sidebar-story">
+                        <p>Add a story</p>
+                    </div>
+                    {/if}
+                    {/for}
+                    {/if}
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <!-- Editor mount point (only for owner) -->
+    {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+    <div data-mount="ProfileBuilder"
+         data-props='{
+             "profileId": "{data.profile.id}",
+             "template": "your_times",
+             "templateConfig": {data.profile.templateConfig raw},
+             "apiEndpoint": "/api/profiles/{data.profile.id}",
+             "isOwner": true
+         }'>
+    </div>
+    {/if}
+
+    <footer class="newspaper-footer">
+        <div class="container">
+            <p>&copy; 2026 {data.profile.templateConfig.masthead_text ?: (data.profile.displayName + ' Times')}. Powered by <a href="https://villagecompute.com">Village Compute</a></p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/assets/js/app.js"></script>
+</body>
+</html>

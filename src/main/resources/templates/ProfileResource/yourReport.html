@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Standard meta -->
+    {#if data.profile.templateConfig.main_header}
+    <title>{data.profile.templateConfig.main_header} - {data.profile.username}</title>
+    <meta name="description" content="Link aggregator by {data.profile.username}">
+    {#else}
+    <title>{data.profile.displayName ?: data.profile.username} - Village Homepage</title>
+    <meta name="description" content="{data.profile.bio ?: 'Link aggregator on Village Homepage'}">
+    {/if}
+
+    <!-- Open Graph tags -->
+    <meta property="og:type" content="profile">
+    {#if data.profile.templateConfig.main_header}
+    <meta property="og:title" content="{data.profile.templateConfig.main_header}">
+    {#else}
+    <meta property="og:title" content="{data.profile.displayName ?: data.profile.username}">
+    {/if}
+    <meta property="og:description" content="Link aggregator by {data.profile.username}">
+    {#if data.profile.templateConfig.headline_photo_url}
+    <meta property="og:image" content="{data.profile.templateConfig.headline_photo_url}">
+    {#else if data.profile.avatarUrl}
+    <meta property="og:image" content="{data.profile.avatarUrl}">
+    {#else}
+    <meta property="og:image" content="https://homepage.villagecompute.com/assets/img/default-avatar.png">
+    {/if}
+    <meta property="og:url" content="https://homepage.villagecompute.com/u/{data.profile.username}">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    {#if data.profile.templateConfig.main_header}
+    <meta name="twitter:title" content="{data.profile.templateConfig.main_header}">
+    {#else}
+    <meta name="twitter:title" content="{data.profile.displayName ?: data.profile.username}">
+    {/if}
+    <meta name="twitter:description" content="Link aggregator by {data.profile.username}">
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://homepage.villagecompute.com/u/{data.profile.username}">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <link rel="stylesheet" href="/assets/css/profiles.css">
+    <link rel="stylesheet" href="/assets/css/profiles-your_report.css">
+</head>
+<body class="profile-page profile-template-your_report {data.profile.templateConfig.uppercase_style ? 'uppercase-style' : ''}">
+    <header class="report-header">
+        <div class="container">
+            {#if data.profile.templateConfig.headline_photo_url}
+            <div class="headline-photo">
+                <img src="{data.profile.templateConfig.headline_photo_url}" alt="Header">
+            </div>
+            {/if}
+            <h1 class="report-title">
+                {data.profile.templateConfig.main_header ?: (data.profile.displayName + "'s Report")}
+            </h1>
+            <p class="report-curator">Curated by <a href="/u/{data.profile.username}">@{data.profile.username}</a></p>
+            {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+            <nav class="editor-nav">
+                <a href="/u/{data.profile.username}/preview" class="btn-preview">Preview</a>
+                <a href="#edit" class="btn-edit">Edit Columns</a>
+            </nav>
+            {/if}
+        </div>
+    </header>
+
+    <main class="report-main">
+        <div class="container">
+            <div class="report-columns">
+                {#if data.profile.templateConfig.columns}
+                {#for column in data.profile.templateConfig.columns}
+                <div class="report-column">
+                    <h2 class="column-header">{column.section_header}</h2>
+                    {#if column.items && !column.items.isEmpty()}
+                    <ul class="column-items">
+                        {#for item in column.items}
+                        {#let article = data.articles.stream().filter(a -> a.id.toString().equals(item.article_id)).findFirst().orElse(null)}
+                        {#if article}
+                        <li class="column-item">
+                            <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
+                                {item.custom_headline ?: article.effectiveHeadline}
+                            </a>
+                        </li>
+                        {#else}
+                        <li class="column-item-empty">
+                            <span>Article not found</span>
+                        </li>
+                        {/if}
+                        {/let}
+                        {/for}
+                    </ul>
+                    {#else}
+                    <p class="column-empty">No items in this section</p>
+                    {/if}
+                </div>
+                {/for}
+                {#else}
+                <div class="columns-empty">
+                    <p>No columns configured. Add columns to get started!</p>
+                    {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+                    <a href="#edit" class="btn-primary">Edit Columns</a>
+                    {/if}
+                </div>
+                {/if}
+            </div>
+        </div>
+    </main>
+
+    <!-- Editor mount point (only for owner) -->
+    {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+    <div data-mount="ProfileBuilder"
+         data-props='{
+             "profileId": "{data.profile.id}",
+             "template": "your_report",
+             "templateConfig": {data.profile.templateConfig raw},
+             "apiEndpoint": "/api/profiles/{data.profile.id}",
+             "isOwner": true
+         }'>
+    </div>
+    {/if}
+
+    <footer class="report-footer">
+        <div class="container">
+            <p>&copy; 2026 {data.profile.templateConfig.main_header ?: (data.profile.displayName + "'s Report")}. Powered by <a href="https://villagecompute.com">Village Compute</a></p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/assets/js/app.js"></script>
+</body>
+</html>

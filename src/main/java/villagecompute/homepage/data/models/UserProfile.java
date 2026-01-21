@@ -315,6 +315,104 @@ public class UserProfile extends PanacheEntityBase {
     }
 
     /**
+     * Validates template configuration for public_homepage template.
+     *
+     * @param config
+     *            template configuration map
+     * @throws ValidationException
+     *             if configuration is invalid
+     */
+    public static void validatePublicHomepageConfig(Map<String, Object> config) throws ValidationException {
+        if (config == null) {
+            throw new ValidationException("Template configuration cannot be null");
+        }
+
+        // header_text is optional, no specific validation needed
+        // accent_color is optional, basic validation if present
+        if (config.containsKey("accent_color")) {
+            String accentColor = (String) config.get("accent_color");
+            if (accentColor != null && !accentColor.matches("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")) {
+                throw new ValidationException("Invalid accent_color format (must be hex color code like #1890ff)");
+            }
+        }
+
+        // widgets and custom_blocks are optional lists
+        // No strict validation here as structure may vary
+    }
+
+    /**
+     * Validates template configuration for your_times template.
+     *
+     * @param config
+     *            template configuration map
+     * @throws ValidationException
+     *             if configuration is invalid
+     */
+    public static void validateYourTimesConfig(Map<String, Object> config) throws ValidationException {
+        if (config == null) {
+            throw new ValidationException("Template configuration cannot be null");
+        }
+
+        // masthead_text is optional but recommended
+        // tagline is optional
+        // color_scheme is optional with predefined values
+        if (config.containsKey("color_scheme")) {
+            String colorScheme = (String) config.get("color_scheme");
+            if (colorScheme != null && !List.of("classic", "modern", "minimal").contains(colorScheme)) {
+                throw new ValidationException(
+                        "Invalid color_scheme (must be 'classic', 'modern', or 'minimal'): " + colorScheme);
+            }
+        }
+
+        // slots is optional but should be a map if present
+        if (config.containsKey("slots")) {
+            Object slotsObj = config.get("slots");
+            if (slotsObj != null && !(slotsObj instanceof Map)) {
+                throw new ValidationException("slots field must be a JSON object/map");
+            }
+
+            // Optional: validate slot names if strict enforcement is needed
+            @SuppressWarnings("unchecked")
+            Map<String, Object> slots = (Map<String, Object>) slotsObj;
+            if (slots != null) {
+                List<String> validSlots = List.of("main_headline", "secondary_1", "secondary_2", "sidebar_1",
+                        "sidebar_2");
+                for (String slotName : slots.keySet()) {
+                    if (!validSlots.contains(slotName)) {
+                        LOG.warnf("Unknown slot name in your_times template: %s", slotName);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Validates template configuration for your_report template.
+     *
+     * @param config
+     *            template configuration map
+     * @throws ValidationException
+     *             if configuration is invalid
+     */
+    public static void validateYourReportConfig(Map<String, Object> config) throws ValidationException {
+        if (config == null) {
+            throw new ValidationException("Template configuration cannot be null");
+        }
+
+        // main_header is optional
+        // headline_photo_url is optional
+        // uppercase_style is optional boolean
+
+        // columns is optional but should be a list if present
+        if (config.containsKey("columns")) {
+            Object columnsObj = config.get("columns");
+            if (columnsObj != null && !(columnsObj instanceof List)) {
+                throw new ValidationException("columns field must be a JSON array/list");
+            }
+        }
+    }
+
+    /**
      * Creates a new profile with default settings.
      *
      * @param userId
@@ -468,10 +566,21 @@ public class UserProfile extends PanacheEntityBase {
      * @param templateConfig
      *            new template configuration
      * @throws ValidationException
-     *             if template is invalid
+     *             if template or configuration is invalid
      */
     public void updateTemplate(String template, Map<String, Object> templateConfig) throws ValidationException {
         validateTemplate(template);
+
+        // Validate template-specific configuration
+        if (templateConfig != null) {
+            switch (template) {
+                case TEMPLATE_PUBLIC_HOMEPAGE -> validatePublicHomepageConfig(templateConfig);
+                case TEMPLATE_YOUR_TIMES -> validateYourTimesConfig(templateConfig);
+                case TEMPLATE_YOUR_REPORT -> validateYourReportConfig(templateConfig);
+                default -> throw new ValidationException("Unknown template type: " + template);
+            }
+        }
+
         this.template = template;
         if (templateConfig != null) {
             this.templateConfig = templateConfig;
