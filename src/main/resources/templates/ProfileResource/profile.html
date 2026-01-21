@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {#if data.profile.bio}
+    <meta name="description" content="{data.profile.bio}">
+    {#else}
+    <meta name="description" content="{data.profile.displayName} on Village Homepage">
+    {/if}
+    <title>{data.profile.displayName ?: data.profile.username} - Village Homepage</title>
+
+    <!-- Open Graph tags -->
+    <meta property="og:title" content="{data.profile.displayName ?: data.profile.username}">
+    {#if data.profile.bio}
+    <meta property="og:description" content="{data.profile.bio}">
+    {#else}
+    <meta property="og:description" content="{data.profile.displayName} on Village Homepage">
+    {/if}
+    {#if data.profile.avatarUrl}
+    <meta property="og:image" content="{data.profile.avatarUrl}">
+    {/if}
+    <meta property="og:url" content="https://homepage.villagecompute.com/u/{data.profile.username}">
+
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <link rel="stylesheet" href="/assets/css/profiles.css">
+</head>
+<body class="profile-page profile-template-{data.profile.template}">
+    <header class="profile-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="site-title">
+                    <a href="/">Village Homepage</a>
+                </h1>
+                <nav class="header-nav">
+                    {#if data.currentUser && data.currentUser.id.equals(data.profile.userId)}
+                    <a href="/api/profiles/{data.profile.id}" class="btn-edit">Edit Profile</a>
+                    {/if}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="profile-main">
+        <div class="container">
+            <article class="profile-content">
+                <!-- Profile header -->
+                <header class="profile-content-header">
+                    {#if data.profile.avatarUrl}
+                    <div class="profile-avatar">
+                        <img src="{data.profile.avatarUrl}" alt="{data.profile.displayName ?: data.profile.username}">
+                    </div>
+                    {/if}
+                    <div class="profile-info">
+                        <h2 class="profile-display-name">{data.profile.displayName ?: data.profile.username}</h2>
+                        <p class="profile-username">@{data.profile.username}</p>
+                        {#if data.profile.bio}
+                        <p class="profile-bio">{data.profile.bio}</p>
+                        {/if}
+                        {#if data.profile.locationText}
+                        <p class="profile-location">📍 {data.profile.locationText}</p>
+                        {/if}
+                        {#if data.profile.websiteUrl}
+                        <p class="profile-website">
+                            <a href="{data.profile.websiteUrl}" target="_blank" rel="noopener noreferrer">
+                                {data.profile.websiteUrl} ↗
+                            </a>
+                        </p>
+                        {/if}
+                    </div>
+                </header>
+
+                <!-- Social links -->
+                {#if data.profile.socialLinks && !data.profile.socialLinks.isEmpty()}
+                <div class="profile-social-links">
+                    <h3>Connect</h3>
+                    <ul class="social-links-list">
+                        {#each data.profile.socialLinks}
+                        <li>
+                            <a href="{it.value}" target="_blank" rel="noopener noreferrer">
+                                {it.key}
+                            </a>
+                        </li>
+                        {/each}
+                    </ul>
+                </div>
+                {/if}
+
+                <!-- Curated articles -->
+                {#if data.articles && !data.articles.isEmpty()}
+                <div class="profile-articles">
+                    <h3>Curated Articles</h3>
+                    <div class="articles-grid">
+                        {#for article in data.articles}
+                        {#if article.isActive}
+                        <article class="article-card">
+                            {#if article.effectiveImageUrl}
+                            <div class="article-image">
+                                <img src="{article.effectiveImageUrl}" alt="{article.effectiveHeadline}">
+                            </div>
+                            {/if}
+                            <div class="article-content">
+                                <h4 class="article-headline">
+                                    <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
+                                        {article.effectiveHeadline}
+                                    </a>
+                                </h4>
+                                {#if article.effectiveDescription}
+                                <p class="article-description">{article.effectiveDescription}</p>
+                                {/if}
+                            </div>
+                        </article>
+                        {/if}
+                        {/for}
+                    </div>
+                </div>
+                {/if}
+
+                <!-- Profile stats -->
+                <div class="profile-stats">
+                    <p class="view-count">{data.profile.viewCount} views</p>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <footer class="profile-footer">
+        <div class="container">
+            <p>&copy; 2026 Village Homepage.</p>
+        </div>
+    </footer>
+</body>
+</html>

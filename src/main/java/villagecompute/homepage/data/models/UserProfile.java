@@ -357,28 +357,30 @@ public class UserProfile extends PanacheEntityBase {
         profile.createdAt = Instant.now();
         profile.updatedAt = Instant.now();
 
-        QuarkusTransaction.requiringNew().run(() -> profile.persist());
+        profile.persist();
         LOG.infof("Created profile %s for user %s with username: %s", profile.id, userId, normalizedUsername);
         return profile;
     }
 
     /**
      * Publishes this profile (makes it publicly accessible).
+     * The caller must be in a transaction context for the update to be persisted.
      */
     public void publish() {
         this.isPublished = true;
         this.updatedAt = Instant.now();
-        QuarkusTransaction.requiringNew().run(() -> this.persist());
+        // No persist() call - entity is managed and will be updated by the transaction
         LOG.infof("Published profile %s (username: %s)", this.id, this.username);
     }
 
     /**
      * Unpublishes this profile (returns to draft, 404 on access).
+     * The caller must be in a transaction context for the update to be persisted.
      */
     public void unpublish() {
         this.isPublished = false;
         this.updatedAt = Instant.now();
-        QuarkusTransaction.requiringNew().run(() -> this.persist());
+        // No persist() call - entity is managed and will be updated by the transaction
         LOG.infof("Unpublished profile %s (username: %s)", this.id, this.username);
     }
 
@@ -388,11 +390,12 @@ public class UserProfile extends PanacheEntityBase {
      * <p>
      * Called when public profile page is accessed. View count is cached here for fast reads; detailed analytics are
      * tracked in link_clicks table.
+     * The caller must be in a transaction context for the update to be persisted.
      */
     public void incrementViewCount() {
         this.viewCount++;
         this.updatedAt = Instant.now();
-        QuarkusTransaction.requiringNew().run(() -> this.persist());
+        // No persist() call - entity is managed and will be updated by the transaction
     }
 
     /**
@@ -401,11 +404,12 @@ public class UserProfile extends PanacheEntityBase {
      * <p>
      * Per Policy P1, soft-deleted profiles are hard-deleted after 90 days by the cleanup job. Username becomes
      * available for re-use after soft delete.
+     * The caller must be in a transaction context for the update to be persisted.
      */
     public void softDelete() {
         this.deletedAt = Instant.now();
         this.updatedAt = Instant.now();
-        QuarkusTransaction.requiringNew().run(() -> this.persist());
+        // No persist() call - entity is managed and will be updated by the transaction
         LOG.infof("Soft-deleted profile %s (username: %s)", this.id, this.username);
     }
 

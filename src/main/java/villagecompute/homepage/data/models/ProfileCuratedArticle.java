@@ -340,12 +340,13 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
     }
 
     /**
-     * Deactivates this article (hides it from profile).
+     * Deactivates this curated article (removes from profile display).
+     * The caller must be in a transaction context for the update to be persisted.
      */
     public void deactivate() {
         this.isActive = false;
         this.updatedAt = Instant.now();
-        QuarkusTransaction.requiringNew().run(() -> this.persist());
+        // No persist() call - entity is managed and will be updated by the transaction
         LOG.infof("Deactivated curated article %s for profile %s", this.id, this.profileId);
     }
 
