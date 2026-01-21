@@ -83,6 +83,20 @@ public class ClickTrackingResource {
      *     "score": 15
      *   }
      * }
+     *
+     * // Profile curated article click example:
+     * {
+     *   "clickType": "profile_curated",
+     *   "targetId": "c5f9d2e2-3456-7890-cdef-3456789012cd",
+     *   "targetUrl": "https://example.com/article",
+     *   "metadata": {
+     *     "profile_id": "d6f0e3f3-4567-8901-def0-4567890123de",
+     *     "profile_username": "johndoe",
+     *     "article_id": "c5f9d2e2-3456-7890-cdef-3456789012cd",
+     *     "article_slot": "top_pick",
+     *     "template": "minimal"
+     *   }
+     * }
      * </pre>
      *
      * @param event
@@ -127,7 +141,6 @@ public class ClickTrackingResource {
 
             // Create LinkClick entity
             LinkClick click = new LinkClick();
-            click.id = UUID.randomUUID();
             Instant now = Instant.now();
             click.clickDate = LocalDate.now();
             click.clickTimestamp = now;
@@ -153,9 +166,22 @@ public class ClickTrackingResource {
                 }
             }
 
+            // Extract profile_id for profile events
+            if (event.clickType().startsWith("profile_") && event.metadata() != null) {
+                if (event.metadata().containsKey("profile_id")) {
+                    try {
+                        UUID profileId = UUID.fromString(event.metadata().get("profile_id").toString());
+                        // Profile context metadata is stored in JSONB; no separate field needed
+                        LOG.debugf("Profile event: type=%s, profile_id=%s", event.clickType(), profileId);
+                    } catch (IllegalArgumentException e) {
+                        LOG.warnf("Invalid profile_id in metadata: %s", event.metadata().get("profile_id"));
+                    }
+                }
+            }
+
             // Store full metadata as JSONB
             if (event.metadata() != null && !event.metadata().isEmpty()) {
-                click.metadata = new JsonObject(event.metadata());
+                click.setMetadataFromJson(new JsonObject(event.metadata()));
             }
 
             // Persist click event
@@ -282,7 +308,6 @@ public class ClickTrackingResource {
                 try {
                     QuarkusTransaction.requiringNew().run(() -> {
                         LinkClick click = new LinkClick();
-                        click.id = UUID.randomUUID();
                         Instant now = Instant.now();
                         click.clickDate = LocalDate.now();
                         click.clickTimestamp = now;
@@ -296,7 +321,7 @@ public class ClickTrackingResource {
                         click.userAgent = sanitizeUserAgent(finalUserAgent);
                         click.referer = finalReferer;
                         click.categoryId = finalCategoryId;
-                        click.metadata = finalMetadata;
+                        click.setMetadataFromJson(finalMetadata);
                         click.createdAt = now;
                         click.persist();
                     });

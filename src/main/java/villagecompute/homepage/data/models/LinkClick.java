@@ -35,6 +35,7 @@ import java.util.UUID;
  * <li>marketplace_listing - User clicks on marketplace listing</li>
  * <li>marketplace_view - User views marketplace listing detail</li>
  * <li>profile_view - User views another user's profile</li>
+ * <li>profile_curated - User clicks on curated article from profile page</li>
  * </ul>
  *
  * <p>
@@ -46,6 +47,11 @@ import java.util.UUID;
  * <li>rank_in_category - Site's rank when clicked</li>
  * <li>score - Site's score when clicked</li>
  * <li>search_query - Search term for directory_search events</li>
+ * <li>profile_id - Profile UUID (for profile events)</li>
+ * <li>profile_username - Profile username (for context)</li>
+ * <li>article_id - Curated article UUID (for profile_curated)</li>
+ * <li>article_slot - Slot name (for profile_curated)</li>
+ * <li>template - Profile template type (for profile events)</li>
  * </ul>
  *
  * @see ClickStatsDaily
@@ -116,7 +122,33 @@ public class LinkClick extends PanacheEntityBase {
     @Column(
             name = "metadata",
             columnDefinition = "jsonb")
-    public JsonObject metadata;
+    public String metadata;
+
+    /**
+     * Get metadata as JsonObject.
+     *
+     * @return JsonObject or null if metadata is null/empty
+     */
+    public JsonObject getMetadataAsJson() {
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+        return new JsonObject(metadata);
+    }
+
+    /**
+     * Set metadata from JsonObject.
+     *
+     * @param json
+     *            JsonObject to store
+     */
+    public void setMetadataFromJson(JsonObject json) {
+        if (json == null) {
+            this.metadata = null;
+        } else {
+            this.metadata = json.encode();
+        }
+    }
 
     @Column(
             name = "created_at",

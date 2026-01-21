@@ -25,6 +25,7 @@ import java.util.UUID;
  * <li>marketplace_listing - Click on marketplace listing</li>
  * <li>marketplace_view - View marketplace listing detail</li>
  * <li>profile_view - View user profile</li>
+ * <li>profile_curated - Click on curated article from profile page</li>
  * </ul>
  *
  * <p>
@@ -37,6 +38,11 @@ import java.util.UUID;
  * <li>rank_in_category - Site's rank when clicked (Integer)</li>
  * <li>score - Site's score when clicked (Integer)</li>
  * <li>search_query - Search term (for directory_search)</li>
+ * <li>profile_id - Profile UUID (for profile events)</li>
+ * <li>profile_username - Profile username (for context)</li>
+ * <li>article_id - Curated article UUID (for profile_curated)</li>
+ * <li>article_slot - Slot name (for profile_curated)</li>
+ * <li>template - Profile template type (for profile events)</li>
  * </ul>
  *
  * <p>
@@ -87,7 +93,7 @@ import java.util.UUID;
  * @see villagecompute.homepage.data.models.LinkClick for persistence
  */
 public record ClickEventType(@NotBlank @Pattern(
-        regexp = "directory_site_click|directory_category_view|directory_site_view|directory_vote|directory_search|directory_bubbled_click|marketplace_listing|marketplace_view|profile_view",
+        regexp = "directory_site_click|directory_category_view|directory_site_view|directory_vote|directory_search|directory_bubbled_click|marketplace_listing|marketplace_view|profile_view|profile_curated",
         message = "Invalid click type") String clickType, UUID targetId, @NotBlank String targetUrl,
         Map<String, Object> metadata) {
 }

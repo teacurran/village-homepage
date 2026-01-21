@@ -548,6 +548,10 @@ Good Sites click tracking uses the unified `/track/click` endpoint with director
 - `directory_vote` - Vote cast on site
 - `directory_search` - Search query
 - `directory_bubbled_click` - Click on bubbled site from parent category
+- `marketplace_listing` - Click on marketplace listing
+- `marketplace_view` - View marketplace listing detail
+- `profile_view` - View user profile (tracked since I6.T4)
+- `profile_curated` - Click on curated article from profile page (tracked since I6.T4)
 
 **Metadata Fields (JSONB):**
 ```json
@@ -637,6 +641,121 @@ DO UPDATE SET
   avg_score = EXCLUDED.avg_score,
   bubbled_clicks = EXCLUDED.bubbled_clicks;
 ```
+
+### Profile Analytics (Policy F14.9)
+
+Profile click tracking captures user engagement with public profiles and curated article selections.
+
+**Tracked Events:**
+- `profile_view` - User views another user's profile
+- `profile_curated` - User clicks on curated article from profile page
+
+**Profile Metadata Fields (JSONB):**
+```json
+{
+  "profile_id": "uuid",
+  "profile_username": "string",
+  "article_id": "uuid",
+  "article_slot": "string",
+  "article_url": "string",
+  "template": "string"
+}
+```
+
+**Frontend Integration:**
+Profile pages include JavaScript to track curated article clicks:
+
+```javascript
+// Track curated article click from profile page
+fetch('/track/click', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    clickType: 'profile_curated',
+    targetId: articleId,
+    targetUrl: articleUrl,
+    metadata: {
+      profile_id: profileId,
+      profile_username: username,
+      article_id: articleId,
+      article_slot: slotName,
+      template: templateType
+    }
+  }),
+  keepalive: true
+});
+```
+
+**Analytics Endpoints:**
+
+The AnalyticsResource provides admin endpoints for profile metrics:
+
+```bash
+# Top viewed profiles (last 30 days)
+GET /admin/api/analytics/profiles/top-viewed?start_date=2026-01-01&end_date=2026-01-31&limit=20
+
+# Curated article clicks for specific profile
+GET /admin/api/analytics/profiles/{profile_id}/curated-clicks?start_date=2026-01-01&end_date=2026-01-31
+
+# Overall profile engagement metrics
+GET /admin/api/analytics/profiles/engagement?start_date=2026-01-01&end_date=2026-01-31
+```
+
+**Dashboard Queries:**
+
+Top viewed profiles (last 30 days):
+```sql
+SELECT
+  target_id AS profile_id,
+  SUM(total_clicks) AS total_views,
+  SUM(unique_users) AS unique_users,
+  SUM(unique_sessions) AS unique_sessions
+FROM click_stats_daily_items
+WHERE click_type = 'profile_view'
+  AND stat_date >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY target_id
+ORDER BY total_views DESC
+LIMIT 20;
+```
+
+Curated article click-through rate by profile:
+```sql
+SELECT
+  (metadata->>'profile_id')::UUID AS profile_id,
+  target_id AS article_id,
+  target_url AS article_url,
+  metadata->>'article_slot' AS slot,
+  COUNT(*) AS total_clicks,
+  COUNT(DISTINCT COALESCE(user_id, session_id)) AS unique_users
+FROM link_clicks
+WHERE click_type = 'profile_curated'
+  AND click_date >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY (metadata->>'profile_id')::UUID, target_id, target_url, metadata->>'article_slot'
+ORDER BY total_clicks DESC;
+```
+
+Profile engagement rate (curated clicks / profile views):
+```sql
+SELECT
+  pv.total_views,
+  pc.total_curated_clicks,
+  ROUND(100.0 * pc.total_curated_clicks / NULLIF(pv.total_views, 0), 2) AS engagement_rate
+FROM
+  (SELECT SUM(total_clicks) AS total_views
+   FROM click_stats_daily_items
+   WHERE click_type = 'profile_view'
+     AND stat_date >= CURRENT_DATE - INTERVAL '30 days') pv,
+  (SELECT SUM(total_clicks) AS total_curated_clicks
+   FROM click_stats_daily_items
+   WHERE click_type = 'profile_curated'
+     AND stat_date >= CURRENT_DATE - INTERVAL '30 days') pc;
+```
+
+**Privacy Considerations:**
+- All profile analytics respect Policy P14 (consent-gated tracking)
+- IP addresses sanitized (last octet zeroed) before storage
+- User agents truncated to 512 characters
+- Aggregated rollup tables contain no PII
 
 ### Data Retention
 

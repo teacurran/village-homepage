@@ -16,6 +16,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.data.models.ClickStatsDaily;
 import villagecompute.homepage.data.models.ClickStatsDailyItems;
+import villagecompute.homepage.data.models.LinkClick;
 import villagecompute.homepage.observability.LoggingConfig;
 
 import java.time.LocalDate;
@@ -59,6 +60,7 @@ import java.util.Map;
  * <li>{@code rollup_date} - Target date being aggregated</li>
  * <li>{@code category_rollups} - Number of category rollup rows created/updated</li>
  * <li>{@code item_rollups} - Number of item rollup rows created/updated</li>
+ * <li>{@code profile_events} - Number of profile-related click events aggregated</li>
  * </ul>
  *
  * <p>
@@ -150,10 +152,16 @@ public class ClickRollupJobHandler implements JobHandler {
                 itemRollups = aggregateItemStats(targetDate);
                 LOG.infof("Created/updated %d item rollup rows", itemRollups);
 
+                // Count profile events for telemetry
+                long profileEvents = LinkClick.count("clickType LIKE 'profile_%' AND clickDate = ?1", targetDate);
+
                 span.setAttribute("category_rollups", categoryRollups);
                 span.setAttribute("item_rollups", itemRollups);
-                span.addEvent("rollup.completed", Attributes.of(AttributeKey.longKey("category_rollups"),
-                        (long) categoryRollups, AttributeKey.longKey("item_rollups"), (long) itemRollups));
+                span.setAttribute("profile_events", profileEvents);
+                span.addEvent("rollup.completed",
+                        Attributes.of(AttributeKey.longKey("category_rollups"), (long) categoryRollups,
+                                AttributeKey.longKey("item_rollups"), (long) itemRollups,
+                                AttributeKey.longKey("profile_events"), profileEvents));
 
                 // Record success metrics
                 Counter.builder("click_tracking.rollups.total").register(meterRegistry)
@@ -180,7 +188,8 @@ public class ClickRollupJobHandler implements JobHandler {
     /**
      * Aggregate clicks by type and category into click_stats_daily table.
      *
-     * Uses INSERT ... ON CONFLICT DO UPDATE for idempotency.
+     * Uses INSERT ... ON CONFLICT DO UPDATE for idempotency. Uses LEFT JOIN for directory_categories to gracefully
+     * handle NULL category_id (e.g., profile events).
      */
     private int aggregateCategoryStats(LocalDate targetDate) {
         String sql = """
@@ -188,17 +197,18 @@ public class ClickRollupJobHandler implements JobHandler {
                 SELECT
                   gen_random_uuid(),
                   :targetDate,
-                  click_type,
-                  category_id,
-                  (SELECT name FROM directory_categories WHERE id = category_id),
+                  lc.click_type,
+                  lc.category_id,
+                  dc.name AS category_name,
                   COUNT(*) AS total_clicks,
-                  COUNT(DISTINCT COALESCE(user_id, session_id)) AS unique_users,
-                  COUNT(DISTINCT session_id) AS unique_sessions,
+                  COUNT(DISTINCT COALESCE(lc.user_id, lc.session_id)) AS unique_users,
+                  COUNT(DISTINCT lc.session_id) AS unique_sessions,
                   NOW(),
                   NOW()
-                FROM link_clicks
-                WHERE click_date = :targetDate
-                GROUP BY click_type, category_id
+                FROM link_clicks lc
+                LEFT JOIN directory_categories dc ON lc.category_id = dc.id
+                WHERE lc.click_date = :targetDate
+                GROUP BY lc.click_type, lc.category_id, dc.name
                 ON CONFLICT (stat_date, click_type, category_id)
                 DO UPDATE SET
                   total_clicks = EXCLUDED.total_clicks,
@@ -215,7 +225,8 @@ public class ClickRollupJobHandler implements JobHandler {
     /**
      * Aggregate clicks by type and target into click_stats_daily_items table.
      *
-     * Includes average rank, score, and bubbled click counts from metadata JSONB.
+     * Includes average rank, score, and bubbled click counts from metadata JSONB. Uses NULLIF to handle profile events
+     * where directory-specific fields (rank_in_category, score, is_bubbled) are not present.
      */
     private int aggregateItemStats(LocalDate targetDate) {
         String sql = """
@@ -228,8 +239,8 @@ public class ClickRollupJobHandler implements JobHandler {
                   COUNT(*) AS total_clicks,
                   COUNT(DISTINCT COALESCE(user_id, session_id)) AS unique_users,
                   COUNT(DISTINCT session_id) AS unique_sessions,
-                  AVG((metadata->>'rank_in_category')::NUMERIC) AS avg_rank,
-                  AVG((metadata->>'score')::NUMERIC) AS avg_score,
+                  AVG(NULLIF((metadata->>'rank_in_category'), '')::NUMERIC) AS avg_rank,
+                  AVG(NULLIF((metadata->>'score'), '')::NUMERIC) AS avg_score,
                   COUNT(*) FILTER (WHERE (metadata->>'is_bubbled')::BOOLEAN = true) AS bubbled_clicks,
                   NOW(),
                   NOW()
