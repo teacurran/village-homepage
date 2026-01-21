@@ -183,8 +183,7 @@ public class User extends PanacheEntityBase {
         if (email == null || email.isBlank()) {
             return Optional.empty();
         }
-        return find("email = ?1 AND deletedAt IS NULL AND isAnonymous = FALSE",
-                email).firstResultOptional();
+        return find("email = ?1 AND deletedAt IS NULL AND isAnonymous = FALSE", email).firstResultOptional();
     }
 
     /**

@@ -389,11 +389,13 @@ public class GoodSitesResourceTest {
     }
 
     /**
-     * Tests karma adjustment through voting workflow (integration test for KarmaService).
-     * This tests karma calculation indirectly via the voting API.
+     * Tests karma adjustment through voting workflow (integration test for KarmaService). This tests karma calculation
+     * indirectly via the voting API.
      */
     @Test
-    @TestSecurity(user = "test@example.com", roles = {})
+    @TestSecurity(
+            user = "test@example.com",
+            roles = {})
     @Transactional
     public void testVoteApi_UpvoteAwardssKarmaToSiteOwner() {
         // Given: Test user owns the site with initial karma
