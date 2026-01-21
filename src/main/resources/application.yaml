@@ -5,6 +5,12 @@ quarkus:
   http:
     port: 8080
 
+  # Qute Configuration
+  qute:
+    strict-rendering: false
+    property-not-found-strategy: default
+    type-check-excludes: "ProfileResource/**"
+
   # S3 Configuration - Disable DevServices (use MinIO from docker-compose)
   s3:
     devservices:

@@ -81,112 +81,126 @@
         <div class="container">
             <div class="newspaper-grid">
                 <!-- Main headline slot -->
-                {#if data.profile.templateConfig.slots && data.profile.templateConfig.slots.main_headline}
-                {#let slot = data.profile.templateConfig.slots.main_headline}
-                {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
-                {#if article}
-                <article class="main-headline">
-                    {#if article.effectiveImageUrl}
-                    <div class="article-image">
-                        <img src="{article.effectiveImageUrl}" alt="{article.effectiveHeadline}">
-                    </div>
+                {#let slots = data.profile.templateConfig.getMap('slots')}
+                    {#if slots}
+                        {#let slot = slots.getMap('main_headline')}
+                                {#if slot}
+                                    {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
+                                        {#if article}
+                                            <article class="main-headline">
+                                                {#if article.effectiveImageUrl}
+                                                <div class="article-image">
+                                                    <img src="{article.effectiveImageUrl}" alt="{article.effectiveHeadline}">
+                                                </div>
+                                                {/if}
+                                                <div class="article-content">
+                                                    <h2 class="article-headline">
+                                                        <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
+                                                            {slot.custom_headline ?: article.effectiveHeadline}
+                                                        </a>
+                                                    </h2>
+                                                    <p class="article-description">
+                                                        {slot.custom_blurb ?: article.effectiveDescription}
+                                                    </p>
+                                                </div>
+                                            </article>
+                                        {#else}
+                                            <div class="slot-empty main-headline">
+                                                <p>Add a story for the main headline</p>
+                                            </div>
+                                        {/if}
+                                    {/let}
+                                {#else}
+                                    <div class="slot-empty main-headline">
+                                        <p>Add a story for the main headline</p>
+                                    </div>
+                                {/if}
+                            {/let}
+                    {#else}
+                        <div class="slot-empty main-headline">
+                            <p>Add a story for the main headline</p>
+                        </div>
                     {/if}
-                    <div class="article-content">
-                        <h2 class="article-headline">
-                            <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
-                                {slot.custom_headline ?: article.effectiveHeadline}
-                            </a>
-                        </h2>
-                        <p class="article-description">
-                            {slot.custom_blurb ?: article.effectiveDescription}
-                        </p>
-                    </div>
-                </article>
-                {#else}
-                <div class="slot-empty main-headline">
-                    <p>Add a story for the main headline</p>
-                </div>
-                {/if}
                 {/let}
-                {/let}
-                {#else}
-                <div class="slot-empty main-headline">
-                    <p>Add a story for the main headline</p>
-                </div>
-                {/if}
 
                 <!-- Secondary stories -->
                 <div class="secondary-stories">
-                    {#if data.profile.templateConfig.slots}
-                    {#for i in java:util:stream:IntStream@range(1, 3)}
-                    {#let slotKey = 'secondary_' + i}
-                    {#let slot = data.profile.templateConfig.slots.get(slotKey)}
-                    {#if slot}
-                    {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
-                    {#if article}
-                    <article class="secondary-story">
-                        {#if article.effectiveImageUrl}
-                        <div class="article-image-small">
-                            <img src="{article.effectiveImageUrl}" alt="{article.effectiveHeadline}">
-                        </div>
+                    {#let slots = data.profile.templateConfig.getMap('slots')}
+                        {#if slots}
+                            {#for i in java:util:stream:IntStream@range(1, 3)}
+                                {#let slotKey = 'secondary_' + i}
+                                    {#let slot = slots.getMap(slotKey)}
+                                            {#if slot}
+                                                {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
+                                                    {#if article}
+                                                        <article class="secondary-story">
+                                                            {#if article.effectiveImageUrl}
+                                                            <div class="article-image-small">
+                                                                <img src="{article.effectiveImageUrl}" alt="{article.effectiveHeadline}">
+                                                            </div>
+                                                            {/if}
+                                                            <div class="article-content">
+                                                                <h3 class="article-headline">
+                                                                    <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
+                                                                        {slot.custom_headline ?: article.effectiveHeadline}
+                                                                    </a>
+                                                                </h3>
+                                                                <p class="article-description">
+                                                                    {slot.custom_blurb ?: article.effectiveDescription}
+                                                                </p>
+                                                            </div>
+                                                        </article>
+                                                    {#else}
+                                                        <div class="slot-empty secondary-story">
+                                                            <p>Add a story or hide slot</p>
+                                                        </div>
+                                                    {/if}
+                                                {/let}
+                                            {#else}
+                                                <div class="slot-empty secondary-story">
+                                                    <p>Add a story or hide slot</p>
+                                                </div>
+                                            {/if}
+                                    {/let}
+                                {/let}
+                            {/for}
                         {/if}
-                        <div class="article-content">
-                            <h3 class="article-headline">
-                                <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
-                                    {slot.custom_headline ?: article.effectiveHeadline}
-                                </a>
-                            </h3>
-                            <p class="article-description">
-                                {slot.custom_blurb ?: article.effectiveDescription}
-                            </p>
-                        </div>
-                    </article>
-                    {#else}
-                    <div class="slot-empty secondary-story">
-                        <p>Add a story or hide slot</p>
-                    </div>
-                    {/if}
                     {/let}
-                    {#else}
-                    <div class="slot-empty secondary-story">
-                        <p>Add a story or hide slot</p>
-                    </div>
-                    {/if}
-                    {/let}
-                    {/for}
-                    {/if}
                 </div>
 
                 <!-- Sidebar stories -->
                 <aside class="sidebar-stories">
-                    {#if data.profile.templateConfig.slots}
-                    {#for i in java:util:stream:IntStream@range(1, 3)}
-                    {#let slotKey = 'sidebar_' + i}
-                    {#let slot = data.profile.templateConfig.slots.get(slotKey)}
-                    {#if slot}
-                    {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
-                    {#if article}
-                    <article class="sidebar-story">
-                        <h4 class="article-headline">
-                            <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
-                                {slot.custom_headline ?: article.effectiveHeadline}
-                            </a>
-                        </h4>
-                    </article>
-                    {#else}
-                    <div class="slot-empty sidebar-story">
-                        <p>Add a story</p>
-                    </div>
-                    {/if}
+                    {#let slots = data.profile.templateConfig.getMap('slots')}
+                        {#if slots}
+                            {#for i in java:util:stream:IntStream@range(1, 3)}
+                                {#let slotKey = 'sidebar_' + i}
+                                    {#let slot = slots.getMap(slotKey)}
+                                            {#if slot}
+                                                {#let article = data.articles.stream().filter(a -> a.id.toString().equals(slot.article_id)).findFirst().orElse(null)}
+                                                    {#if article}
+                                                        <article class="sidebar-story">
+                                                            <h4 class="article-headline">
+                                                                <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
+                                                                    {slot.custom_headline ?: article.effectiveHeadline}
+                                                                </a>
+                                                            </h4>
+                                                        </article>
+                                                    {#else}
+                                                        <div class="slot-empty sidebar-story">
+                                                            <p>Add a story</p>
+                                                        </div>
+                                                    {/if}
+                                                {/let}
+                                            {#else}
+                                                <div class="slot-empty sidebar-story">
+                                                    <p>Add a story</p>
+                                                </div>
+                                            {/if}
+                                        {/let}
+                                    {/let}
+                                {/for}
+                        {/if}
                     {/let}
-                    {#else}
-                    <div class="slot-empty sidebar-story">
-                        <p>Add a story</p>
-                    </div>
-                    {/if}
-                    {/let}
-                    {/for}
-                    {/if}
                 </aside>
             </div>
         </div>

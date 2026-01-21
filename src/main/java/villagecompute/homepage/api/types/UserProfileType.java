@@ -1,6 +1,7 @@
 package villagecompute.homepage.api.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.quarkus.qute.TemplateData;
 
 import java.time.Instant;
 import java.util.Map;
@@ -44,6 +45,9 @@ import java.util.UUID;
  * }
  * }</pre>
  */
+@TemplateData(
+        ignoreSuperclasses = true,
+        properties = false)
 public record UserProfileType(@JsonProperty("id") UUID id, @JsonProperty("user_id") UUID userId,
         @JsonProperty("username") String username, @JsonProperty("display_name") String displayName,
         @JsonProperty("bio") String bio, @JsonProperty("avatar_url") String avatarUrl,

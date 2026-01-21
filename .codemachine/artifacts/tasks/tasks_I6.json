@@ -16,7 +16,7 @@
       "I5"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T2",
@@ -34,7 +34,7 @@
       "I5"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T3",
@@ -52,7 +52,7 @@
       "I3.T2"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T4",
@@ -70,7 +70,7 @@
       "I6.T1"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T5",
@@ -90,7 +90,7 @@
       "I6.T4"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T6",
@@ -111,7 +111,7 @@
       "I5.T2"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T7",
@@ -130,7 +130,7 @@
       "I6.T1"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T8",
@@ -145,7 +145,7 @@
     "acceptance_criteria": "Content aligns with Section 6+7 requirements, references tasks, anchors present for manifest.",
     "dependencies": [],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T9",
@@ -160,6 +160,6 @@
     "acceptance_criteria": "Tests green, performance targets met, manifest accurate, release checklist approved by stakeholders, retrospective logged.",
     "dependencies": [],
     "parallelizable": false,
-    "done": false
+    "done": true
   }
 ]

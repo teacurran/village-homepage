@@ -77,15 +77,17 @@
         <div class="container">
             <!-- Gridstack widget layout -->
             <div class="grid-stack" id="profile-gridstack">
-                {#if data.profile.templateConfig.widgets}
-                {#for widget in data.profile.templateConfig.widgets}
+                {#let widgets = data.profile.templateConfig.getList('widgets')}
+                {#if widgets}
+                {#for widget in widgets}
+                {#let position = widget.getMap('position')}
                 <div class="grid-stack-item"
-                     gs-x="{widget.position.x}"
-                     gs-y="{widget.position.y}"
-                     gs-w="{widget.position.w}"
-                     gs-h="{widget.position.h}">
-                    <div class="grid-stack-item-content widget widget-{widget.type}">
-                        {#if widget.type == 'news'}
+                     gs-x="{position.get('x')}"
+                     gs-y="{position.get('y')}"
+                     gs-w="{position.get('w')}"
+                     gs-h="{position.get('h')}">
+                    <div class="grid-stack-item-content widget widget-{widget.getString('type')}">
+                        {#if widget.getString('type') == 'news'}
                         <div class="widget-header">
                             <h3>News</h3>
                         </div>
@@ -104,7 +106,7 @@
                         </div>
                         {/if}
 
-                        {#if widget.type == 'weather'}
+                        {#if widget.getString('type') == 'weather'}
                         <div class="widget-header">
                             <h3>Weather</h3>
                         </div>
@@ -113,13 +115,14 @@
                         </div>
                         {/if}
 
-                        {#if widget.type == 'custom'}
+                        {#if widget.getString('type') == 'custom'}
                         <div class="widget-body">
-                            {widget.content raw}
+                            {widget.getString('content').orEmpty.raw}
                         </div>
                         {/if}
                     </div>
                 </div>
+                {/let}
                 {/for}
                 {#else}
                 <div class="empty-layout">
@@ -129,18 +132,21 @@
                     {/if}
                 </div>
                 {/if}
+                {/let}
             </div>
 
             <!-- Custom blocks -->
-            {#if data.profile.templateConfig.custom_blocks}
+            {#let customBlocks = data.profile.templateConfig.getList('custom_blocks')}
+            {#if customBlocks}
             <div class="custom-blocks">
-                {#for block in data.profile.templateConfig.custom_blocks}
+                {#for block in customBlocks}
                 <div class="custom-block">
-                    {block.content raw}
+                    {block.getString('content').orEmpty.raw}
                 </div>
                 {/for}
             </div>
             {/if}
+            {/let}
         </div>
     </main>
 

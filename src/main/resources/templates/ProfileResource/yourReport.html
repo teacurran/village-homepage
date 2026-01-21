@@ -71,18 +71,20 @@
     <main class="report-main">
         <div class="container">
             <div class="report-columns">
-                {#if data.profile.templateConfig.columns}
-                {#for column in data.profile.templateConfig.columns}
+                {#let columns = data.profile.templateConfig.getList('columns')}
+                {#if columns}
+                {#for column in columns}
                 <div class="report-column">
-                    <h2 class="column-header">{column.section_header}</h2>
-                    {#if column.items && !column.items.isEmpty()}
+                    <h2 class="column-header">{column.getString('section_header')}</h2>
+                    {#let items = column.getList('items')}
+                    {#if items}
                     <ul class="column-items">
-                        {#for item in column.items}
-                        {#let article = data.articles.stream().filter(a -> a.id.toString().equals(item.article_id)).findFirst().orElse(null)}
+                        {#for item in items}
+                        {#let article = data.articles.stream().filter(a -> a.id.toString().equals(item.getString('article_id'))).findFirst().orElse(null)}
                         {#if article}
                         <li class="column-item">
                             <a href="{article.originalUrl}" target="_blank" rel="noopener noreferrer">
-                                {item.custom_headline ?: article.effectiveHeadline}
+                                {item.getString('custom_headline') ?: article.effectiveHeadline}
                             </a>
                         </li>
                         {#else}
@@ -96,6 +98,7 @@
                     {#else}
                     <p class="column-empty">No items in this section</p>
                     {/if}
+                    {/let}
                 </div>
                 {/for}
                 {#else}
@@ -106,6 +109,7 @@
                     {/if}
                 </div>
                 {/if}
+                {/let}
             </div>
         </div>
     </main>

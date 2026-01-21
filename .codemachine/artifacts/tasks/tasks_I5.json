@@ -155,6 +155,6 @@
     "acceptance_criteria": "Tests cover success/failure flows, coverage metrics updated, load test results documented, release checklist approved.",
     "dependencies": [],
     "parallelizable": false,
-    "done": false
+    "done": true
   }
 ]
