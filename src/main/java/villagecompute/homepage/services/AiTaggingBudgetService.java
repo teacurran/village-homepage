@@ -8,9 +8,6 @@ package villagecompute.homepage.services;
 
 import java.time.YearMonth;
 
-import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
-
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -58,7 +55,7 @@ public class AiTaggingBudgetService {
     private volatile Double lastAlertPercentage = null;
 
     @Inject
-    Mailer mailer;
+    EmailNotificationService emailNotificationService;
 
     /**
      * Determines current budget action based on usage percentage.
@@ -222,7 +219,11 @@ public class AiTaggingBudgetService {
     }
 
     /**
-     * Sends budget alert email to operations team.
+     * Sends budget alert email to operations team using HTML template.
+     *
+     * <p>
+     * Delegates to EmailNotificationService which handles HTML template rendering, rate limiting, and error handling.
+     * Alert level and recommended action are determined based on threshold crossed.
      *
      * @param percentUsed
      *            current budget usage percentage
@@ -232,46 +233,26 @@ public class AiTaggingBudgetService {
      *            the threshold that was crossed
      */
     private void sendBudgetAlert(double percentUsed, AiUsageTracking tracking, double threshold) {
-        YearMonth month = YearMonth.from(tracking.month);
-        String severity = threshold >= HARD_STOP_THRESHOLD ? "CRITICAL"
-                : threshold >= QUEUE_THRESHOLD ? "WARNING" : "INFO";
-
-        String subject = String.format("[%s] AI Budget Alert: %.0f%% Used (%s %d)", severity, percentUsed,
-                month.getMonth(), month.getYear());
-
-        String body = String.format("""
-                The AI tagging budget has reached %.1f%% of the monthly limit.
-
-                Provider: %s
-                Month: %s %d
-                Budget Used: $%.2f / $%.2f
-                Remaining: $%.2f
-                Total Requests: %,d
-                Input Tokens: %,d
-                Output Tokens: %,d
-
-                Current Action: %s
-
-                Thresholds:
-                - 75%%: REDUCE (smaller batches)
-                - 90%%: QUEUE (defer to next cycle)
-                - 100%%: HARD_STOP (stop all AI operations)
-
-                For more details, visit the admin dashboard:
-                https://homepage.villagecompute.com/admin/ai-usage
-                """, percentUsed, tracking.provider, month.getMonth(), month.getYear(),
-                tracking.estimatedCostCents / 100.0, tracking.budgetLimitCents / 100.0,
-                tracking.getRemainingBudgetCents() / 100.0, tracking.totalRequests, tracking.totalTokensInput,
-                tracking.totalTokensOutput,
-                threshold >= HARD_STOP_THRESHOLD ? "HARD_STOP" : threshold >= QUEUE_THRESHOLD ? "QUEUE" : "REDUCE");
-
-        try {
-            mailer.send(Mail.withText(ALERT_EMAIL, subject, body));
-            LOG.infof("Sent AI budget alert: threshold=%.0f%%, percentUsed=%.1f%%", threshold, percentUsed);
-        } catch (Exception e) {
-            LOG.errorf(e, "Failed to send AI budget alert email: threshold=%.0f%%, percentUsed=%.1f%%", threshold,
-                    percentUsed);
+        // Determine alert level based on threshold
+        String level;
+        String action;
+        if (threshold >= HARD_STOP_THRESHOLD) {
+            level = "EMERGENCY";
+            action = "HARD_STOP";
+        } else if (threshold >= QUEUE_THRESHOLD) {
+            level = "CRITICAL";
+            action = "QUEUE";
+        } else {
+            level = "WARNING";
+            action = "REDUCE";
         }
+
+        // Delegate to EmailNotificationService for HTML template rendering and sending
+        emailNotificationService.sendAiBudgetAlert(level, percentUsed, tracking.estimatedCostCents,
+                tracking.budgetLimitCents, action);
+
+        LOG.infof("Sent AI budget alert: level=%s, threshold=%.0f%%, percentUsed=%.1f%%", level, threshold,
+                percentUsed);
     }
 
     /**

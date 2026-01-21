@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[{level}] AI Budget Alert</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    {#if level == 'WARNING'}
+    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin-bottom: 20px;">
+        <h2 style="margin-top: 0; color: #856404;">⚠️ AI Budget Warning</h2>
+    </div>
+    {/if}
+
+    {#if level == 'CRITICAL'}
+    <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 20px; margin-bottom: 20px;">
+        <h2 style="margin-top: 0; color: #721c24;">🚨 AI Budget Critical Alert</h2>
+    </div>
+    {/if}
+
+    {#if level == 'EMERGENCY'}
+    <div style="background: #f8ecf8; border-left: 4px solid #800080; padding: 20px; margin-bottom: 20px;">
+        <h2 style="margin-top: 0; color: #4a004a;">🛑 AI Budget Emergency - Operations Halted</h2>
+    </div>
+    {/if}
+
+    <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 4px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #495057;">Budget Status</h3>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+            <div style="margin-bottom: 10px;">
+                <strong style="color: #495057;">Usage:</strong>
+                <span style="font-size: 24px; color: {#if level == 'WARNING'}#ffc107{/if}{#if level == 'CRITICAL'}#dc3545{/if}{#if level == 'EMERGENCY'}#800080{/if}; font-weight: bold;">
+                    {percentUsed}%
+                </span>
+            </div>
+
+            <div style="background: #e9ecef; height: 20px; border-radius: 10px; overflow: hidden; margin-bottom: 15px;">
+                <div style="background: {#if level == 'WARNING'}#ffc107{/if}{#if level == 'CRITICAL'}#dc3545{/if}{#if level == 'EMERGENCY'}#800080{/if}; height: 100%; width: {percentUsed}%; transition: width 0.3s ease;"></div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #6c757d; border-bottom: 1px solid #dee2e6;">
+                        <strong>Estimated Cost:</strong>
+                    </td>
+                    <td style="padding: 8px 0; text-align: right; color: #495057; font-weight: bold; border-bottom: 1px solid #dee2e6;">
+                        ${costDollars}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #6c757d; border-bottom: 1px solid #dee2e6;">
+                        <strong>Monthly Budget:</strong>
+                    </td>
+                    <td style="padding: 8px 0; text-align: right; color: #495057; font-weight: bold; border-bottom: 1px solid #dee2e6;">
+                        ${budgetDollars}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #6c757d;">
+                        <strong>Remaining:</strong>
+                    </td>
+                    <td style="padding: 8px 0; text-align: right; color: #28a745; font-weight: bold;">
+                        ${remainingDollars}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="background: {#if level == 'WARNING'}#fff3cd{/if}{#if level == 'CRITICAL'}#f8d7da{/if}{#if level == 'EMERGENCY'}#f8ecf8{/if}; border: 1px solid {#if level == 'WARNING'}#ffc107{/if}{#if level == 'CRITICAL'}#dc3545{/if}{#if level == 'EMERGENCY'}#800080{/if}; border-radius: 4px; padding: 15px;">
+            <p style="margin: 0; color: {#if level == 'WARNING'}#856404{/if}{#if level == 'CRITICAL'}#721c24{/if}{#if level == 'EMERGENCY'}#4a004a{/if}; font-weight: bold;">
+                <strong>Recommended Action:</strong> {action}
+            </p>
+        </div>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #495057;">What this means</h3>
+
+        {#if level == 'WARNING'}
+        <ul style="padding-left: 20px; color: #6c757d;">
+            <li style="margin-bottom: 10px;">
+                <strong>REDUCE:</strong> AI operations are still running, but batch sizes should be reduced
+            </li>
+            <li style="margin-bottom: 10px;">
+                Consider reducing frequency of AI tagging jobs
+            </li>
+            <li style="margin-bottom: 10px;">
+                Monitor budget closely for rest of the month
+            </li>
+            <li style="margin-bottom: 10px;">
+                75% threshold crossed - approaching monthly limit
+            </li>
+        </ul>
+        {/if}
+
+        {#if level == 'CRITICAL'}
+        <ul style="padding-left: 20px; color: #6c757d;">
+            <li style="margin-bottom: 10px;">
+                <strong>QUEUE:</strong> Non-urgent AI operations will be queued for next month
+            </li>
+            <li style="margin-bottom: 10px;">
+                Only critical AI tagging operations will proceed
+            </li>
+            <li style="margin-bottom: 10px;">
+                Consider increasing monthly budget if this happens regularly
+            </li>
+            <li style="margin-bottom: 10px;">
+                90% threshold crossed - very close to hard limit
+            </li>
+        </ul>
+        {/if}
+
+        {#if level == 'EMERGENCY'}
+        <ul style="padding-left: 20px; color: #6c757d;">
+            <li style="margin-bottom: 10px;">
+                <strong>HARD_STOP:</strong> All AI operations have been halted
+            </li>
+            <li style="margin-bottom: 10px;">
+                100% of monthly budget consumed
+            </li>
+            <li style="margin-bottom: 10px;">
+                Operations will resume at the start of next month
+            </li>
+            <li style="margin-bottom: 10px;">
+                <strong>Action Required:</strong> Increase monthly budget or review AI usage patterns
+            </li>
+        </ul>
+        {/if}
+    </div>
+
+    <div style="background: #e9ecef; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #495057;">Budget Policy</h3>
+
+        <p style="margin: 8px 0; color: #6c757d;">
+            AI budget thresholds are designed to prevent cost overruns while maintaining service quality:
+        </p>
+
+        <ul style="padding-left: 20px; color: #6c757d; font-size: 14px;">
+            <li style="margin-bottom: 8px;"><strong>75% (WARNING):</strong> Reduce batch sizes</li>
+            <li style="margin-bottom: 8px;"><strong>90% (CRITICAL):</strong> Queue non-urgent operations</li>
+            <li style="margin-bottom: 8px;"><strong>100% (EMERGENCY):</strong> Hard stop all AI operations</li>
+        </ul>
+
+        <p style="margin: 8px 0; color: #6c757d; font-size: 14px;">
+            For more details, see Policy P10 (AI Budget Management) in the architecture documentation.
+        </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{dashboardUrl}" style="display: inline-block; background: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+            View Admin Dashboard
+        </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+
+    <div style="color: #6c757d; font-size: 12px; text-align: center;">
+        <p style="margin: 5px 0;">
+            This is an automated alert from <a href="{baseUrl}" style="color: #007bff; text-decoration: none;">Village Homepage</a> AI Budget Service.
+        </p>
+        <p style="margin: 5px 0;">
+            <a href="{dashboardUrl}" style="color: #007bff; text-decoration: none;">Analytics Dashboard</a> |
+            <a href="{baseUrl}/admin/ai-budget" style="color: #007bff; text-decoration: none;">AI Budget Settings</a> |
+            <a href="{baseUrl}/help/ai-budget" style="color: #007bff; text-decoration: none;">Help</a>
+        </p>
+        <p style="margin: 5px 0;">
+            Alerts sent to: Operations Team
+        </p>
+    </div>
+</body>
+</html>

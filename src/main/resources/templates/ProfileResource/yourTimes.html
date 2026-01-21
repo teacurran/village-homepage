@@ -136,11 +136,9 @@
                                     {slot.custom_headline ?: article.effectiveHeadline}
                                 </a>
                             </h3>
-                            {#if slot.custom_blurb ?: article.effectiveDescription}
                             <p class="article-description">
                                 {slot.custom_blurb ?: article.effectiveDescription}
                             </p>
-                            {/if}
                         </div>
                     </article>
                     {#else}

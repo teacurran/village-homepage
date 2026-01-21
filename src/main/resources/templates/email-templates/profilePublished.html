@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your profile is now public</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin-bottom: 20px;">
+        <h2 style="margin-top: 0; color: #155724;" data-i18n="email.profile_published.heading">Your profile is now public!</h2>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 4px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #495057;" data-i18n="email.profile_published.subheading">@{username}</h3>
+
+        <p style="margin: 8px 0; color: #6c757d;">
+            <strong data-i18n="email.profile_published.template_type_label">Template:</strong> {templateType}
+        </p>
+
+        <p style="margin: 8px 0; color: #6c757d;">
+            <strong data-i18n="email.profile_published.url_label">Your Profile URL:</strong>
+        </p>
+
+        <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 4px; font-family: monospace; font-size: 14px; color: #007bff; word-break: break-all; margin-bottom: 15px;">
+            {profileUrl}
+        </div>
+
+        <p style="margin: 8px 0; color: #495057;" data-i18n="email.profile_published.congrats">
+            Congratulations! Your customized homepage is now visible to the world. Share this link with friends, family, or on social media.
+        </p>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #495057;" data-i18n="email.profile_published.next_steps">What you can do next</h3>
+
+        <ul style="padding-left: 20px; color: #6c757d;">
+            <li style="margin-bottom: 10px;" data-i18n="email.profile_published.tip_customize">
+                <strong>Customize further:</strong> Add more widgets, adjust layouts, or change your template style
+            </li>
+            <li style="margin-bottom: 10px;" data-i18n="email.profile_published.tip_share">
+                <strong>Share your profile:</strong> Post your profile URL on social media or add it to your email signature
+            </li>
+            <li style="margin-bottom: 10px;" data-i18n="email.profile_published.tip_seo">
+                <strong>Improve SEO:</strong> Add a bio, profile picture, and meaningful content to help people find you
+            </li>
+            <li style="margin-bottom: 10px;" data-i18n="email.profile_published.tip_privacy">
+                <strong>Control visibility:</strong> You can unpublish your profile anytime from the editor settings
+            </li>
+        </ul>
+    </div>
+
+    <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 4px; padding: 15px; margin-bottom: 20px;">
+        <p style="margin: 0; color: #0c5460; font-size: 14px;" data-i18n="email.profile_published.seo_tip">
+            <strong>SEO Tip:</strong> Search engines will start indexing your profile within 24-48 hours. The more unique content you add, the better your profile will rank in search results.
+        </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{profileUrl}" style="display: inline-block; background: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-right: 10px;" data-i18n="email.profile_published.view_button">
+            View Your Profile
+        </a>
+        <a href="{editUrl}" style="display: inline-block; background: #6c757d; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;" data-i18n="email.profile_published.edit_button">
+            Edit Profile
+        </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+
+    <div style="color: #6c757d; font-size: 12px; text-align: center;">
+        <p style="margin: 5px 0;" data-i18n="email.profile_published.footer_automated">
+            This is an automated message from <a href="{baseUrl}" style="color: #007bff; text-decoration: none;">Village Homepage</a>.
+        </p>
+        <p style="margin: 5px 0;">
+            <a href="{profileUrl}" style="color: #007bff; text-decoration: none;" data-i18n="email.profile_published.footer_view">View profile</a> |
+            <a href="{editUrl}" style="color: #007bff; text-decoration: none;" data-i18n="email.profile_published.footer_edit">Edit profile</a> |
+            <a href="{baseUrl}/profile/settings" style="color: #007bff; text-decoration: none;" data-i18n="email.profile_published.footer_settings">Settings</a>
+        </p>
+        <p style="margin: 5px 0;" data-i18n="email.profile_published.footer_help">
+            Need help? Visit our <a href="{baseUrl}/help/profiles" style="color: #007bff; text-decoration: none;">help center</a>.
+        </p>
+    </div>
+</body>
+</html>

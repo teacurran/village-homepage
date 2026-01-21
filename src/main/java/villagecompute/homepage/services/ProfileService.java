@@ -53,6 +53,9 @@ public class ProfileService {
     @Inject
     SlotCapacityValidator slotCapacityValidator;
 
+    @Inject
+    EmailNotificationService emailNotificationService;
+
     /**
      * Creates a new profile for a user.
      *
@@ -240,6 +243,10 @@ public class ProfileService {
     /**
      * Publishes a profile (makes it publicly accessible at /u/{username}).
      *
+     * <p>
+     * After successful publish, sends notification email to user with profile URL and SEO tips. Email sending is
+     * best-effort and won't cause publish to fail if email delivery fails.
+     *
      * @param profileId
      *            profile UUID
      * @return published profile
@@ -252,11 +259,28 @@ public class ProfileService {
         profile.publish();
 
         LOG.infof("Published profile %s (username: %s)", profileId, profile.username);
+
+        // Send profile published notification (best-effort, non-blocking)
+        try {
+            User user = User.findById(profile.userId);
+            if (user != null && user.email != null && !user.isAnonymous) {
+                RateLimitService.Tier userTier = RateLimitService.Tier.fromKarma(user.directoryKarma);
+                emailNotificationService.sendProfilePublishedNotification(profile.userId, user.email, profile.username,
+                        profile.template, userTier);
+            }
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to send profile published email for profile %s (non-fatal)", profileId);
+        }
+
         return profile;
     }
 
     /**
      * Unpublishes a profile (returns to draft, returns 404 when accessed).
+     *
+     * <p>
+     * After successful unpublish, sends confirmation email to user explaining data is retained. Email sending is
+     * best-effort and won't cause unpublish to fail if email delivery fails.
      *
      * @param profileId
      *            profile UUID
@@ -270,6 +294,19 @@ public class ProfileService {
         profile.unpublish();
 
         LOG.infof("Unpublished profile %s (username: %s)", profileId, profile.username);
+
+        // Send profile unpublished notification (best-effort, non-blocking)
+        try {
+            User user = User.findById(profile.userId);
+            if (user != null && user.email != null && !user.isAnonymous) {
+                RateLimitService.Tier userTier = RateLimitService.Tier.fromKarma(user.directoryKarma);
+                emailNotificationService.sendProfileUnpublishedNotification(profile.userId, user.email,
+                        profile.username, userTier);
+            }
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to send profile unpublished email for profile %s (non-fatal)", profileId);
+        }
+
         return profile;
     }
 

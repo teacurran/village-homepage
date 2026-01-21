@@ -239,6 +239,13 @@ email:
     # In dev mode with Mailpit: host=localhost, port=1143, username=empty, password=empty, ssl=false
     # In prod with Gmail: host=imap.gmail.com, port=993, username=email@domain.com, password=${EMAIL_IMAP_PASSWORD}, ssl=true
 
+  # Notification settings (Policy F14.3: Email Communication)
+  notifications:
+    from: ${EMAIL_FROM:noreply@villagecompute.com}
+    platform-name: ${EMAIL_PLATFORM_NAME:Village Homepage}
+    base-url: ${EMAIL_BASE_URL:https://homepage.villagecompute.com}
+    ops-alert-email: ${EMAIL_OPS_ALERT:ops@villagecompute.com}
+
 # GDPR Configuration (Policy P1: GDPR/CCPA data governance)
 gdpr:
   # Data export settings
