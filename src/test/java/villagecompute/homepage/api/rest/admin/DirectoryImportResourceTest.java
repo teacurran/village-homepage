@@ -32,7 +32,7 @@ public class DirectoryImportResourceTest {
         User testUser = User.findByEmail("test@example.com").orElseGet(() -> {
             User u = new User();
             u.email = "test@example.com";
-            u.role = User.ROLE_SUPER_ADMIN;
+            u.adminRole = User.ROLE_SUPER_ADMIN;
             u.persist();
             return u;
         });
@@ -58,8 +58,7 @@ public class DirectoryImportResourceTest {
     @Test
     @TestSecurity(
             user = "test@example.com",
-            roles = "super_admin",
-            attributes = {"user_id=" + "test-user-id"})
+            roles = "super_admin")
     public void testListSuggestions_empty() {
         given().when().get("/admin/api/directory/import/suggestions").then().statusCode(200)
                 .contentType(ContentType.JSON).body("$", hasSize(0));
@@ -68,8 +67,7 @@ public class DirectoryImportResourceTest {
     @Test
     @TestSecurity(
             user = "test@example.com",
-            roles = "super_admin",
-            attributes = {"user_id=" + "test-user-id"})
+            roles = "super_admin")
     @Transactional
     public void testListSuggestions_withData() {
         // Create test suggestion
@@ -95,8 +93,7 @@ public class DirectoryImportResourceTest {
     @Test
     @TestSecurity(
             user = "test@example.com",
-            roles = "super_admin",
-            attributes = {"user_id=" + "test-user-id"})
+            roles = "super_admin")
     @Transactional
     public void testGetSuggestion_found() {
         // Create test suggestion
@@ -119,8 +116,7 @@ public class DirectoryImportResourceTest {
     @Test
     @TestSecurity(
             user = "test@example.com",
-            roles = "super_admin",
-            attributes = {"user_id=" + "test-user-id"})
+            roles = "super_admin")
     public void testGetSuggestion_notFound() {
         UUID randomId = UUID.randomUUID();
 
@@ -131,8 +127,7 @@ public class DirectoryImportResourceTest {
     @Test
     @TestSecurity(
             user = "test@example.com",
-            roles = "super_admin",
-            attributes = {"user_id=" + "test-user-id"})
+            roles = "super_admin")
     @Transactional
     public void testRejectSuggestion_success() {
         // Create test suggestion
@@ -155,8 +150,7 @@ public class DirectoryImportResourceTest {
     @Test
     @TestSecurity(
             user = "test@example.com",
-            roles = "super_admin",
-            attributes = {"user_id=" + "test-user-id"})
+            roles = "super_admin")
     @Transactional
     public void testRejectSuggestion_alreadyProcessed() {
         // Create already-rejected suggestion

@@ -38,7 +38,7 @@ public class BulkImportJobHandlerTest {
         // Create test user
         User testUser = new User();
         testUser.email = "test@example.com";
-        testUser.role = User.ROLE_SUPER_ADMIN;
+        testUser.adminRole = User.ROLE_SUPER_ADMIN;
         testUser.persist();
         testUserId = testUser.id;
 

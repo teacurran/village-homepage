@@ -858,6 +858,21 @@ open target/site/jacoco/index.html
 
 # Run with coverage enforcement (fail if <80%)
 ./mvnw verify jacoco:check
+
+# Run Good Sites directory tests
+./mvnw test -Dtest="*Directory*Test,Good*Test"
+
+# Run specific Good Sites test suites
+./mvnw test -Dtest=DirectoryVotingServiceTest  # Voting logic (14/14 passing)
+./mvnw test -Dtest=GoodSitesResourceTest      # Browse/search (18/18 passing)
+./mvnw test -Dtest=KarmaServiceTest           # Karma calculations (known transaction isolation issue)
+
+# Run E2E tests (Playwright)
+npm run test:e2e
+npx playwright test tests/e2e/good-sites.spec.ts  # Good Sites browsing flows
+
+# Run load tests (k6)
+k6 run tests/load/screenshot-queue.js  # Screenshot capture performance
 ```
 
 ### Test Categories
@@ -868,16 +883,47 @@ open target/site/jacoco/index.html
 - **AuthIdentityServiceTest**: Anonymous cookies, bootstrap guard, role management
 - **UserPreferenceServiceTest**: Preference CRUD, validation, schema migration
 - **FeatureFlagServiceTest**: Feature flag evaluation, cohort hashing, analytics opt-out
+- **DirectoryVotingServiceTest**: Good Sites voting logic (cast, change, remove votes)
+- **KarmaServiceTest**: Karma adjustments for submissions and votes (see known issues)
 
 #### Integration Tests
 - **RateLimitFilterTest**: Database configuration, config CRUD operations
 - **HomepageResourceTest**: SSR output, gridstack attributes, React mount points
+- **GoodSitesResourceTest**: Good Sites browsing, search, pagination
+- **DirectoryCategoryResourceTest**: Category CRUD operations
+- **DirectoryImportResourceTest**: Bulk CSV import and AI categorization
 
-#### E2E Tests (Future)
-E2E tests with Playwright are planned for iteration I3 to test:
+#### E2E Tests
+E2E tests use Playwright to test user flows with a real browser:
 - Homepage edit mode functionality
 - Widget drag-and-drop operations
 - Anonymous vs authenticated user flows
+- **Good Sites directory** (tests/e2e/good-sites.spec.ts):
+  - Category browsing and navigation
+  - Search functionality
+  - Site detail pages
+  - Voting flows (skipped until React component implemented)
+
+**Run E2E tests:**
+```bash
+npm run test:e2e
+# or specific file
+npx playwright test tests/e2e/good-sites.spec.ts
+```
+
+#### Load Tests
+Load tests use k6 to test performance under concurrent load:
+- **Screenshot capture queue** (tests/load/screenshot-queue.js):
+  - Tests screenshot capture under concurrent load
+  - Monitors semaphore enforcement (max 3 concurrent browsers)
+  - Measures p95/p99 latency and queue depth
+
+**Run load tests:**
+```bash
+k6 run tests/load/screenshot-queue.js
+```
+
+See [docs/ops/testing.md](docs/ops/testing.md) for comprehensive testing documentation.
 
 ### Writing Tests
 

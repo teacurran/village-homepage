@@ -336,29 +336,37 @@ public class KarmaService {
     private void adjustKarma(User user, int delta, String reason, String triggerType, String triggerEntityType,
             UUID triggerEntityId, UUID adjustedByUserId, Map<String, Object> metadata) {
 
+        UUID userId = user.id;
         QuarkusTransaction.requiringNew().run(() -> {
-            int oldKarma = user.directoryKarma;
-            String oldTrustLevel = user.directoryTrustLevel;
+            // Re-fetch user in new transaction to avoid detached entity error
+            User freshUser = User.findById(userId);
+            if (freshUser == null) {
+                LOG.warnf("Cannot adjust karma - user %s not found", userId);
+                return;
+            }
+
+            int oldKarma = freshUser.directoryKarma;
+            String oldTrustLevel = freshUser.directoryTrustLevel;
 
             // Apply karma change (but don't allow negative karma)
             int newKarma = Math.max(0, oldKarma + delta);
-            user.directoryKarma = newKarma;
+            freshUser.directoryKarma = newKarma;
 
             // Auto-promote to trusted if threshold reached
-            String newTrustLevel = user.directoryTrustLevel;
-            if (user.shouldPromoteToTrusted()) {
-                user.directoryTrustLevel = User.TRUST_LEVEL_TRUSTED;
+            String newTrustLevel = freshUser.directoryTrustLevel;
+            if (freshUser.shouldPromoteToTrusted()) {
+                freshUser.directoryTrustLevel = User.TRUST_LEVEL_TRUSTED;
                 newTrustLevel = User.TRUST_LEVEL_TRUSTED;
-                LOG.infof("AUTO-PROMOTED user %s to TRUSTED (karma: %d → %d)", user.id, oldKarma, newKarma);
+                LOG.infof("AUTO-PROMOTED user %s to TRUSTED (karma: %d → %d)", freshUser.id, oldKarma, newKarma);
             }
 
-            user.persist();
+            freshUser.persist();
 
             // Create audit record
-            KarmaAudit.create(user.id, oldKarma, newKarma, oldTrustLevel, newTrustLevel, reason, triggerType,
+            KarmaAudit.create(freshUser.id, oldKarma, newKarma, oldTrustLevel, newTrustLevel, reason, triggerType,
                     triggerEntityType, triggerEntityId, adjustedByUserId, metadata);
 
-            LOG.infof("Karma adjusted for user %s: %d → %d (%+d) | Trust: %s → %s | Reason: %s", user.id, oldKarma,
+            LOG.infof("Karma adjusted for user %s: %d → %d (%+d) | Trust: %s → %s | Reason: %s", freshUser.id, oldKarma,
                     newKarma, delta, oldTrustLevel, newTrustLevel, reason);
         });
     }

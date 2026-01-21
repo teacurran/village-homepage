@@ -142,7 +142,9 @@ public class GoodSitesResource {
     @Transactional
     public TemplateInstance categoryPage(@PathParam("slug") String slug,
             @QueryParam("page") @DefaultValue("1") int page) {
-        LOG.infof("Rendering category page: slug=%s, page=%d", slug, page);
+        // Normalize page number (treat negative/zero as 1)
+        int normalizedPage = Math.max(1, page);
+        LOG.infof("Rendering category page: slug=%s, page=%d", slug, normalizedPage);
 
         // Find category by slug
         DirectoryCategory category = DirectoryCategory.findBySlug(slug)
@@ -153,7 +155,7 @@ public class GoodSitesResource {
 
         // Paginate direct sites
         int totalSites = directSiteCategories.size();
-        int offset = (page - 1) * PAGE_SIZE;
+        int offset = (normalizedPage - 1) * PAGE_SIZE;
         int toIndex = Math.min(offset + PAGE_SIZE, totalSites);
 
         // Handle case where offset is beyond total sites (empty page)
@@ -183,7 +185,7 @@ public class GoodSitesResource {
         int totalPages = (int) Math.ceil((double) totalSites / PAGE_SIZE);
 
         CategoryViewType viewData = new CategoryViewType(DirectoryCategoryType.fromEntity(category), directSites,
-                bubbledSites, userVotes, totalSites, page, PAGE_SIZE, totalPages);
+                bubbledSites, userVotes, totalSites, normalizedPage, PAGE_SIZE, totalPages);
 
         // Get subcategories for navigation
         List<DirectoryCategory> subcategories = DirectoryCategory.findByParentId(category.id);
