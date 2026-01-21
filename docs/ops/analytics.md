@@ -936,6 +936,334 @@ groups:
 - Contact site maintainers for affected sites
 - Consider removing consistently dead sites after review
 
+## Admin Analytics Dashboard (React/AntV)
+
+**File:** `src/main/resources/templates/AdminResource/analytics.html` (Qute template)
+**Component:** `src/main/resources/META-INF/resources/assets/ts/components/AnalyticsDashboard.tsx`
+**Backend API:** `src/main/java/villagecompute/homepage/api/rest/admin/AnalyticsResource.java`
+
+### Overview
+
+The Admin Analytics Dashboard is a comprehensive React-based UI for monitoring Village Homepage system health, user engagement, and resource utilization. Built with Ant Design components and AntV G2Plot charts, it provides real-time insights for super admins, ops engineers, and read-only analysts.
+
+**Access URL:** `https://homepage.villagecompute.com/admin/analytics`
+
+**Security:** Requires `super_admin`, `ops`, or `read_only` role (Policy P8)
+
+### Dashboard Layout
+
+The dashboard is organized into responsive sections using Ant Design's 24-column grid system:
+
+#### 1. Overview Cards (Row 1)
+
+Four metric cards displaying key system metrics with sparklines:
+
+| Card | Metric | Data Source | Color Coding |
+|------|--------|-------------|--------------|
+| **Total Clicks Today** | Sum of all clicks today | `click_stats_daily` | Green (trending up) |
+| **Total Clicks (Range)** | Sum over selected period (1d/7d/30d) | `click_stats_daily` | Default |
+| **Unique Users Today** | Distinct users today | `click_stats_daily.unique_users` | Default |
+| **AI Budget** | % of monthly $50 budget used | `ai_usage_tracking` | Green <75%, Yellow 75-90%, Red >90% |
+
+**7-Day Trend Sparkline:** Line chart below overview cards showing daily click totals for context. Uses `stocks` color ramp (#1890ff) from design system.
+
+#### 2. Category Performance Chart (Row 2, Left)
+
+**Chart Type:** Pie/Donut chart (AntV G2Plot)
+
+**Features:**
+- Multi-select filter for click types: `feed_item`, `directory_site`, `marketplace_listing`, `profile_curated`
+- Shows total clicks and percentage per category
+- Uses `marketplace-category` color ramp for accessibility (#ffccc7, #ffe7ba, #d9f7be, #b5f5ec, #d6e4ff)
+- Legend displays category names with absolute numbers and percentages
+- Export buttons: CSV and JSON
+
+**Data Source:** `GET /admin/api/analytics/clicks/category-performance?click_types=X,Y&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`
+
+**Interpretation:**
+- **High feed_item %:** Strong RSS feed engagement
+- **High directory_site %:** Good Sites directory driving traffic
+- **High marketplace_listing %:** Active marketplace usage
+- **High profile_curated %:** Public profiles attracting clicks
+
+#### 3. Job Health Summary (Row 2, Right)
+
+**Chart Type:** Ant Design Table with color-coded status tags
+
+**Columns:**
+- **Queue:** Queue name (DEFAULT, HIGH, LOW, BULK)
+- **Backlog:** Number of pending jobs (bold if >10)
+- **Avg Wait (s):** Average wait time for pending jobs
+- **Stuck Jobs:** Jobs in-progress >30 minutes (red text if >0)
+- **Status:** Health badge (green=healthy, yellow=warning, red=critical)
+
+**Status Thresholds:**
+- **Healthy (green):** Backlog <10, no stuck jobs
+- **Warning (yellow):** Backlog 10-50
+- **Critical (red):** Backlog >50 OR stuck jobs >0
+
+**Data Source:** `GET /admin/api/analytics/jobs/health`
+
+**Export:** CSV download for historical tracking
+
+**Interpretation:**
+- **Backlog >50:** Check worker thread pool size, consider scaling up
+- **Stuck jobs >0:** Investigate job logs for exceptions or deadlocks
+- **High avg_wait_seconds:** Queue congestion, prioritize critical jobs
+
+#### 4. Footer Metadata
+
+Small card displaying:
+- **Data Sources:** Tables queried (click_stats_daily, ai_usage_tracking, delayed_jobs)
+- **Retention Policies:** Raw clicks 90 days, rollups indefinite
+- **Policy References:** F14.9 (Analytics), P8 (Admin Access), P14 (Privacy)
+
+### Backend API Endpoints
+
+All endpoints secured with `@RolesAllowed({"super_admin", "ops", "read_only"})`.
+
+#### GET /admin/api/analytics/overview
+
+**Purpose:** Overview card metrics
+
+**Query Params:**
+- `date_range` (optional): `1d`, `7d`, or `30d` (default: `7d`)
+
+**Response:**
+```json
+{
+  "clicks_today": 1523,
+  "clicks_range": 8942,
+  "date_range": "7d",
+  "unique_users_today": 456,
+  "ai_budget_pct": 67.3,
+  "ai_cost_cents": 3365,
+  "ai_budget_cents": 5000,
+  "daily_trend": [
+    {"date": "2026-01-14", "clicks": 1205},
+    {"date": "2026-01-15", "clicks": 1340}
+  ]
+}
+```
+
+#### GET /admin/api/analytics/clicks/category-performance
+
+**Purpose:** Category breakdown for pie chart
+
+**Query Params:**
+- `click_types` (optional): Comma-separated list (e.g., `feed_item,directory_site`)
+- `start_date` (optional): Start date (default: 7 days ago)
+- `end_date` (optional): End date (default: today)
+
+**Response:**
+```json
+{
+  "categories": [
+    {"type": "feed_item", "clicks": 5240, "percentage": 45.2},
+    {"type": "directory_site", "clicks": 3890, "percentage": 33.6}
+  ],
+  "total_clicks": 11590,
+  "start_date": "2026-01-14",
+  "end_date": "2026-01-21"
+}
+```
+
+#### GET /admin/api/analytics/ai/budget
+
+**Purpose:** AI budget usage with thresholds
+
+**Response:**
+```json
+{
+  "current_cost_cents": 3750,
+  "monthly_budget_cents": 5000,
+  "usage_pct": 75.0,
+  "threshold_75": true,
+  "threshold_90": false,
+  "threshold_100": false,
+  "daily_costs": [
+    {"date": "2026-01-14", "cost_cents": 520},
+    {"date": "2026-01-15", "cost_cents": 480}
+  ]
+}
+```
+
+#### GET /admin/api/analytics/jobs/health
+
+**Purpose:** Job queue health metrics
+
+**Response:**
+```json
+{
+  "queues": [
+    {
+      "queue": "DEFAULT",
+      "backlog": 5,
+      "avg_wait_seconds": 12.3,
+      "stuck_jobs": 0,
+      "status": "healthy"
+    },
+    {
+      "queue": "BULK",
+      "backlog": 45,
+      "avg_wait_seconds": 180.5,
+      "stuck_jobs": 2,
+      "status": "critical"
+    }
+  ],
+  "timestamp": "2026-01-21"
+}
+```
+
+### Chart Theming & Accessibility
+
+All charts follow Village Homepage Design System color ramps (Policy P14 compliance):
+
+| Chart | Color Ramp | Usage | Accessibility |
+|-------|-----------|-------|---------------|
+| **Sparkline** | `stocks` (#bae7ff → #1890ff → #0050b3) | Click trend visualization | Numeric labels + tooltips |
+| **Category Pie** | `marketplace-category` (#ffccc7, #ffe7ba, #d9f7be, #b5f5ec, #d6e4ff) | Category distribution | Legend with percentages + absolute numbers |
+| **Job Status Tags** | Ant Design semantic colors (success, warning, error) | Health status indicators | Icon + color + text label |
+
+**Best Practices:**
+- Always include numeric labels alongside colors for colorblind users
+- Provide tooltips with full context on hover
+- Use dashed baselines for thresholds (AI budget 75%, 90%)
+- Export raw data (CSV/JSON) for external analysis
+
+### Export Functionality
+
+**CSV Export:**
+- Client-side generation (no server round-trip)
+- Headers from first row keys
+- Values comma-separated
+- Filename: `<chart-name>-<date>.csv`
+
+**JSON Export:**
+- Formatted with 2-space indentation
+- Full data structure preserved
+- Filename: `<chart-name>-<date>.json`
+
+**Use Cases:**
+- Historical trend analysis in Excel/Google Sheets
+- Automated report generation via scripts
+- Audit trail for compliance reporting
+
+### Ops Guidance: Interpreting Anomalies
+
+#### AI Budget Exceeding 90%
+
+**Symptom:** AI Budget card shows red, usage >90%
+
+**Causes:**
+- High volume of AI tagging jobs (RSS feed auto-categorization)
+- LangChain4j model API rate limiting causing retries
+- Batch size too large for AI tagging delayed jobs
+
+**Remediation:**
+1. Check `ai_usage_tracking` table for spike patterns:
+   ```sql
+   SELECT DATE(created_at) AS day, SUM(cost_cents) AS daily_cost
+   FROM ai_usage_tracking
+   WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+   GROUP BY day ORDER BY day;
+   ```
+2. Review AI tagging batch size in `AiTaggingJobHandler.java` - reduce if needed
+3. Consider rate limiting AI tagging jobs in peak hours
+4. Upgrade monthly budget if sustained high usage is justified
+
+#### Job Queue Critical Status
+
+**Symptom:** Job Health table shows red status, stuck jobs >0
+
+**Causes:**
+- Database deadlocks in transaction-heavy jobs
+- External API timeouts (Stripe, Meta Graph API)
+- Worker thread pool exhausted
+
+**Remediation:**
+1. Check application logs for stuck job IDs:
+   ```bash
+   grep "Job stuck" /var/log/village-homepage/quarkus.log
+   ```
+2. Query delayed_jobs for stuck entries:
+   ```sql
+   SELECT * FROM delayed_jobs
+   WHERE status='in_progress'
+     AND updated_at < NOW() - INTERVAL '30 minutes'
+   ORDER BY updated_at ASC;
+   ```
+3. Kill stuck jobs manually if safe:
+   ```sql
+   UPDATE delayed_jobs SET status='failed', error_message='Manual kill due to timeout'
+   WHERE id IN (...);
+   ```
+4. Restart application if thread pool exhausted
+
+#### Zero Clicks Recorded
+
+**Symptom:** Overview cards show 0 clicks today, 7-day trend flat
+
+**Causes:**
+- ClickRollupJobHandler not running (delayed job scheduler down)
+- `click_stats_daily` table not receiving rollup inserts
+- Raw `link_clicks` table filling up (partition issue)
+
+**Remediation:**
+1. Check delayed_jobs scheduler status:
+   ```sql
+   SELECT * FROM delayed_jobs WHERE job_type='ClickRollupJobHandler'
+   ORDER BY scheduled_at DESC LIMIT 5;
+   ```
+2. Manually trigger rollup job (admin endpoint or direct call)
+3. Verify raw clicks are being recorded:
+   ```sql
+   SELECT COUNT(*) FROM link_clicks WHERE click_date = CURRENT_DATE;
+   ```
+4. Check partition health:
+   ```sql
+   SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'link_clicks_%';
+   ```
+
+### React Component Architecture
+
+**Component Lifecycle:**
+1. **Mount:** mounts.tsx scans DOM for `data-mount="AnalyticsDashboard"`
+2. **Hydration:** Validates props via Zod schema, creates React root
+3. **Initialization:** Fetches all data sources in parallel via `Promise.all()`
+4. **Rendering:** AntV charts instantiate with imperative API (refs + useEffect)
+5. **Polling:** Refreshes data every 5 minutes automatically
+6. **Unmount:** Destroys chart instances to prevent memory leaks
+
+**Key Files:**
+- `src/main/resources/META-INF/resources/assets/ts/components/AnalyticsDashboard.tsx` - Main component
+- `src/main/resources/META-INF/resources/assets/ts/mounts.tsx` - Registry + hydration logic
+- `src/main/resources/templates/AdminResource/analytics.html` - Qute template with mount point
+- `src/main/java/villagecompute/homepage/api/rest/admin/AdminResource.java` - UI route handler
+
+**Development Workflow:**
+1. Start Quarkus dev mode: `./mvnw quarkus:dev`
+2. Frontend watch: `cd src/main/resources/META-INF/resources/assets && npm run watch`
+3. Access dashboard: `http://localhost:8080/admin/analytics`
+4. Hot reload enabled for both backend and frontend changes
+
+### Testing
+
+**Manual Verification Checklist:**
+- [ ] Load `/admin/analytics` with super_admin role
+- [ ] Verify all 4 overview cards display data
+- [ ] Change date range selector (1d/7d/30d) - cards update
+- [ ] Apply category filter - pie chart updates
+- [ ] Click "Export CSV" - file downloads with valid data
+- [ ] Click "Export JSON" - file downloads with valid JSON
+- [ ] Verify job health table shows queues
+- [ ] Check sparkline renders below overview cards
+- [ ] Resize browser window - layout remains responsive
+
+**Automated Tests:**
+- **Backend:** `AnalyticsResourceTest.java` - Tests all 4 new endpoints
+- **Frontend:** TBD - Playwright E2E test for dashboard load and interaction
+
 ## Implementation References
 
 - **Click Tracking Endpoint:** `src/main/java/villagecompute/homepage/api/rest/ClickTrackingResource.java`
@@ -943,9 +1271,12 @@ groups:
 - **Metrics Registration:** `src/main/java/villagecompute/homepage/observability/ObservabilityMetrics.java`
 - **Database Schema:** `migrations/scripts/20250111000700_create_link_clicks.sql`, `migrations/scripts/20250111000800_create_click_stats_rollup.sql`
 - **Grafana Dashboard:** `docs/ops/dashboards/good-sites.json`
+- **Admin Analytics Dashboard:** `src/main/resources/templates/AdminResource/analytics.html`
+- **Analytics REST API:** `src/main/java/villagecompute/homepage/api/rest/admin/AnalyticsResource.java`
+- **AnalyticsDashboard Component:** `src/main/resources/META-INF/resources/assets/ts/components/AnalyticsDashboard.tsx`
 
 ---
 
-**Document Version:** 1.1
-**Last Updated:** 2026-01-11
-**Tasks:** I4.T9 (Marketplace), I5.T8 (Good Sites)
+**Document Version:** 1.2
+**Last Updated:** 2026-01-21
+**Tasks:** I4.T9 (Marketplace), I5.T8 (Good Sites), I6.T5 (Admin Analytics Dashboard)

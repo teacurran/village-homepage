@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Village Homepage Admin Analytics Dashboard">
+    <title>Analytics Dashboard - Village Homepage Admin</title>
+
+    <!-- Ant Design CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd@5.22.6/dist/reset.css">
+
+    <!-- Admin CSS -->
+    <link rel="stylesheet" href="/assets/css/admin.css">
+
+    <!-- React islands bundle (content-hashed) -->
+    <script type="module" src="/assets/js/main.bundle.js" defer></script>
+</head>
+<body class="admin-layout">
+    <!-- Admin Header -->
+    <header class="admin-header">
+        <div class="admin-header-content">
+            <div class="admin-logo">
+                <h1>Village Homepage Admin</h1>
+            </div>
+            <nav class="admin-nav">
+                <a href="/" class="nav-link">Public Site</a>
+                <a href="/admin/analytics" class="nav-link active">Analytics</a>
+                <a href="/admin/users" class="nav-link">Users</a>
+                <a href="/admin/content" class="nav-link">Content</a>
+                <a href="/api/auth/logout" class="nav-link">Logout</a>
+            </nav>
+            <div class="admin-user-info">
+                <span class="user-email">{user.email}</span>
+                <span class="user-role">{userRole}</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <div class="admin-container">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/admin">Admin</a>
+                <span class="separator">/</span>
+                <span class="current">Analytics</span>
+            </div>
+
+            <!-- React Island: AnalyticsDashboard -->
+            <div data-mount="AnalyticsDashboard"
+                 data-props='{"apiBaseUrl": "/admin/api/analytics", "initialDateRange": "7d", "userRole": "{userRole}"}'>
+                <!-- Loading placeholder -->
+                <div class="loading-placeholder" style="text-align: center; padding: 100px 20px;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 20px; color: #666;">Loading analytics dashboard...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <div class="admin-container">
+            <p>&copy; 2025 Village Homepage. Admin Dashboard v1.0</p>
+            <p class="footer-links">
+                <a href="/admin/docs">Documentation</a> |
+                <a href="/admin/support">Support</a> |
+                <a href="https://github.com/villagecompute/village-homepage/issues" target="_blank">Report Issue</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

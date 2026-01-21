@@ -39,6 +39,7 @@ import { z } from 'zod';
 // Import components
 import SampleWidget from './components/SampleWidget';
 import GridstackEditor from './components/GridstackEditor';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 
 /**
  * Component registry mapping data-mount attribute values to React components
@@ -60,6 +61,14 @@ const COMPONENT_REGISTRY = {
       saveEndpoint: z.string(),
     }),
   },
+  AnalyticsDashboard: {
+    component: AnalyticsDashboard,
+    propsSchema: z.object({
+      apiBaseUrl: z.string(),
+      initialDateRange: z.enum(['1d', '7d', '30d']).optional(),
+      userRole: z.string(),
+    }),
+  },
   // Add additional components here as they are developed:
   // WeatherWidget: {
   //   component: WeatherWidget,
@@ -74,7 +83,7 @@ type ComponentName = keyof typeof COMPONENT_REGISTRY;
  */
 function parseProps<T>(
   propsJson: string | null,
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T>,
   componentName: string
 ): T | null {
   if (!propsJson) {

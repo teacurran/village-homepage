@@ -31,6 +31,10 @@ import java.util.*;
  * <li>GET /admin/api/analytics/profiles/top-viewed - Top profiles by view count</li>
  * <li>GET /admin/api/analytics/profiles/{id}/curated-clicks - Curated article click stats for profile</li>
  * <li>GET /admin/api/analytics/profiles/engagement - Overall profile engagement metrics</li>
+ * <li>GET /admin/api/analytics/overview - Dashboard overview cards (clicks today/range, users, AI budget)</li>
+ * <li>GET /admin/api/analytics/clicks/category-performance - Click breakdown by category with filters</li>
+ * <li>GET /admin/api/analytics/ai/budget - AI usage vs budget with daily trend</li>
+ * <li>GET /admin/api/analytics/jobs/health - Job queue health metrics</li>
  * </ul>
  *
  * <p>
@@ -325,6 +329,361 @@ public class AnalyticsResource {
             LOG.errorf(e, "Failed to retrieve profile engagement metrics: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(Map.of("error", "Failed to retrieve analytics")).build();
+        }
+    }
+
+    /**
+     * Returns overview dashboard metrics for admin analytics UI.
+     *
+     * <p>
+     * Aggregates total clicks today, clicks for date range (1d/7d/30d), unique users today, and AI budget usage
+     * percentage. Used by AnalyticsDashboard.tsx overview cards.
+     *
+     * <p>
+     * <b>Example Response:</b>
+     *
+     * <pre>
+     * {
+     *   "clicks_today": 1523,
+     *   "clicks_range": 8942,
+     *   "date_range": "7d",
+     *   "unique_users_today": 456,
+     *   "ai_budget_pct": 67.3,
+     *   "ai_cost_cents": 3365,
+     *   "ai_budget_cents": 5000,
+     *   "daily_trend": [...]
+     * }
+     * </pre>
+     *
+     * @param dateRange
+     *            date range: 1d, 7d, or 30d (default 7d)
+     * @return JSON with overview metrics
+     */
+    @GET
+    @Path("/overview")
+    public Response getOverview(@QueryParam("date_range") @DefaultValue("7d") String dateRange) {
+        try {
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = switch (dateRange) {
+                case "1d" -> endDate.minusDays(1);
+                case "30d" -> endDate.minusDays(30);
+                default -> endDate.minusDays(7);
+            };
+
+            // Total clicks today
+            String todaySql = """
+                    SELECT COALESCE(SUM(total_clicks), 0), COALESCE(SUM(unique_users), 0)
+                    FROM click_stats_daily
+                    WHERE stat_date = :today
+                    """;
+            Object[] todayResult = (Object[]) entityManager.createNativeQuery(todaySql)
+                    .setParameter("today", LocalDate.now()).getSingleResult();
+
+            long clicksToday = ((Number) todayResult[0]).longValue();
+            long uniqueUsersToday = ((Number) todayResult[1]).longValue();
+
+            // Total clicks in date range
+            String rangeSql = """
+                    SELECT COALESCE(SUM(total_clicks), 0)
+                    FROM click_stats_daily
+                    WHERE stat_date BETWEEN :start AND :end
+                    """;
+            long clicksRange = ((Number) entityManager.createNativeQuery(rangeSql).setParameter("start", startDate)
+                    .setParameter("end", endDate).getSingleResult()).longValue();
+
+            // Daily trend for sparkline (last 7 days)
+            String trendSql = """
+                    SELECT stat_date, COALESCE(SUM(total_clicks), 0) AS clicks
+                    FROM click_stats_daily
+                    WHERE stat_date BETWEEN :trendStart AND :today
+                    GROUP BY stat_date
+                    ORDER BY stat_date ASC
+                    """;
+            @SuppressWarnings("unchecked")
+            List<Object[]> trendResults = entityManager.createNativeQuery(trendSql)
+                    .setParameter("trendStart", LocalDate.now().minusDays(7)).setParameter("today", LocalDate.now())
+                    .getResultList();
+
+            List<Map<String, Object>> dailyTrend = new ArrayList<>();
+            for (Object[] row : trendResults) {
+                dailyTrend.add(Map.of("date", row[0].toString(), "clicks", ((Number) row[1]).longValue()));
+            }
+
+            // AI budget (from ai_usage_tracking table)
+            // Monthly budget set to $50 (5000 cents)
+            int monthlyBudgetCents = 5000;
+
+            String aiSql = """
+                    SELECT COALESCE(SUM(cost_cents), 0)
+                    FROM ai_usage_tracking
+                    WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+                    """;
+            long costCents = ((Number) entityManager.createNativeQuery(aiSql).getSingleResult()).longValue();
+
+            double budgetPct = monthlyBudgetCents > 0 ? (double) costCents / monthlyBudgetCents * 100 : 0;
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("clicks_today", clicksToday);
+            response.put("clicks_range", clicksRange);
+            response.put("date_range", dateRange);
+            response.put("unique_users_today", uniqueUsersToday);
+            response.put("ai_budget_pct", Math.round(budgetPct * 10) / 10.0); // Round to 1 decimal
+            response.put("ai_cost_cents", costCents);
+            response.put("ai_budget_cents", monthlyBudgetCents);
+            response.put("daily_trend", dailyTrend);
+
+            LOG.debugf("Retrieved overview metrics for date range %s: %d clicks today, %d clicks in range", dateRange,
+                    clicksToday, clicksRange);
+
+            return Response.ok(response).build();
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to retrieve overview analytics: %s", e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Map.of("error", "Failed to retrieve overview analytics")).build();
+        }
+    }
+
+    /**
+     * Returns category performance breakdown for admin analytics dashboard.
+     *
+     * <p>
+     * Aggregates clicks by click_type with optional filtering. Returns total clicks and percentage per category. Used
+     * by AnalyticsDashboard.tsx pie/donut chart.
+     *
+     * <p>
+     * <b>Example Response:</b>
+     *
+     * <pre>
+     * {
+     *   "categories": [
+     *     {"type": "feed_item", "clicks": 5240, "percentage": 45.2},
+     *     {"type": "directory_site", "clicks": 3890, "percentage": 33.6}
+     *   ],
+     *   "total_clicks": 11590
+     * }
+     * </pre>
+     *
+     * @param clickTypes
+     *            optional comma-separated list of click types to filter (e.g., "feed_item,directory_site")
+     * @param startDate
+     *            start date (inclusive)
+     * @param endDate
+     *            end date (inclusive)
+     * @return JSON with category breakdown
+     */
+    @GET
+    @Path("/clicks/category-performance")
+    public Response getCategoryPerformance(@QueryParam("click_types") String clickTypes,
+            @QueryParam("start_date") String startDate, @QueryParam("end_date") String endDate) {
+        try {
+            LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().minusDays(7);
+            LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
+
+            // Parse click types filter
+            List<String> typeFilter = null;
+            if (clickTypes != null && !clickTypes.isBlank()) {
+                typeFilter = Arrays.asList(clickTypes.split(","));
+            }
+
+            // Build SQL with optional type filter
+            String sql = """
+                    SELECT click_type, SUM(total_clicks) AS clicks
+                    FROM click_stats_daily
+                    WHERE stat_date BETWEEN :startDate AND :endDate
+                    """ + (typeFilter != null ? " AND click_type IN (:clickTypes)" : "") + """
+                    GROUP BY click_type
+                    ORDER BY clicks DESC
+                    """;
+
+            var query = entityManager.createNativeQuery(sql).setParameter("startDate", start).setParameter("endDate",
+                    end);
+
+            if (typeFilter != null) {
+                query.setParameter("clickTypes", typeFilter);
+            }
+
+            @SuppressWarnings("unchecked")
+            List<Object[]> results = query.getResultList();
+
+            // Calculate total for percentages
+            long totalClicks = results.stream().mapToLong(row -> ((Number) row[1]).longValue()).sum();
+
+            List<Map<String, Object>> categories = new ArrayList<>();
+            for (Object[] row : results) {
+                String type = (String) row[0];
+                long clicks = ((Number) row[1]).longValue();
+                double percentage = totalClicks > 0 ? (double) clicks / totalClicks * 100 : 0;
+
+                categories
+                        .add(Map.of("type", type, "clicks", clicks, "percentage", Math.round(percentage * 10) / 10.0));
+            }
+
+            LOG.debugf("Retrieved category performance for %d categories, %d total clicks", categories.size(),
+                    totalClicks);
+
+            return Response.ok(Map.of("categories", categories, "total_clicks", totalClicks, "start_date",
+                    start.toString(), "end_date", end.toString())).build();
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to retrieve category performance: %s", e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Map.of("error", "Failed to retrieve category performance")).build();
+        }
+    }
+
+    /**
+     * Returns AI budget usage details with daily trend and threshold warnings.
+     *
+     * <p>
+     * Queries ai_usage_tracking table for current month usage and calculates percentage of $50 monthly budget. Returns
+     * threshold states (75%, 90%, 100%) and 7-day cost trend.
+     *
+     * <p>
+     * <b>Example Response:</b>
+     *
+     * <pre>
+     * {
+     *   "current_cost_cents": 3750,
+     *   "monthly_budget_cents": 5000,
+     *   "usage_pct": 75.0,
+     *   "threshold_75": true,
+     *   "threshold_90": false,
+     *   "threshold_100": false,
+     *   "daily_costs": [...]
+     * }
+     * </pre>
+     *
+     * @return JSON with AI budget details
+     */
+    @GET
+    @Path("/ai/budget")
+    public Response getAiBudget() {
+        try {
+            int monthlyBudgetCents = 5000; // $50 monthly budget
+
+            // Current month total cost
+            String currentSql = """
+                    SELECT COALESCE(SUM(cost_cents), 0)
+                    FROM ai_usage_tracking
+                    WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+                    """;
+            long currentCostCents = ((Number) entityManager.createNativeQuery(currentSql).getSingleResult())
+                    .longValue();
+
+            // Daily costs for last 7 days
+            String dailySql = """
+                    SELECT DATE(created_at) AS day, COALESCE(SUM(cost_cents), 0) AS cost
+                    FROM ai_usage_tracking
+                    WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+                    GROUP BY DATE(created_at)
+                    ORDER BY day ASC
+                    """;
+            @SuppressWarnings("unchecked")
+            List<Object[]> dailyResults = entityManager.createNativeQuery(dailySql).getResultList();
+
+            List<Map<String, Object>> dailyCosts = new ArrayList<>();
+            for (Object[] row : dailyResults) {
+                dailyCosts.add(Map.of("date", row[0].toString(), "cost_cents", ((Number) row[1]).longValue()));
+            }
+
+            double usagePct = (double) currentCostCents / monthlyBudgetCents * 100;
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("current_cost_cents", currentCostCents);
+            response.put("monthly_budget_cents", monthlyBudgetCents);
+            response.put("usage_pct", Math.round(usagePct * 10) / 10.0);
+            response.put("threshold_75", usagePct >= 75);
+            response.put("threshold_90", usagePct >= 90);
+            response.put("threshold_100", usagePct >= 100);
+            response.put("daily_costs", dailyCosts);
+
+            LOG.debugf("Retrieved AI budget: %s cents used of %s (%.1f%%)", Long.toString(currentCostCents),
+                    Integer.toString(monthlyBudgetCents), usagePct);
+
+            return Response.ok(response).build();
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to retrieve AI budget: %s", e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Map.of("error", "Failed to retrieve AI budget")).build();
+        }
+    }
+
+    /**
+     * Returns job queue health metrics for delayed job monitoring.
+     *
+     * <p>
+     * Queries delayed_jobs table for backlog size, average wait time, and stuck job count per queue. Color-coded
+     * thresholds: green (&lt;10 backlog), yellow (10-50), red (&gt;50 or stuck jobs present).
+     *
+     * <p>
+     * <b>Example Response:</b>
+     *
+     * <pre>
+     * {
+     *   "queues": [
+     *     {
+     *       "queue": "DEFAULT",
+     *       "backlog": 5,
+     *       "avg_wait_seconds": 12.3,
+     *       "stuck_jobs": 0,
+     *       "status": "healthy"
+     *     }
+     *   ]
+     * }
+     * </pre>
+     *
+     * @return JSON with queue health stats
+     */
+    @GET
+    @Path("/jobs/health")
+    public Response getJobHealth() {
+        try {
+            String sql = """
+                    SELECT
+                      queue,
+                      COUNT(*) FILTER (WHERE status = 'pending') AS backlog,
+                      AVG(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - scheduled_at))) FILTER (WHERE status = 'pending') AS avg_wait_seconds,
+                      COUNT(*) FILTER (WHERE status = 'in_progress' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '30 minutes') AS stuck_jobs
+                    FROM delayed_jobs
+                    WHERE status IN ('pending', 'in_progress')
+                    GROUP BY queue
+                    ORDER BY queue
+                    """;
+
+            @SuppressWarnings("unchecked")
+            List<Object[]> results = entityManager.createNativeQuery(sql).getResultList();
+
+            List<Map<String, Object>> queues = new ArrayList<>();
+            for (Object[] row : results) {
+                String queue = (String) row[0];
+                long backlog = ((Number) row[1]).longValue();
+                double avgWaitSeconds = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
+                long stuckJobs = ((Number) row[3]).longValue();
+
+                // Determine health status
+                String status;
+                if (stuckJobs > 0 || backlog > 50) {
+                    status = "critical";
+                } else if (backlog > 10) {
+                    status = "warning";
+                } else {
+                    status = "healthy";
+                }
+
+                queues.add(Map.of("queue", queue, "backlog", backlog, "avg_wait_seconds",
+                        Math.round(avgWaitSeconds * 10) / 10.0, "stuck_jobs", stuckJobs, "status", status));
+            }
+
+            LOG.debugf("Retrieved job health for %d queues", queues.size());
+
+            return Response.ok(Map.of("queues", queues, "timestamp", LocalDate.now().toString())).build();
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to retrieve job health: %s", e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Map.of("error", "Failed to retrieve job health")).build();
         }
     }
 }
