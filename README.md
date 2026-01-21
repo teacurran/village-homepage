@@ -1025,6 +1025,29 @@ kubectl apply -k ../villagecompute/k8s/overlays/production/homepage
 
 ---
 
+## Documentation
+
+### Architecture & Planning
+- [Architecture Manifests](.codemachine/artifacts/architecture/) - System design documents (C4 diagrams, ERD, policies)
+- [Plan Documents](.codemachine/artifacts/plan/) - Implementation plan by iteration (I1-I6)
+- [Verification Strategy](docs/VERIFICATION_STRATEGY.md) - Testing, CI/CD, quality gates, and release processes
+- [Glossary](docs/GLOSSARY.md) - Technical terminology reference (30+ core terms)
+- [Architecture Decision Records](docs/adr/) - Key technical decisions
+
+### Operations
+- [Testing Guide](docs/ops/testing.md) - Unit, integration, and E2E testing patterns
+- [CI/CD Pipeline](docs/ops/ci-cd-pipeline.md) - Build and deployment pipeline
+- [Observability](docs/ops/observability.md) - Logging, metrics, and tracing
+- [Runbooks](docs/ops/runbooks/) - Operational procedures and troubleshooting
+- [Development Services](docs/ops/dev-services.md) - Docker Compose service management
+
+### API & Integration
+- [OpenAPI Specification](api/openapi/v1.yaml) - REST API contract documentation
+- [Widget Endpoints](docs/api/widgets.md) - News, weather, stocks, social integration
+- [Marketplace API](docs/api/marketplace.md) - Listings, payments, promotions
+
+---
+
 ## Architecture
 
 ### Architectural Diagrams

@@ -4,6 +4,11 @@
 
 This document details the CI/CD pipeline for Village Homepage, including quality gates, caching strategies, troubleshooting, and operational procedures.
 
+> **Related Documentation:**
+> - [Verification & Integration Strategy](../VERIFICATION_STRATEGY.md) - Quality gates and release processes
+> - [Testing Guide](./testing.md) - Test execution details
+> - [Glossary](../GLOSSARY.md) - Technical terminology reference
+
 ## Table of Contents
 
 1. [Pipeline Architecture](#pipeline-architecture)

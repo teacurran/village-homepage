@@ -3,6 +3,11 @@
 
 This document provides comprehensive testing guidance for Village Homepage, covering unit tests, integration tests, E2E tests, load tests, and coverage reporting.
 
+> **Related Documentation:**
+> - [Verification & Integration Strategy](../VERIFICATION_STRATEGY.md) - Overview of testing approach and release processes
+> - [CI/CD Pipeline](./ci-cd-pipeline.md) - Pipeline configuration and troubleshooting
+> - [Glossary](../GLOSSARY.md) - Technical terminology reference
+
 ## Table of Contents
 
 1. [Unit Tests](#unit-tests)
