@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -54,6 +55,15 @@ import java.util.Map;
 @Entity
 @Table(
         name = "delayed_jobs")
+@NamedQuery(
+        name = DelayedJob.QUERY_FIND_READY_JOBS,
+        query = "SELECT j FROM DelayedJob j WHERE j.queue = :queue AND j.status = :status "
+                + "AND j.scheduledAt <= CURRENT_TIMESTAMP "
+                + "AND (j.lockedAt IS NULL OR j.lockedAt < :staleThreshold) "
+                + "ORDER BY j.priority DESC, j.scheduledAt ASC")
+@NamedQuery(
+        name = DelayedJob.QUERY_FIND_BY_STATUS,
+        query = "SELECT j FROM DelayedJob j WHERE j.status = :status ORDER BY j.createdAt DESC")
 public class DelayedJob extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(DelayedJob.class);
@@ -190,9 +200,11 @@ public class DelayedJob extends PanacheEntityBase {
             return List.of();
         }
         Instant staleThreshold = Instant.now().minusSeconds(5 * 60);
-        return find("#" + QUERY_FIND_READY_JOBS
-                + " WHERE queue = ?1 AND status = ?2 AND scheduled_at <= NOW() AND (locked_at IS NULL OR locked_at < ?3) "
-                + "ORDER BY priority DESC, scheduled_at ASC", queue, JobStatus.PENDING, staleThreshold).page(0, limit)
+        return find("#" + QUERY_FIND_READY_JOBS,
+                io.quarkus.panache.common.Parameters.with("queue", queue)
+                        .and("status", JobStatus.PENDING)
+                        .and("staleThreshold", staleThreshold))
+                .page(0, limit)
                 .list();
     }
 
@@ -207,7 +219,8 @@ public class DelayedJob extends PanacheEntityBase {
         if (status == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_STATUS + " WHERE status = ?1 ORDER BY created_at DESC", status).list();
+        return find("#" + QUERY_FIND_BY_STATUS,
+                io.quarkus.panache.common.Parameters.with("status", status)).list();
     }
 
     /**

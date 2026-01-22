@@ -5,6 +5,11 @@
 .codemachine/agents
 .codemachine/artifacts/
 .codemachine/template.json
+.codemachine_2/logs
+.codemachine_2/memory
+.codemachine_2/prompts
+.codemachine_2/agents
+.codemachine_2/template.json
 
 # Maven build artifacts
 target/

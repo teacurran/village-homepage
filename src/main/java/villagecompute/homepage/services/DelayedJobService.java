@@ -6,7 +6,9 @@ import io.opentelemetry.context.Scope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
+import villagecompute.homepage.data.models.DelayedJob;
 import villagecompute.homepage.jobs.JobHandler;
 import villagecompute.homepage.jobs.JobQueue;
 import villagecompute.homepage.jobs.JobType;
@@ -219,14 +221,13 @@ public class DelayedJobService {
             span.recordException(e);
             span.addEvent("job.interrupted");
             LOG.warnf(e, "Job %d (type: %s) interrupted during execution", jobId, jobType);
-            // TODO: Schedule retry with backoff
+            handleJobFailure(jobId, attempt, e.getMessage());
 
         } catch (Exception e) {
             span.recordException(e);
             span.addEvent("job.failed");
             LOG.errorf(e, "Job %d (type: %s) failed on attempt %d", jobId, jobType, attempt);
-            // TODO: Calculate backoff delay and update scheduled_at for retry
-            // TODO: If attempt >= max_attempts, move to failed state and trigger alert
+            handleJobFailure(jobId, attempt, e.getMessage());
 
         } finally {
             // P12: Release semaphore for SCREENSHOT queue
@@ -238,6 +239,58 @@ public class DelayedJobService {
             LoggingConfig.clearMDC();
             span.end();
         }
+    }
+
+    /**
+     * Handles job failure by either scheduling a retry with backoff or marking as permanently failed.
+     *
+     * @param jobId
+     *            the job ID
+     * @param attempt
+     *            current attempt number
+     * @param errorMessage
+     *            error description
+     */
+    @Transactional
+    void handleJobFailure(Long jobId, int attempt, String errorMessage) {
+        DelayedJob job = DelayedJob.findById(jobId);
+        if (job == null) {
+            LOG.errorf("Cannot handle failure for non-existent job %d", jobId);
+            return;
+        }
+
+        job.lastError = errorMessage;
+
+        if (attempt < job.maxAttempts) {
+            // Schedule retry with exponential backoff
+            long backoffSeconds = calculateBackoffDelay(attempt);
+            // Cap at 1 hour maximum delay
+            backoffSeconds = Math.min(backoffSeconds, 3600);
+
+            job.scheduleRetry(backoffSeconds);
+            LOG.infof("Job %d retry scheduled in %d seconds (attempt %d/%d)",
+                    jobId, backoffSeconds, attempt, job.maxAttempts);
+        } else {
+            // Exhausted retries - mark as permanently failed
+            job.markFailed(errorMessage);
+            alertAdminForFailedJob(job);
+            LOG.errorf("Job %d exhausted %d retry attempts, marked FAILED: %s",
+                    jobId, job.maxAttempts, errorMessage);
+        }
+    }
+
+    /**
+     * Sends admin alert for permanently failed critical jobs.
+     *
+     * @param job
+     *            the failed job
+     */
+    void alertAdminForFailedJob(DelayedJob job) {
+        // For critical job types (AI tagging budget exhaustion, payment processing failures),
+        // this would trigger email/Slack alerts to admins
+        // Implementation deferred per Phase 2 priority (non-blocking for v1)
+        LOG.warnf("ALERT: Job %d (type: %s) permanently failed. Admin notification would be sent here.",
+                job.id, job.jobType);
     }
 
     /**

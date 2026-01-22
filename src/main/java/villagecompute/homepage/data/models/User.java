@@ -7,6 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -55,6 +56,19 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "users")
+@NamedQuery(
+        name = User.QUERY_FIND_BY_EMAIL,
+        query = "SELECT u FROM User u WHERE u.email = :email AND u.deletedAt IS NULL AND u.isAnonymous = FALSE")
+@NamedQuery(
+        name = User.QUERY_FIND_BY_OAUTH,
+        query = "SELECT u FROM User u WHERE u.oauthProvider = :provider AND u.oauthId = :providerId "
+                + "AND u.deletedAt IS NULL AND u.isAnonymous = FALSE")
+@NamedQuery(
+        name = User.QUERY_FIND_PENDING_PURGE,
+        query = "SELECT u FROM User u WHERE u.deletedAt IS NOT NULL AND u.deletedAt < CURRENT_TIMESTAMP")
+@NamedQuery(
+        name = User.QUERY_FIND_ADMINS,
+        query = "SELECT u FROM User u WHERE u.adminRole IS NOT NULL AND u.deletedAt IS NULL")
 public class User extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(User.class);
@@ -183,7 +197,8 @@ public class User extends PanacheEntityBase {
         if (email == null || email.isBlank()) {
             return Optional.empty();
         }
-        return find("email = ?1 AND deletedAt IS NULL AND isAnonymous = FALSE", email).firstResultOptional();
+        return find("#" + QUERY_FIND_BY_EMAIL,
+                io.quarkus.panache.common.Parameters.with("email", email)).firstResultOptional();
     }
 
     /**
@@ -199,9 +214,9 @@ public class User extends PanacheEntityBase {
         if (provider == null || providerId == null) {
             return Optional.empty();
         }
-        return find("#" + QUERY_FIND_BY_OAUTH
-                + " WHERE oauth_provider = ?1 AND oauth_id = ?2 AND deleted_at IS NULL AND is_anonymous = FALSE",
-                provider, providerId).firstResultOptional();
+        return find("#" + QUERY_FIND_BY_OAUTH,
+                io.quarkus.panache.common.Parameters.with("provider", provider)
+                        .and("providerId", providerId)).firstResultOptional();
     }
 
     /**
@@ -214,7 +229,7 @@ public class User extends PanacheEntityBase {
      * @return list of users eligible for purge
      */
     public static java.util.List<User> findPendingPurge() {
-        return find("#" + QUERY_FIND_PENDING_PURGE + " WHERE deleted_at IS NOT NULL AND deleted_at < NOW()").list();
+        return find("#" + QUERY_FIND_PENDING_PURGE).list();
     }
 
     /**
@@ -223,7 +238,7 @@ public class User extends PanacheEntityBase {
      * @return list of users with admin roles (super_admin, support, ops, read_only)
      */
     public static java.util.List<User> findAdmins() {
-        return find("#" + QUERY_FIND_ADMINS + " WHERE admin_role IS NOT NULL AND deleted_at IS NULL").list();
+        return find("#" + QUERY_FIND_ADMINS).list();
     }
 
     /**
