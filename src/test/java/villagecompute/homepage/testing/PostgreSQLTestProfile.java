@@ -34,12 +34,16 @@ public class PostgreSQLTestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {
         // Override datasource configuration to use PostgreSQL 17 + PostGIS with dev services
-        return Map.of("quarkus.datasource.db-kind", "postgresql", "quarkus.datasource.username", "test",
-                "quarkus.datasource.password", "test", "quarkus.datasource.devservices.enabled", "true",
+        return Map.of(
+                "quarkus.datasource.db-kind", "postgresql",
+                "quarkus.datasource.username", "test",
+                "quarkus.datasource.password", "test",
+                "quarkus.datasource.devservices.enabled", "true",
                 "quarkus.datasource.devservices.image-name", "postgis/postgis:17-3.5-alpine",
                 "quarkus.datasource.devservices.init-script-path", "db/init-test-postgis.sql",
-                "quarkus.hibernate-orm.database.generation", "drop-and-create", "quarkus.hibernate-orm.log.sql",
-                "false", "quarkus.hibernate-orm.sql-load-script", "no-file");
+                "quarkus.hibernate-orm.database.generation", "drop-and-create",
+                "quarkus.hibernate-orm.log.sql", "false",
+                "quarkus.hibernate-orm.sql-load-script", "no-file");
     }
 
     @Override

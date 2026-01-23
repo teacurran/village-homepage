@@ -268,7 +268,7 @@
             <artifactId>quarkus-test-h2</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- NOTE: H2 retained for legacy tests. New integration tests should extend BaseIntegrationTest with PostgreSQL (Task I1.T2) -->
+        <!-- NOTE: H2 retained for test compatibility. PostgreSQL via @TestProfile requires removing H2 or using test containers resource -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5-mockito</artifactId>
@@ -383,6 +383,11 @@
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
+                        <!-- Force PostgreSQL for all tests (overrides quarkus-test-h2 dependency) -->
+                        <quarkus.profile>test</quarkus.profile>
+                        <quarkus.datasource.db-kind>postgresql</quarkus.datasource.db-kind>
+                        <quarkus.datasource.devservices.enabled>true</quarkus.datasource.devservices.enabled>
+                        <quarkus.test.integration-test-profile>test</quarkus.test.integration-test-profile>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
