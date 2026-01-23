@@ -53,7 +53,9 @@ public class PostgreSQLTestProfile implements QuarkusTestProfile {
                 Map.entry("quarkus.hibernate-orm.log.sql", "true"),
                 Map.entry("quarkus.hibernate-orm.sql-load-script", "no-file"),
                 // CRITICAL: Enable Jackson JSON-B handling for JSONB columns (fixes Map serialization)
-                Map.entry("quarkus.hibernate-orm.mapping.jackson.convert-to-json-mode", "enabled")));
+                Map.entry("quarkus.hibernate-orm.mapping.jackson.convert-to-json-mode", "enabled"),
+                // LangChain4j test configuration (Task I4.T1)
+                Map.entry("quarkus.langchain4j.anthropic.api-key", "sk-ant-test-fake-key-for-testing-12345678")));
     }
 
     @Override

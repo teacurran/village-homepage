@@ -363,8 +363,9 @@ public abstract class WireMockTestBase extends BaseIntegrationTest {
      *            the custom JSON response body
      */
     protected void stubGoogleUserInfo(String responseBodyJson) {
-        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/oauth2/v3/userinfo")).willReturn(WireMock
-                .aResponse().withStatus(200).withHeader("Content-Type", "application/json").withBody(responseBodyJson)));
+        wireMockServer
+                .stubFor(WireMock.get(WireMock.urlPathEqualTo("/oauth2/v3/userinfo")).willReturn(WireMock.aResponse()
+                        .withStatus(200).withHeader("Content-Type", "application/json").withBody(responseBodyJson)));
     }
 
     /**

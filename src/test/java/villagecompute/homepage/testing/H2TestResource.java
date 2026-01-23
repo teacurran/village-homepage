@@ -19,7 +19,9 @@ public class H2TestResource implements QuarkusTestResourceLifecycleManager {
     public Map<String, String> start() {
         return Map.of("quarkus.datasource.db-kind", "h2", "quarkus.datasource.username", "sa",
                 "quarkus.datasource.password", "sa", "quarkus.datasource.jdbc.url", JDBC_URL,
-                "quarkus.datasource.jdbc.driver", "org.h2.Driver", "quarkus.datasource.devservices.enabled", "false");
+                "quarkus.datasource.jdbc.driver", "org.h2.Driver", "quarkus.datasource.devservices.enabled", "false",
+                // LangChain4j test configuration (Task I4.T1)
+                "quarkus.langchain4j.anthropic.api-key", "sk-ant-test-fake-key-for-testing-12345678");
     }
 
     @Override

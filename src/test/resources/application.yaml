@@ -28,6 +28,10 @@ quarkus:
   otel:
     sdk:
       disabled: true
+  # LangChain4j test configuration (Task I4.T1)
+  langchain4j:
+    anthropic:
+      api-key: sk-ant-test-fake-key-for-testing-12345678
 
   # NO DEFAULT DATASOURCE CONFIGURATION
   # Legacy tests use @QuarkusTestResource(H2TestResource.class) which provides H2 configuration

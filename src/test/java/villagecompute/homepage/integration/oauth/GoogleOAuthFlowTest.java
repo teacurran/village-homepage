@@ -30,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  *
  * <p>
- * Uses WireMock to stub external Google OAuth API calls (token exchange and user profile).
- * All tests run with Testcontainers PostgreSQL for realistic database integration.
+ * Uses WireMock to stub external Google OAuth API calls (token exchange and user profile). All tests run with
+ * Testcontainers PostgreSQL for realistic database integration.
  *
  * <p>
  * <b>Ref:</b> Task I3.T7, Foundation Blueprint Section 3.5 (OAuth Flow Testing)
@@ -82,7 +82,8 @@ public class GoogleOAuthFlowTest extends WireMockTestBase {
                 "Auth URL should point to Google OAuth endpoint");
 
         // Verify state stored in database
-        assertEntityExists(OAuthState.class, OAuthState.findByStateAndProvider(initResponse.state(), "google").get().id);
+        assertEntityExists(OAuthState.class,
+                OAuthState.findByStateAndProvider(initResponse.state(), "google").get().id);
 
         // 2. Stub Google OAuth API responses
         stubGoogleTokenExchange();
@@ -173,7 +174,8 @@ public class GoogleOAuthFlowTest extends WireMockTestBase {
                 "No user should be created when state validation fails");
 
         // 6. Verify original state not deleted (still in database)
-        assertEntityExists(OAuthState.class, OAuthState.findByStateAndProvider(initResponse.state(), "google").get().id);
+        assertEntityExists(OAuthState.class,
+                OAuthState.findByStateAndProvider(initResponse.state(), "google").get().id);
     }
 
     /**
@@ -292,10 +294,12 @@ public class GoogleOAuthFlowTest extends WireMockTestBase {
                 authenticatedUser.id);
 
         assertEquals(listingCount, authListingCount, "Listings should be transferred to authenticated user");
-        assertEquals(notificationCount, authNotificationCount, "Notifications should be transferred to authenticated user");
+        assertEquals(notificationCount, authNotificationCount,
+                "Notifications should be transferred to authenticated user");
 
         // 7. Verify merge audit created
-        assertEntityExists(AccountMergeAudit.class, AccountMergeAudit.findByAuthenticatedUser(authenticatedUser.id).get(0).id);
+        assertEntityExists(AccountMergeAudit.class,
+                AccountMergeAudit.findByAuthenticatedUser(authenticatedUser.id).get(0).id);
 
         // 8. Verify anonymous user soft-deleted
         User deletedAnonUser = User.findById(anonUser.id);

@@ -146,11 +146,13 @@ public class UserMergeServiceTest extends BaseIntegrationTest {
 
         // 5. Verify notification IDs and read status preserved
         UserNotification reloadedNotification1 = UserNotification.findById(notification1.id);
-        assertEquals(authUser.id, reloadedNotification1.userId, "Notification 1 userId should point to authenticated user");
+        assertEquals(authUser.id, reloadedNotification1.userId,
+                "Notification 1 userId should point to authenticated user");
         assertNull(reloadedNotification1.readAt, "Notification 1 should remain unread");
 
         UserNotification reloadedNotification2 = UserNotification.findById(notification2.id);
-        assertEquals(authUser.id, reloadedNotification2.userId, "Notification 2 userId should point to authenticated user");
+        assertEquals(authUser.id, reloadedNotification2.userId,
+                "Notification 2 userId should point to authenticated user");
         assertNotNull(reloadedNotification2.readAt, "Notification 2 should remain read (readAt preserved)");
     }
 
@@ -264,8 +266,8 @@ public class UserMergeServiceTest extends BaseIntegrationTest {
         // 1. Create two authenticated users
         User authUser1 = TestFixtures.createOAuthUser(TestConstants.VALID_EMAIL, TestConstants.OAUTH_PROVIDER_GOOGLE,
                 TestConstants.OAUTH_GOOGLE_ID);
-        User authUser2 = TestFixtures.createOAuthUser(TestConstants.VALID_EMAIL_2, TestConstants.OAUTH_PROVIDER_FACEBOOK,
-                TestConstants.OAUTH_FACEBOOK_ID);
+        User authUser2 = TestFixtures.createOAuthUser(TestConstants.VALID_EMAIL_2,
+                TestConstants.OAUTH_PROVIDER_FACEBOOK, TestConstants.OAUTH_FACEBOOK_ID);
 
         // 2. Attempt merge (should fail - source is not anonymous)
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {

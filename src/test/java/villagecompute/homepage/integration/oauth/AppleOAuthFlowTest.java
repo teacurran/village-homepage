@@ -31,8 +31,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  *
  * <p>
- * Uses WireMock to stub external Apple OAuth API calls (token exchange only - user info comes from ID token JWT).
- * All tests run with Testcontainers PostgreSQL for realistic database integration.
+ * Uses WireMock to stub external Apple OAuth API calls (token exchange only - user info comes from ID token JWT). All
+ * tests run with Testcontainers PostgreSQL for realistic database integration.
  *
  * <p>
  * <b>Apple-Specific Behavior:</b>
@@ -267,7 +267,8 @@ public class AppleOAuthFlowTest extends WireMockTestBase {
                 "Notifications should be transferred to authenticated user");
 
         // 7. Verify merge audit created
-        assertEntityExists(AccountMergeAudit.class, AccountMergeAudit.findByAuthenticatedUser(authenticatedUser.id).get(0).id);
+        assertEntityExists(AccountMergeAudit.class,
+                AccountMergeAudit.findByAuthenticatedUser(authenticatedUser.id).get(0).id);
 
         // 8. Verify anonymous user soft-deleted
         User deletedAnonUser = User.findById(anonUser.id);
@@ -296,7 +297,8 @@ public class AppleOAuthFlowTest extends WireMockTestBase {
 
         // 4. Verify user info extracted from ID token JWT
         assertEquals(TestConstants.TEST_APPLE_EMAIL, user.email, "Email should be extracted from ID token email claim");
-        assertEquals(TestConstants.TEST_APPLE_USER_ID, user.oauthId, "User ID should be extracted from ID token sub claim");
+        assertEquals(TestConstants.TEST_APPLE_USER_ID, user.oauthId,
+                "User ID should be extracted from ID token sub claim");
         assertNotNull(user.displayName, "Display name should be present");
     }
 

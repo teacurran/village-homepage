@@ -2,7 +2,6 @@ package villagecompute.homepage;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
-import io.quarkus.test.TestTransaction;
 import org.junit.jupiter.api.Test;
 import jakarta.transaction.Transactional;
 import villagecompute.homepage.testing.PostgreSQLTestProfile;

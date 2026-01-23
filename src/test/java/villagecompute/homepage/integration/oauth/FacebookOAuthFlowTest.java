@@ -30,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  *
  * <p>
- * Uses WireMock to stub external Facebook OAuth API calls (token exchange and Graph API user info).
- * All tests run with Testcontainers PostgreSQL for realistic database integration.
+ * Uses WireMock to stub external Facebook OAuth API calls (token exchange and Graph API user info). All tests run with
+ * Testcontainers PostgreSQL for realistic database integration.
  *
  * <p>
  * <b>Ref:</b> Task I3.T7, Foundation Blueprint Section 3.5 (OAuth Flow Testing)
@@ -138,8 +138,10 @@ public class FacebookOAuthFlowTest extends WireMockTestBase {
         assertEquals(existingUser.id, returnedUser.id, "Should return existing user, not create new one");
 
         // 6. Verify no duplicate users created
-        assertEquals(1, User.count("oauthProvider = ?1 AND oauthId = ?2", TestConstants.OAUTH_PROVIDER_FACEBOOK,
-                TestConstants.TEST_FACEBOOK_USER_ID), "Should have exactly one user with this Facebook OAuth ID");
+        assertEquals(1,
+                User.count("oauthProvider = ?1 AND oauthId = ?2", TestConstants.OAUTH_PROVIDER_FACEBOOK,
+                        TestConstants.TEST_FACEBOOK_USER_ID),
+                "Should have exactly one user with this Facebook OAuth ID");
     }
 
     /**
@@ -246,8 +248,8 @@ public class FacebookOAuthFlowTest extends WireMockTestBase {
         stubFacebookUserInfo();
 
         // 4. Complete OAuth callback
-        User authenticatedUser = oauthService.handleFacebookCallback(TestConstants.TEST_OAUTH_CODE, initResponse.state(),
-                TestConstants.TEST_OAUTH_REDIRECT_URI);
+        User authenticatedUser = oauthService.handleFacebookCallback(TestConstants.TEST_OAUTH_CODE,
+                initResponse.state(), TestConstants.TEST_OAUTH_REDIRECT_URI);
 
         // 5. Verify user created (not upgraded in place, but merged)
         assertNotNull(authenticatedUser);
@@ -266,7 +268,8 @@ public class FacebookOAuthFlowTest extends WireMockTestBase {
                 "Notifications should be transferred to authenticated user");
 
         // 7. Verify merge audit created
-        assertEntityExists(AccountMergeAudit.class, AccountMergeAudit.findByAuthenticatedUser(authenticatedUser.id).get(0).id);
+        assertEntityExists(AccountMergeAudit.class,
+                AccountMergeAudit.findByAuthenticatedUser(authenticatedUser.id).get(0).id);
 
         // 8. Verify anonymous user soft-deleted
         User deletedAnonUser = User.findById(anonUser.id);
