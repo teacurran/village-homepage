@@ -166,6 +166,75 @@ public class MarketplaceListing extends PanacheEntityBase {
     public static final String JPQL_FIND_EXPIRING_WITHIN_DAYS = "FROM MarketplaceListing WHERE status = 'active' AND expiresAt > ?1 AND expiresAt <= ?2 AND reminderSent = false";
     public static final String QUERY_FIND_EXPIRING_WITHIN_DAYS = "MarketplaceListing.findExpiringWithinDays";
 
+    /**
+     * JPQL constant for dynamic category filtering in search queries.
+     *
+     * <p>
+     * Used when building programmatic search filters that include category. This constant supports dynamic query
+     * construction with named parameters for flexible marketplace search functionality.
+     *
+     * <p>
+     * Parameters:
+     * <ul>
+     * <li>{@code :categoryId} - The category UUID to filter by</li>
+     * </ul>
+     */
+    public static final String JPQL_FIND_BY_CATEGORY = "FROM MarketplaceListing ml "
+            + "WHERE ml.categoryId = :categoryId AND ml.status = 'active' " + "ORDER BY ml.createdAt DESC";
+
+    /**
+     * Native SQL constant for PostGIS spatial radius filtering.
+     *
+     * <p>
+     * Finds active listings within specified radius of a geographic point. This query uses native PostGIS spatial
+     * functions to perform accurate distance calculations on the Earth's surface.
+     *
+     * <p>
+     * The query joins with the geo_cities table to access PostGIS location data, as MarketplaceListing references
+     * cities via geoCityId foreign key rather than storing location directly. The radius is specified in meters per
+     * PostGIS standard.
+     *
+     * <p>
+     * Performance: Query uses GIST spatial index on geo_cities.location (created in migration
+     * 20250110001800_create_geo_tables.sql) to achieve sub-100ms response times per Policy P11 for radius queries up
+     * to 100 miles.
+     *
+     * <p>
+     * This is a native SQL query constant (not JPQL) due to lack of JPA entity mapping for geo_cities reference table.
+     * Use with EntityManager.createNativeQuery() for execution.
+     *
+     * <p>
+     * Parameters:
+     * <ul>
+     * <li>{@code :longitude} - Center point longitude in decimal degrees (e.g., -122.3321 for Seattle)</li>
+     * <li>{@code :latitude} - Center point latitude in decimal degrees (e.g., 47.6062 for Seattle)</li>
+     * <li>{@code :radiusMeters} - Search radius in meters (e.g., 80467 meters = 50 miles)</li>
+     * </ul>
+     *
+     * <p>
+     * Example usage:
+     *
+     * <pre>
+     * // Find listings within 50 miles of Seattle (80467 meters)
+     * List&lt;MarketplaceListing&gt; results = getEntityManager()
+     *         .createNativeQuery(JPQL_FIND_WITHIN_RADIUS, MarketplaceListing.class)
+     *         .setParameter("longitude", -122.3321)
+     *         .setParameter("latitude", 47.6062)
+     *         .setParameter("radiusMeters", 80467.0)
+     *         .getResultList();
+     * </pre>
+     *
+     * <p>
+     * Note: The ST_DWithin function performs geography-based distance calculations (accurate for Earth's curvature),
+     * while ST_MakePoint constructs a point geometry from longitude/latitude coordinates. The ::geography cast ensures
+     * meter-based distance calculations.
+     */
+    public static final String JPQL_FIND_WITHIN_RADIUS = "SELECT ml.* FROM marketplace_listings ml "
+            + "JOIN geo_cities gc ON ml.geo_city_id = gc.id "
+            + "WHERE ml.status = 'active' "
+            + "AND ST_DWithin(gc.location, ST_MakePoint(:longitude, :latitude)::geography, :radiusMeters) "
+            + "ORDER BY ml.created_at DESC";
+
     /** Default expiration period: 30 days from activation. */
     public static final Duration DEFAULT_EXPIRATION_PERIOD = Duration.ofDays(30);
 
