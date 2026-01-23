@@ -98,6 +98,24 @@ public enum JobType {
     ACCOUNT_MERGE_CLEANUP(JobQueue.DEFAULT, "Account merge cleanup (daily, P1 enforced)"),
 
     /**
+     * Refreshes expiring OAuth access tokens using refresh tokens.
+     * <p>
+     * <b>Cadence:</b> Daily at 2am UTC
+     * <p>
+     * <b>Handler:</b> OAuthTokenRefreshJobHandler
+     * <p>
+     * Queries users with tokens expiring within 7 days and refreshes:
+     * <ul>
+     * <li>Google: Uses refresh_token grant (token persists forever)</li>
+     * <li>Facebook: Extends long-lived token (resets 60-day expiration)</li>
+     * <li>Apple: Uses refresh_token grant (6-month expiration, requires JWT regeneration)</li>
+     * </ul>
+     * <p>
+     * Failed refreshes (revoked tokens) clear token fields and log for manual intervention.
+     */
+    OAUTH_TOKEN_REFRESH(JobQueue.DEFAULT, "OAuth token refresh (daily)"),
+
+    /**
      * Exports user data to JSON and uploads to R2 with signed URL.
      * <p>
      * <b>Cadence:</b> On-demand (triggered by user request)

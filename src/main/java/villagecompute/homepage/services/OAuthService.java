@@ -187,6 +187,16 @@ public class OAuthService {
             finalUser = newUser;
         }
 
+        // Store OAuth tokens for refresh (I3.T5)
+        if (tokenResponse.refreshToken() != null) {
+            finalUser.googleRefreshToken = tokenResponse.refreshToken();
+        }
+        finalUser.googleAccessTokenExpiresAt = Instant.now().plusSeconds(tokenResponse.expiresIn());
+        finalUser.updatedAt = Instant.now();
+        finalUser.persist();
+        LOG.infof("Stored Google OAuth tokens for user %s (expires: %s)", finalUser.id,
+                finalUser.googleAccessTokenExpiresAt);
+
         // 6. Handle anonymous account upgrade (I3.T4)
         if (sessionId != null && !sessionId.equals(finalUser.id.toString())) {
             try {
@@ -350,6 +360,14 @@ public class OAuthService {
             finalUser = newUser;
         }
 
+        // Store OAuth tokens for refresh (I3.T5)
+        finalUser.facebookAccessToken = tokenResponse.accessToken();
+        finalUser.facebookAccessTokenExpiresAt = Instant.now().plusSeconds(tokenResponse.expiresIn());
+        finalUser.updatedAt = Instant.now();
+        finalUser.persist();
+        LOG.infof("Stored Facebook OAuth tokens for user %s (expires: %s)", finalUser.id,
+                finalUser.facebookAccessTokenExpiresAt);
+
         // 6. Handle anonymous account upgrade (I3.T4)
         if (sessionId != null && !sessionId.equals(finalUser.id.toString())) {
             try {
@@ -364,8 +382,6 @@ public class OAuthService {
                 LOG.warnf("Invalid sessionId format: %s", sessionId);
             }
         }
-
-        // Note: Token expiration (tokenResponse.expiresIn()) will be stored in I3.T5 for token refresh
 
         return finalUser;
     }
@@ -511,6 +527,16 @@ public class OAuthService {
             finalUser = newUser;
         }
 
+        // Store OAuth tokens for refresh (I3.T5)
+        if (tokenResponse.refreshToken() != null) {
+            finalUser.appleRefreshToken = tokenResponse.refreshToken();
+        }
+        finalUser.appleAccessTokenExpiresAt = Instant.now().plusSeconds(tokenResponse.expiresIn());
+        finalUser.updatedAt = Instant.now();
+        finalUser.persist();
+        LOG.infof("Stored Apple OAuth tokens for user %s (expires: %s)", finalUser.id,
+                finalUser.appleAccessTokenExpiresAt);
+
         // 6. Handle anonymous account upgrade (I3.T4)
         if (sessionId != null && !sessionId.equals(finalUser.id.toString())) {
             try {
@@ -525,8 +551,6 @@ public class OAuthService {
                 LOG.warnf("Invalid sessionId format: %s", sessionId);
             }
         }
-
-        // Note: Token expiration (tokenResponse.expiresIn()) will be stored in I3.T5 for token refresh
 
         return finalUser;
     }

@@ -104,4 +104,29 @@ public class GoogleOAuthClient {
     public GoogleUserInfoType getUserProfile(String accessToken) {
         return restClient.getUserInfo("Bearer " + accessToken);
     }
+
+    /**
+     * Refresh Google OAuth access token using refresh token.
+     *
+     * <p>
+     * Calls POST https://oauth2.googleapis.com/token with grant_type=refresh_token.
+     *
+     * <p>
+     * Response includes new access_token and expires_in (3600 seconds = 1 hour). Google does NOT return a new
+     * refresh_token - the original refresh token remains valid indefinitely until the user revokes access or the app is
+     * removed from their Google Account.
+     *
+     * <p>
+     * This method is called by {@code OAuthTokenRefreshJobHandler} to proactively refresh access tokens before they
+     * expire, preventing social integration failures.
+     *
+     * @param refreshToken
+     *            the refresh token from initial token exchange
+     * @return token response with new access_token and expires_in (no refresh_token in response)
+     * @throws RuntimeException
+     *             if refresh fails (revoked token, network error, invalid_grant)
+     */
+    public GoogleTokenResponseType refreshAccessToken(String refreshToken) {
+        return restClient.refreshToken("refresh_token", refreshToken, clientId, clientSecret);
+    }
 }

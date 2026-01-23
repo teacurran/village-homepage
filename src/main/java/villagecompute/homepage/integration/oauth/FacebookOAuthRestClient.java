@@ -87,4 +87,36 @@ public interface FacebookOAuthRestClient {
     @Produces(MediaType.APPLICATION_JSON)
     FacebookUserInfoType getUserInfo(@HeaderParam("Authorization") String authorization,
             @QueryParam("fields") @DefaultValue("id,name,email,picture") String fields);
+
+    /**
+     * Extend Facebook access token validity from short-lived to long-lived (60 days).
+     *
+     * <p>
+     * Calls GET https://graph.facebook.com/v18.0/oauth/access_token with grant_type=fb_exchange_token.
+     *
+     * <p>
+     * Facebook does NOT use refresh tokens. Instead, short-lived tokens (from initial login) can be exchanged for
+     * long-lived tokens that expire in 60 days. Before the long-lived token expires, call this method again to get a
+     * new 60-day token.
+     *
+     * <p>
+     * This method is called by {@code OAuthTokenRefreshJobHandler} to extend tokens before they expire, preventing
+     * social integration failures.
+     *
+     * @param grantType
+     *            always "fb_exchange_token"
+     * @param fbExchangeToken
+     *            the current access token (short-lived or long-lived)
+     * @param clientId
+     *            Facebook App ID
+     * @param clientSecret
+     *            Facebook App Secret
+     * @return token response with new access_token and expires_in (~5183944 seconds = 60 days)
+     */
+    @GET
+    @Path("/oauth/access_token")
+    @Produces(MediaType.APPLICATION_JSON)
+    FacebookTokenResponseType extendToken(@QueryParam("grant_type") String grantType,
+            @QueryParam("fb_exchange_token") String fbExchangeToken, @QueryParam("client_id") String clientId,
+            @QueryParam("client_secret") String clientSecret);
 }

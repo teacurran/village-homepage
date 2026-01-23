@@ -45,6 +45,12 @@ import java.util.UUID;
  * <li>{@code is_banned} (BOOLEAN) - User banned from platform (typically for 2+ chargebacks per P3)</li>
  * <li>{@code banned_at} (TIMESTAMPTZ) - Timestamp when user was banned</li>
  * <li>{@code ban_reason} (TEXT) - Reason for ban (e.g., "Repeated chargebacks (3)")</li>
+ * <li>{@code google_refresh_token} (TEXT) - Google OAuth refresh token (never expires)</li>
+ * <li>{@code google_access_token_expires_at} (TIMESTAMPTZ) - Google access token expiration</li>
+ * <li>{@code facebook_access_token} (TEXT) - Facebook long-lived access token (60 days)</li>
+ * <li>{@code facebook_access_token_expires_at} (TIMESTAMPTZ) - Facebook token expiration</li>
+ * <li>{@code apple_refresh_token} (TEXT) - Apple refresh token (6 months)</li>
+ * <li>{@code apple_access_token_expires_at} (TIMESTAMPTZ) - Apple access token expiration</li>
  * <li>{@code last_active_at} (TIMESTAMPTZ) - Last activity timestamp</li>
  * <li>{@code created_at} (TIMESTAMPTZ) - Record creation timestamp</li>
  * <li>{@code updated_at} (TIMESTAMPTZ) - Last modification timestamp</li>
@@ -72,6 +78,12 @@ import java.util.UUID;
 @NamedQuery(
         name = User.QUERY_FIND_BY_ADMIN_ROLE,
         query = User.JPQL_FIND_BY_ADMIN_ROLE)
+@NamedQuery(
+        name = User.QUERY_FIND_TOKENS_EXPIRING_SOON,
+        query = "SELECT u FROM User u WHERE "
+                + "(u.googleRefreshToken IS NOT NULL AND u.googleAccessTokenExpiresAt < :expiryThreshold) OR "
+                + "(u.facebookAccessToken IS NOT NULL AND u.facebookAccessTokenExpiresAt < :expiryThreshold) OR "
+                + "(u.appleRefreshToken IS NOT NULL AND u.appleAccessTokenExpiresAt < :expiryThreshold)")
 public class User extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(User.class);
@@ -97,6 +109,7 @@ public class User extends PanacheEntityBase {
     public static final String QUERY_FIND_PENDING_PURGE = "User.findPendingPurge";
     public static final String QUERY_FIND_ADMINS = "User.findAdmins";
     public static final String QUERY_FIND_BY_ADMIN_ROLE = "User.findByAdminRole";
+    public static final String QUERY_FIND_TOKENS_EXPIRING_SOON = "User.findTokensExpiringSoon";
 
     @Id
     @GeneratedValue
@@ -192,6 +205,30 @@ public class User extends PanacheEntityBase {
             name = "deleted_at")
     public Instant deletedAt;
 
+    @Column(
+            name = "google_refresh_token")
+    public String googleRefreshToken;
+
+    @Column(
+            name = "google_access_token_expires_at")
+    public Instant googleAccessTokenExpiresAt;
+
+    @Column(
+            name = "facebook_access_token")
+    public String facebookAccessToken;
+
+    @Column(
+            name = "facebook_access_token_expires_at")
+    public Instant facebookAccessTokenExpiresAt;
+
+    @Column(
+            name = "apple_refresh_token")
+    public String appleRefreshToken;
+
+    @Column(
+            name = "apple_access_token_expires_at")
+    public Instant appleAccessTokenExpiresAt;
+
     /**
      * Finds a user by email address (authenticated users only).
      *
@@ -259,6 +296,30 @@ public class User extends PanacheEntityBase {
             return java.util.List.of();
         }
         return find("#" + QUERY_FIND_BY_ADMIN_ROLE, role).list();
+    }
+
+    /**
+     * Finds all users with OAuth tokens expiring before the given threshold.
+     *
+     * <p>
+     * Used by {@code OAuthTokenRefreshJobHandler} to identify users whose access tokens need refreshing. Returns users
+     * with any of the following conditions:
+     * <ul>
+     * <li>Google refresh token exists and access token expires before threshold</li>
+     * <li>Facebook access token exists and expires before threshold</li>
+     * <li>Apple refresh token exists and access token expires before threshold</li>
+     * </ul>
+     *
+     * <p>
+     * Typical threshold: 7 days from now (provides buffer for refresh before actual expiration).
+     *
+     * @param expiryThreshold
+     *            the expiration timestamp threshold (e.g., Instant.now().plusSeconds(7 * 24 * 60 * 60))
+     * @return list of users with tokens expiring before threshold
+     */
+    public static java.util.List<User> findTokensExpiringSoon(Instant expiryThreshold) {
+        return find("#" + QUERY_FIND_TOKENS_EXPIRING_SOON,
+                io.quarkus.panache.common.Parameters.with("expiryThreshold", expiryThreshold)).list();
     }
 
     /**

@@ -200,6 +200,34 @@ public class AppleOAuthClient {
     }
 
     /**
+     * Refresh Apple access token using refresh token.
+     *
+     * <p>
+     * Calls POST https://appleid.apple.com/auth/token with grant_type=refresh_token.
+     *
+     * <p>
+     * Apple refresh tokens expire after 6 months and cannot be refreshed - users must re-authenticate. The client
+     * secret JWT MUST be regenerated for each refresh request (10-minute expiration).
+     *
+     * <p>
+     * This method is called by {@code OAuthTokenRefreshJobHandler} to refresh access tokens before they expire,
+     * preventing social integration failures.
+     *
+     * @param refreshToken
+     *            the refresh token from initial token exchange
+     * @return token response with new access_token, expires_in, and possibly rotated refresh_token
+     * @throws RuntimeException
+     *             if refresh fails (expired refresh token after 6 months, network error, invalid_grant)
+     */
+    public AppleTokenResponseType refreshAccessToken(String refreshToken) {
+        // Generate fresh client secret JWT (10-minute expiration)
+        // CRITICAL: Must regenerate for EVERY refresh request (cannot reuse cached JWT)
+        String clientSecret = generateClientSecret();
+
+        return restClient.refreshToken("refresh_token", refreshToken, clientId, clientSecret);
+    }
+
+    /**
      * Generate Apple client secret JWT.
      *
      * <p>

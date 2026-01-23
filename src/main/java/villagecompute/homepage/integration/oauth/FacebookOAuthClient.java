@@ -123,4 +123,33 @@ public class FacebookOAuthClient {
     public FacebookUserInfoType getUserProfile(String accessToken) {
         return restClient.getUserInfo("Bearer " + accessToken, "id,name,email,picture");
     }
+
+    /**
+     * Extend Facebook access token validity from short-lived (1 hour) to long-lived (60 days).
+     *
+     * <p>
+     * Calls GET https://graph.facebook.com/v18.0/oauth/access_token with grant_type=fb_exchange_token.
+     *
+     * <p>
+     * Facebook does NOT use refresh tokens like Google or Apple. Instead, tokens are extended:
+     *
+     * <ul>
+     * <li>Initial login: Short-lived token (3600 seconds = 1 hour)</li>
+     * <li>First extension: Long-lived token (~5183944 seconds = 60 days)</li>
+     * <li>Subsequent extensions: Reset 60-day expiration</li>
+     * </ul>
+     *
+     * <p>
+     * This method is called by {@code OAuthTokenRefreshJobHandler} to extend tokens before they expire, preventing
+     * social integration failures.
+     *
+     * @param currentToken
+     *            the current access token (may be short-lived or long-lived)
+     * @return token response with new access_token and expires_in (~60 days)
+     * @throws RuntimeException
+     *             if extension fails (revoked token, network error, invalid token)
+     */
+    public FacebookTokenResponseType extendAccessToken(String currentToken) {
+        return restClient.extendToken("fb_exchange_token", currentToken, clientId, clientSecret);
+    }
 }

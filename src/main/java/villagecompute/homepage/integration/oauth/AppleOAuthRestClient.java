@@ -69,4 +69,32 @@ public interface AppleOAuthRestClient {
     AppleTokenResponseType exchangeToken(@FormParam("grant_type") String grantType, @FormParam("code") String code,
             @FormParam("redirect_uri") String redirectUri, @FormParam("client_id") String clientId,
             @FormParam("client_secret") String clientSecret);
+
+    /**
+     * Refresh Apple access token using refresh token.
+     *
+     * <p>
+     * Calls POST https://appleid.apple.com/auth/token with grant_type=refresh_token.
+     *
+     * <p>
+     * Critical: The {@code clientSecret} parameter MUST be a freshly generated JWT (same as initial exchange). Apple
+     * requires regenerating the client secret JWT for EVERY refresh request - you cannot reuse a cached JWT.
+     *
+     * @param grantType
+     *            always "refresh_token"
+     * @param refreshToken
+     *            the refresh token from initial token exchange (expires after 6 months)
+     * @param clientId
+     *            Apple Service ID (e.g., com.villagecompute.homepage.service)
+     * @param clientSecret
+     *            Freshly generated JWT token signed with ES256 using Apple private key
+     * @return token response with new access_token, expires_in, and possibly rotated refresh_token
+     */
+    @POST
+    @Path("/auth/token")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.APPLICATION_JSON)
+    AppleTokenResponseType refreshToken(@FormParam("grant_type") String grantType,
+            @FormParam("refresh_token") String refreshToken, @FormParam("client_id") String clientId,
+            @FormParam("client_secret") String clientSecret);
 }

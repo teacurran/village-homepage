@@ -67,4 +67,32 @@ public interface GoogleOAuthRestClient {
     @Path("/oauth2/v2/userinfo")
     @Produces(MediaType.APPLICATION_JSON)
     GoogleUserInfoType getUserInfo(@HeaderParam("Authorization") String authorization);
+
+    /**
+     * Refresh Google OAuth access token using refresh token.
+     *
+     * <p>
+     * Calls POST https://oauth2.googleapis.com/token with form-encoded parameters using grant_type=refresh_token.
+     *
+     * <p>
+     * Response includes new access_token and expires_in (3600 seconds). Google does NOT return a new refresh_token -
+     * the original refresh token remains valid and should be preserved.
+     *
+     * @param grantType
+     *            always "refresh_token"
+     * @param refreshToken
+     *            the refresh token from initial token exchange
+     * @param clientId
+     *            Google OAuth client ID
+     * @param clientSecret
+     *            Google OAuth client secret
+     * @return token response with new access_token and expires_in
+     */
+    @POST
+    @Path("/token")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.APPLICATION_JSON)
+    GoogleTokenResponseType refreshToken(@FormParam("grant_type") String grantType,
+            @FormParam("refresh_token") String refreshToken, @FormParam("client_id") String clientId,
+            @FormParam("client_secret") String clientSecret);
 }
