@@ -69,6 +69,9 @@ import java.util.UUID;
 @NamedQuery(
         name = User.QUERY_FIND_ADMINS,
         query = "SELECT u FROM User u WHERE u.adminRole IS NOT NULL AND u.deletedAt IS NULL")
+@NamedQuery(
+        name = User.QUERY_FIND_BY_ADMIN_ROLE,
+        query = User.JPQL_FIND_BY_ADMIN_ROLE)
 public class User extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(User.class);
@@ -87,10 +90,13 @@ public class User extends PanacheEntityBase {
     // Karma thresholds aligned with RateLimitService.Tier
     public static final int KARMA_THRESHOLD_TRUSTED = 10;
 
+    public static final String JPQL_FIND_BY_ADMIN_ROLE = "FROM User u WHERE u.adminRole = ?1 AND u.deletedAt IS NULL ORDER BY u.createdAt DESC";
+
     public static final String QUERY_FIND_BY_EMAIL = "User.findByEmail";
     public static final String QUERY_FIND_BY_OAUTH = "User.findByOAuth";
     public static final String QUERY_FIND_PENDING_PURGE = "User.findPendingPurge";
     public static final String QUERY_FIND_ADMINS = "User.findAdmins";
+    public static final String QUERY_FIND_BY_ADMIN_ROLE = "User.findByAdminRole";
 
     @Id
     @GeneratedValue
@@ -246,13 +252,13 @@ public class User extends PanacheEntityBase {
      *
      * @param role
      *            the admin role to filter by (super_admin, support, ops, read_only)
-     * @return list of users with the specified admin role
+     * @return list of users with the specified admin role, ordered by creation date (newest first)
      */
     public static java.util.List<User> findByAdminRole(String role) {
         if (role == null || role.isBlank()) {
             return java.util.List.of();
         }
-        return find("admin_role = ?1 AND deleted_at IS NULL", role).list();
+        return find("#" + QUERY_FIND_BY_ADMIN_ROLE, role).list();
     }
 
     /**

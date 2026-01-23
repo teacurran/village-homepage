@@ -72,8 +72,7 @@ public class UserTest extends BaseIntegrationTest {
         assertFalse(user.isAnonymous, "User should not be anonymous");
         assertNotNull(user.preferences, "Preferences should be initialized");
         assertEquals(0, user.directoryKarma, "Directory karma should start at 0");
-        assertEquals(TRUST_LEVEL_UNTRUSTED, user.directoryTrustLevel,
-                "Trust level should be untrusted by default");
+        assertEquals(TRUST_LEVEL_UNTRUSTED, user.directoryTrustLevel, "Trust level should be untrusted by default");
         assertFalse(user.analyticsConsent, "Analytics consent should default to false");
         assertFalse(user.isBanned, "User should not be banned by default");
         assertNotNull(user.createdAt, "Created timestamp should be set");
@@ -278,7 +277,8 @@ public class UserTest extends BaseIntegrationTest {
 
         User refreshed = User.findById(user.id);
         assertNotNull(refreshed, "User should still exist after update");
-        assertTrue(refreshed.lastActiveAt.isAfter(originalTimestamp) || refreshed.lastActiveAt.equals(originalTimestamp),
+        assertTrue(
+                refreshed.lastActiveAt.isAfter(originalTimestamp) || refreshed.lastActiveAt.equals(originalTimestamp),
                 "Last active timestamp should be updated or equal (depending on timing precision)");
         assertTrue(refreshed.updatedAt.isAfter(originalTimestamp) || refreshed.updatedAt.equals(originalTimestamp),
                 "Updated timestamp should be updated or equal (depending on timing precision)");
@@ -568,7 +568,8 @@ public class UserTest extends BaseIntegrationTest {
     public void testGetKarmaToNextLevel() {
         User user = TestFixtures.createTestUser();
         Integer karmaNeeded = user.getKarmaToNextLevel();
-        assertEquals(User.KARMA_THRESHOLD_TRUSTED, karmaNeeded, "Untrusted user with 0 karma needs 10 to reach next level");
+        assertEquals(User.KARMA_THRESHOLD_TRUSTED, karmaNeeded,
+                "Untrusted user with 0 karma needs 10 to reach next level");
 
         user.directoryKarma = 5;
         user.persist();

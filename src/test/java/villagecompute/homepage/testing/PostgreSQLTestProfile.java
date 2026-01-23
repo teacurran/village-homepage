@@ -44,8 +44,7 @@ public class PostgreSQLTestProfile implements QuarkusTestProfile {
         // CRITICAL: These settings override H2TestResource AND environment variables to force PostgreSQL Testcontainers
         // NOTE: We DON'T set jdbc.url, username, or password - Dev Services will auto-configure Testcontainers
         // NOTE: No init script needed - PostGIS extensions are pre-installed in postgis/postgis image
-        return new java.util.HashMap<>(Map.ofEntries(
-                Map.entry("quarkus.datasource.db-kind", "postgresql"),
+        return new java.util.HashMap<>(Map.ofEntries(Map.entry("quarkus.datasource.db-kind", "postgresql"),
                 Map.entry("quarkus.datasource.jdbc.driver", "org.postgresql.Driver"),
                 Map.entry("quarkus.datasource.devservices.enabled", "true"),
                 Map.entry("quarkus.datasource.devservices.image-name", "postgis/postgis:17-3.5-alpine"),
