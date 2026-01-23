@@ -456,6 +456,14 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
+                            <excludes>
+                                <exclude>**/config/**/*Listener.class</exclude>
+                                <exclude>**/generated/**</exclude>
+                                <exclude>**/test/**</exclude>
+                                <exclude>**/TestConstants.class</exclude>
+                                <exclude>**/TestFixtures.class</exclude>
+                                <exclude>**/BaseIntegrationTest.class</exclude>
+                            </excludes>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
@@ -463,12 +471,12 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.80</minimum>
+                                            <minimum>0.95</minimum>
                                         </limit>
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.80</minimum>
+                                            <minimum>0.95</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

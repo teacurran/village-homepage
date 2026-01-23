@@ -15,7 +15,7 @@
       "I1.T9"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T2",
@@ -33,7 +33,7 @@
       "I1.T3"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T3",
@@ -51,7 +51,7 @@
       "I1.T8"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T4",
@@ -70,7 +70,7 @@
       "I1.T8"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T5",
@@ -87,7 +87,7 @@
       "I2.T4"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T6",
@@ -104,7 +104,7 @@
       "I2.T5"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T7",
@@ -122,7 +122,7 @@
       "I2.T6"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T8",
@@ -139,7 +139,7 @@
       "I2.T1"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T9",
@@ -154,6 +154,6 @@
     "acceptance_criteria": "Coverage ≥80% for auth/preferences modules, e2e smoke runs in CI, rate limit tests assert 429 path, documentation updated.",
     "dependencies": [],
     "parallelizable": false,
-    "done": true
+    "done": false
   }
 ]
