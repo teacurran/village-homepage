@@ -8,16 +8,18 @@ package villagecompute.homepage.services;
 
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-// NOTE: LangChain4j integration - uncomment when anthropic API key is configured
-// import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
+import io.quarkus.narayana.jta.QuarkusTransaction;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -25,19 +27,25 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 import villagecompute.homepage.api.types.AiCategorySuggestionType;
+import villagecompute.homepage.api.types.ListingCategorizationResultType;
 import villagecompute.homepage.data.models.AiUsageTracking;
 import villagecompute.homepage.data.models.DirectoryCategory;
+import villagecompute.homepage.data.models.MarketplaceListing;
 
 /**
  * Service for AI-powered category suggestion using LangChain4j and Anthropic Claude.
  *
  * <p>
- * This service analyzes website metadata (URL, title, description) and suggests 1-3 most appropriate categories from
- * the Good Sites directory hierarchy using Claude Sonnet 4. It handles prompt engineering with full category tree
- * context, response parsing, token tracking, and cost estimation per P2/P10 budget policies.
+ * This service provides AI-powered categorization for two features:
+ * <ul>
+ * <li><b>Good Sites Directory:</b> Analyzes website metadata and suggests categories from hierarchical directory
+ * taxonomy
+ * <li><b>Marketplace Listings:</b> Analyzes listing title/description and suggests category from flat marketplace
+ * taxonomy
+ * </ul>
  *
  * <p>
- * <b>Categorization Process:</b>
+ * <b>Directory Categorization Process:</b>
  * <ol>
  * <li>Build category tree JSON from DirectoryCategory hierarchy</li>
  * <li>Construct prompt with taxonomy and website metadata</li>
@@ -49,16 +57,30 @@ import villagecompute.homepage.data.models.DirectoryCategory;
  * </ol>
  *
  * <p>
+ * <b>Marketplace Categorization Process:</b>
+ * <ol>
+ * <li>Batch up to 50 listings per API call for cost efficiency</li>
+ * <li>Construct prompt with flat marketplace taxonomy and listing data</li>
+ * <li>Send to Claude Sonnet 4 via LangChain4j</li>
+ * <li>Parse JSON array response into {@link ListingCategorizationResultType} records</li>
+ * <li>Store suggestions in JSONB field for human review (not auto-applied)</li>
+ * <li>Flag low confidence results (<0.7) for manual review</li>
+ * </ol>
+ *
+ * <p>
  * <b>Policy References:</b>
  * <ul>
  * <li>P2/P10 (AI Budget Control): All categorization operations respect budget limits via AiTaggingBudgetService</li>
+ * <li>F12.4 (Marketplace): AI category suggestions stored in JSONB for review before applying</li>
  * <li>F13.14 (Bulk Import): Provides confidence scores and reasoning for admin review workflow</li>
  * </ul>
  *
  * @see AiCategorySuggestionType
+ * @see ListingCategorizationResultType
  * @see AiUsageTracking
  * @see AiTaggingBudgetService
  * @see villagecompute.homepage.jobs.BulkImportJobHandler
+ * @see villagecompute.homepage.jobs.AiCategorizationJobHandler
  */
 @ApplicationScoped
 public class AiCategorizationService {
@@ -66,10 +88,10 @@ public class AiCategorizationService {
     private static final Logger LOG = Logger.getLogger(AiCategorizationService.class);
 
     private static final String PROVIDER = AiUsageTracking.DEFAULT_PROVIDER;
+    private static final int MARKETPLACE_BATCH_SIZE = 50;
 
-    // NOTE: Uncomment when LangChain4j and Anthropic API key are configured
-    // @Inject
-    // ChatLanguageModel chatModel;
+    @Inject
+    ChatModel chatModel;
 
     @Inject
     ObjectMapper objectMapper;
@@ -100,11 +122,7 @@ public class AiCategorizationService {
             LOG.debugf("Sending categorization request to Claude: url=\"%s\", title=\"%s\"", url, title);
 
             // Call Claude via LangChain4j
-            // NOTE: Uncomment when API key is configured
-            // String response = chatModel.generate(prompt);
-
-            // TODO: Remove this stub when LangChain4j is properly configured
-            String response = generateStubResponse(url, title, description);
+            String response = chatModel.chat(prompt);
 
             // Parse response
             AiCategorySuggestionType suggestion = parseResponse(response);
@@ -308,68 +326,303 @@ public class AiCategorizationService {
         }
     }
 
+    // ========================================
+    // Marketplace Listing Categorization
+    // ========================================
+
     /**
-     * Stub response generator for development/testing.
+     * Categorizes a single marketplace listing into appropriate category and subcategory.
      *
      * <p>
-     * Uses simple keyword-based heuristics to suggest categories. TODO: Remove this method when LangChain4j is properly
-     * configured with Anthropic API key.
+     * This method is a convenience wrapper around {@link #categorizeListingsBatch(List)} for single-listing
+     * categorization. For efficiency, prefer batch processing when categorizing multiple listings.
      *
-     * @param url
-     *            website URL
-     * @param title
-     *            site title
-     * @param description
-     *            site description
-     * @return mock JSON response
+     * @param listing
+     *            the marketplace listing to categorize
+     * @return categorization result, or null if categorization failed
      */
-    private String generateStubResponse(String url, String title, String description) {
-        // Simple keyword-based categorization for testing
-        String categorySlug = "computers-internet";
-        String categoryPath = "Computers > Internet";
-        String reasoning = "Based on URL and title keywords (development stub)";
-        double confidence = 0.65;
-
-        // Combine all text for keyword matching
-        String allText = (url + " " + title + " " + description).toLowerCase();
-
-        if (allText.contains("github") || allText.contains("gitlab") || allText.contains("code")
-                || allText.contains("programming")) {
-            categorySlug = "computers-programming";
-            categoryPath = "Computers > Programming";
-            reasoning = "Contains programming/code-related keywords";
-            confidence = 0.75;
-        } else if (allText.contains("news") || allText.contains("breaking") || allText.contains("journalism")) {
-            categorySlug = "news-technology";
-            categoryPath = "News > Technology";
-            reasoning = "Contains news-related keywords";
-            confidence = 0.70;
-        } else if (allText.contains("business") || allText.contains("startup") || allText.contains("commerce")) {
-            categorySlug = "business-ecommerce";
-            categoryPath = "Business > E-commerce";
-            reasoning = "Contains business-related keywords";
-            confidence = 0.70;
-        } else if (allText.contains("science") || allText.contains("research") || allText.contains("academic")) {
-            categorySlug = "science-research";
-            categoryPath = "Science > Research";
-            reasoning = "Contains science/research keywords";
-            confidence = 0.70;
+    public ListingCategorizationResultType categorizeListing(MarketplaceListing listing) {
+        if (listing == null) {
+            LOG.warn("Attempted to categorize null listing");
+            return null;
         }
 
-        return String.format(
+        List<ListingCategorizationResultType> results = categorizeListingsBatch(List.of(listing));
+        return results.isEmpty() ? null : results.get(0);
+    }
+
+    /**
+     * Categorizes multiple marketplace listings in batch (up to 50 per API call).
+     *
+     * <p>
+     * This method processes listings in batches to minimize API costs per P2/P10 budget policy. Each batch constructs a
+     * single prompt with all listings and parses the JSON array response.
+     *
+     * <p>
+     * <b>Batch Processing:</b>
+     * <ul>
+     * <li>Processes up to 50 listings per API call
+     * <li>Constructs single prompt with indexed listings
+     * <li>Parses JSON array response with one result per listing
+     * <li>Tracks token usage and cost per batch
+     * </ul>
+     *
+     * <p>
+     * <b>Low Confidence Handling:</b> Results with confidence < 0.7 are logged as warnings and should be flagged for
+     * human review before applying category.
+     *
+     * @param listings
+     *            list of marketplace listings to categorize (max 50 per call recommended)
+     * @return list of categorization results (one per listing), or empty list if batch failed
+     */
+    public List<ListingCategorizationResultType> categorizeListingsBatch(List<MarketplaceListing> listings) {
+        if (listings == null || listings.isEmpty()) {
+            return List.of();
+        }
+
+        // Split into batches of 50
+        List<ListingCategorizationResultType> allResults = new ArrayList<>();
+
+        for (int i = 0; i < listings.size(); i += MARKETPLACE_BATCH_SIZE) {
+            int end = Math.min(i + MARKETPLACE_BATCH_SIZE, listings.size());
+            List<MarketplaceListing> batch = listings.subList(i, end);
+
+            try {
+                // Build batch prompt
+                String prompt = buildMarketplacePrompt(batch);
+
+                LOG.debugf("Sending marketplace categorization request for %d listings", batch.size());
+
+                // Call Claude via LangChain4j
+                String response = chatModel.chat(prompt);
+
+                // Parse response
+                List<ListingCategorizationResultType> batchResults = parseMarketplaceResponse(response, batch.size());
+
+                // Track token usage
+                long estimatedInputTokens = prompt.length() / 4;
+                long estimatedOutputTokens = response.length() / 4;
+                int costCents = AiUsageTracking.calculateCostCents(estimatedInputTokens, estimatedOutputTokens);
+
+                AiUsageTracking.recordUsage(YearMonth.now(), PROVIDER, batch.size(), estimatedInputTokens,
+                        estimatedOutputTokens, costCents);
+
+                LOG.debugf("Categorized %d listings, cost=%d cents, inputTokens=%d, outputTokens=%d",
+                        batchResults.size(), costCents, estimatedInputTokens, estimatedOutputTokens);
+
+                allResults.addAll(batchResults);
+
+            } catch (Exception e) {
+                LOG.errorf(e, "Failed to categorize marketplace listings batch (size=%d)", batch.size());
+                // Add nulls for failed batch
+                allResults.addAll(Collections.nCopies(batch.size(), null));
+            }
+        }
+
+        return allResults;
+    }
+
+    /**
+     * Builds marketplace categorization prompt for Claude.
+     *
+     * <p>
+     * Constructs a prompt with flat marketplace taxonomy (5 categories with subcategories) and listing data indexed for
+     * correlation with response array.
+     *
+     * @param listings
+     *            batch of listings to categorize
+     * @return formatted prompt string
+     */
+    private String buildMarketplacePrompt(List<MarketplaceListing> listings) {
+        StringBuilder prompt = new StringBuilder();
+
+        prompt.append("""
+                Categorize these marketplace listings into the appropriate category and subcategory.
+
+                CATEGORY TAXONOMY:
+                1. For Sale
+                   - Electronics (computers, phones, cameras, gaming, tech)
+                   - Furniture (tables, chairs, beds, sofas, home furnishings)
+                   - Clothing (shirts, pants, shoes, accessories, fashion)
+                   - Books (textbooks, novels, magazines, comics)
+                   - Sporting Goods (bikes, gym equipment, outdoor gear, sports)
+                   - Other (general items that don't fit above)
+
+                2. Housing
+                   - Rent (apartments, rooms for rent, rentals)
+                   - Sale (houses, condos for sale, real estate)
+                   - Roommates (seeking/offering roommate, shared housing)
+                   - Sublets (temporary housing, short-term rentals)
+
+                3. Jobs
+                   - Full-time (permanent, full-time employment)
+                   - Part-time (flexible hours, part-time work)
+                   - Contract (project-based, fixed term, freelance)
+                   - Internship (student positions, training, co-op)
+
+                4. Services
+                   - Professional (legal, accounting, consulting, business)
+                   - Personal (cleaning, tutoring, personal training, care)
+                   - Home Improvement (repairs, renovations, landscaping, maintenance)
+
+                5. Community
+                   - Events (meetups, workshops, concerts, gatherings)
+                   - Activities (sports groups, book clubs, hobbies)
+                   - Rideshare (carpools, travel companions, transport)
+                   - Lost & Found (lost items, found pets, reunions)
+
+                INSTRUCTIONS:
+                - Select the MOST SPECIFIC subcategory that fits
+                - Provide brief reasoning (1-2 sentences explaining your choice)
+                - Assign confidence score 0.0-1.0 based on clarity of listing
+                - If listing is ambiguous or doesn't clearly fit, use lower confidence
+
+                LISTINGS TO CATEGORIZE:
+                """);
+
+        for (int i = 0; i < listings.size(); i++) {
+            MarketplaceListing listing = listings.get(i);
+            String title = listing.title != null ? listing.title : "";
+            String description = listing.description != null ? listing.description : "";
+
+            // Truncate description if too long to save tokens
+            if (description.length() > 500) {
+                description = description.substring(0, 500) + "...";
+            }
+
+            prompt.append(String.format("""
+
+                    [%d] Title: %s
+                        Description: %s
+                    """, i, title, description));
+        }
+
+        prompt.append(
                 """
-                        {
-                          "suggested_categories": [
-                            {
-                              "category_slug": "%s",
-                              "category_path": "%s",
-                              "reasoning": "%s"
-                            }
-                          ],
-                          "confidence": %.2f,
-                          "overall_reasoning": "Stub categorization based on keyword matching (replace with real AI when configured)"
-                        }
-                        """,
-                categorySlug, categoryPath, reasoning, confidence);
+
+                        Respond with ONLY a JSON array (no markdown, no explanation):
+                        [
+                          {"index": 0, "category": "For Sale", "subcategory": "Electronics", "confidenceScore": 0.95, "reasoning": "..."},
+                          {"index": 1, "category": "Housing", "subcategory": "Rent", "confidenceScore": 0.88, "reasoning": "..."}
+                        ]
+                        """);
+
+        return prompt.toString();
+    }
+
+    /**
+     * Parses Claude response for marketplace categorization.
+     *
+     * <p>
+     * Expects JSON array with one object per listing. Handles markdown code blocks and validates structure. Falls back
+     * to defaults if parsing fails. Flags low confidence results (<0.7) with warnings.
+     *
+     * @param response
+     *            raw Claude response string
+     * @param expectedCount
+     *            number of listings in batch
+     * @return list of categorization results (padded to expectedCount if needed)
+     */
+    private List<ListingCategorizationResultType> parseMarketplaceResponse(String response, int expectedCount) {
+        try {
+            // Strip markdown code blocks if present
+            String json = response.trim();
+            if (json.startsWith("```json")) {
+                json = json.substring(7);
+            } else if (json.startsWith("```")) {
+                json = json.substring(3);
+            }
+            if (json.endsWith("```")) {
+                json = json.substring(0, json.length() - 3);
+            }
+            json = json.trim();
+
+            // Parse JSON array
+            List<Map<String, Object>> rawResults = objectMapper.readValue(json,
+                    new TypeReference<List<Map<String, Object>>>() {
+                    });
+
+            List<ListingCategorizationResultType> results = new ArrayList<>();
+
+            for (Map<String, Object> raw : rawResults) {
+                String category = (String) raw.get("category");
+                String subcategory = (String) raw.get("subcategory");
+                Object confObj = raw.get("confidenceScore");
+                Double confidenceScore = confObj instanceof Number ? ((Number) confObj).doubleValue() : 0.3;
+                String reasoning = (String) raw.get("reasoning");
+
+                // Validate required fields
+                if (category == null || subcategory == null || reasoning == null) {
+                    LOG.warnf("Incomplete categorization result: category=%s, subcategory=%s", category, subcategory);
+                    results.add(new ListingCategorizationResultType("For Sale", "Other", 0.3,
+                            "AI response incomplete, using default category"));
+                } else {
+                    ListingCategorizationResultType result = new ListingCategorizationResultType(category, subcategory,
+                            confidenceScore, reasoning);
+                    results.add(result);
+
+                    // Flag low confidence
+                    if (confidenceScore < 0.7) {
+                        LOG.warnf(
+                                "Low confidence marketplace categorization: confidence=%.2f, category=%s/%s, reasoning=%s",
+                                confidenceScore, category, subcategory, reasoning);
+                    }
+                }
+            }
+
+            // Pad to expected count if response was short
+            while (results.size() < expectedCount) {
+                results.add(new ListingCategorizationResultType("For Sale", "Other", 0.3,
+                        "AI response incomplete, using default category"));
+            }
+
+            return results;
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to parse marketplace categorization response: response=%s", response);
+            // Return defaults for all listings
+            return Collections.nCopies(expectedCount,
+                    new ListingCategorizationResultType("For Sale", "Other", 0.3, "AI response parsing failed"));
+        }
+    }
+
+    /**
+     * Stores AI category suggestion in marketplace listing's JSONB field.
+     *
+     * <p>
+     * This method persists the categorization result to the {@code ai_category_suggestion} JSONB column. The suggestion
+     * is NOT applied to {@code category_id} - it requires human review first.
+     *
+     * @param listing
+     *            the marketplace listing
+     * @param result
+     *            the categorization result to store
+     */
+    public void storeCategorizationSuggestion(MarketplaceListing listing, ListingCategorizationResultType result) {
+        if (listing == null || result == null) {
+            LOG.warn("Attempted to store null categorization suggestion");
+            return;
+        }
+
+        try {
+            QuarkusTransaction.requiringNew().run(() -> {
+                // Refetch to ensure managed
+                MarketplaceListing managed = MarketplaceListing.findById(listing.id);
+                if (managed == null) {
+                    LOG.warnf("Listing not found when storing categorization: id=%s", listing.id);
+                    return;
+                }
+
+                managed.aiCategorySuggestion = result;
+                managed.persist();
+
+                LOG.debugf(
+                        "Stored AI category suggestion for listing: id=%s, category=%s/%s, confidence=%.2f, reasoning=%s",
+                        managed.id, result.category(), result.subcategory(), result.confidenceScore(),
+                        result.reasoning());
+            });
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to store categorization suggestion for listing: id=%s", listing.id);
+        }
     }
 }

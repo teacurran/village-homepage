@@ -18,6 +18,7 @@ import org.hibernate.search.mapper.pojo.mapping.definition.annotation.KeywordFie
 import org.hibernate.type.SqlTypes;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.ContactInfoType;
+import villagecompute.homepage.api.types.ListingCategorizationResultType;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -144,6 +145,9 @@ import java.util.UUID;
 @NamedQuery(
         name = MarketplaceListing.QUERY_FIND_EXPIRING_WITHIN_DAYS,
         query = MarketplaceListing.JPQL_FIND_EXPIRING_WITHIN_DAYS)
+@NamedQuery(
+        name = MarketplaceListing.QUERY_FIND_WITHOUT_AI_SUGGESTIONS,
+        query = MarketplaceListing.JPQL_FIND_WITHOUT_AI_SUGGESTIONS)
 public class MarketplaceListing extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(MarketplaceListing.class);
@@ -165,6 +169,9 @@ public class MarketplaceListing extends PanacheEntityBase {
 
     public static final String JPQL_FIND_EXPIRING_WITHIN_DAYS = "FROM MarketplaceListing WHERE status = 'active' AND expiresAt > ?1 AND expiresAt <= ?2 AND reminderSent = false";
     public static final String QUERY_FIND_EXPIRING_WITHIN_DAYS = "MarketplaceListing.findExpiringWithinDays";
+
+    public static final String JPQL_FIND_WITHOUT_AI_SUGGESTIONS = "FROM MarketplaceListing WHERE status = 'active' AND aiCategorySuggestion IS NULL ORDER BY createdAt ASC";
+    public static final String QUERY_FIND_WITHOUT_AI_SUGGESTIONS = "MarketplaceListing.findWithoutAiSuggestions";
 
     /**
      * JPQL constant for dynamic category filtering in search queries.
@@ -323,6 +330,47 @@ public class MarketplaceListing extends PanacheEntityBase {
     public Instant updatedAt;
 
     /**
+     * AI-generated category suggestion stored as JSONB.
+     *
+     * <p>
+     * This field contains the AI's recommended category and subcategory for the listing, along with confidence score
+     * and reasoning. The suggestion is NOT automatically applied to {@code categoryId} - it requires human review first
+     * (either by admin or user).
+     *
+     * <p>
+     * <b>Structure:</b> Contains {@link ListingCategorizationResultType} with:
+     * <ul>
+     * <li>{@code category} - Primary marketplace category (e.g., "For Sale", "Housing")
+     * <li>{@code subcategory} - Specific subcategory (e.g., "Electronics", "Rent")
+     * <li>{@code confidenceScore} - AI confidence 0.0-1.0 (scores < 0.7 flagged for review)
+     * <li>{@code reasoning} - Brief explanation of categorization decision
+     * </ul>
+     *
+     * <p>
+     * <b>Workflow:</b>
+     * <ul>
+     * <li>New listings start with NULL ai_category_suggestion
+     * <li>Hourly scheduled job finds listings WHERE ai_category_suggestion IS NULL
+     * <li>AI categorization batch processes 50 listings per API call
+     * <li>Results stored in this field for admin review
+     * <li>Admin (or user) can accept suggestion → updates categoryId
+     * </ul>
+     *
+     * <p>
+     * <b>Index:</b> Partial index {@code idx_marketplace_listings_needs_categorization} on (ai_category_suggestion IS
+     * NULL) for efficient job queries.
+     *
+     * @see ListingCategorizationResultType for JSONB structure
+     * @see villagecompute.homepage.services.AiCategorizationService for categorization logic
+     * @see villagecompute.homepage.jobs.AiCategorizationJobHandler for scheduled processing
+     */
+    @Column(
+            name = "ai_category_suggestion",
+            columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    public ListingCategorizationResultType aiCategorySuggestion;
+
+    /**
      * Finds all listings for a specific user, ordered by creation date descending.
      *
      * <p>
@@ -411,6 +459,23 @@ public class MarketplaceListing extends PanacheEntityBase {
         Instant now = Instant.now();
         Instant futureThreshold = now.plus(Duration.ofDays(days));
         return find(JPQL_FIND_EXPIRING_WITHIN_DAYS, now, futureThreshold).list();
+    }
+
+    /**
+     * Finds active listings without AI category suggestions.
+     *
+     * <p>
+     * Used by {@link villagecompute.homepage.jobs.AiCategorizationJobHandler} scheduled job to identify listings that
+     * need AI categorization. Query uses partial index {@code idx_marketplace_listings_needs_categorization} for
+     * optimal performance.
+     *
+     * <p>
+     * Returns listings ordered by creation date (oldest first) to prioritize older uncategorized listings.
+     *
+     * @return List of active listings without AI suggestions, ordered by createdAt ASC
+     */
+    public static List<MarketplaceListing> findWithoutAiSuggestions() {
+        return find("#" + QUERY_FIND_WITHOUT_AI_SUGGESTIONS).list();
     }
 
     /**

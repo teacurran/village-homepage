@@ -235,6 +235,20 @@ public enum JobType {
     AI_TAGGING(JobQueue.BULK, "AI tagging (on-demand, P10 budget enforced)"),
 
     /**
+     * Applies AI-powered category suggestions to marketplace listings.
+     * <p>
+     * Processes listings in batches of 50 to minimize API costs. Stores suggestions in JSONB field for human review
+     * before applying category. Low confidence results (< 0.7) are flagged for manual review.
+     * <p>
+     * <b>Cadence:</b> Hourly (finds active listings without AI suggestions)
+     * <p>
+     * <b>Handler:</b> AiCategorizationJobHandler
+     * <p>
+     * <b>Policy P2/P10:</b> Shares $500/month budget with feed tagging and fraud detection
+     */
+    AI_CATEGORIZATION(JobQueue.BULK, "Marketplace AI categorization (hourly, P2/P10 budget enforced)"),
+
+    /**
      * Resizes and optimizes uploaded marketplace listing images.
      * <p>
      * Generates 3 variants: thumbnail (150x150), list (300x225), full (1200x900). WebP conversion is currently stubbed
