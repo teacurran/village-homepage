@@ -62,6 +62,9 @@ public class OAuthService {
     @Inject
     AppleOAuthClient appleClient;
 
+    @Inject
+    UserMergeService userMergeService;
+
     /**
      * Initiate Google OAuth login flow.
      *
@@ -156,38 +159,50 @@ public class OAuthService {
 
         // Check if email already exists with different provider
         Optional<User> emailMatch = User.findByEmail(userInfo.email());
+        User finalUser;
+
         if (emailMatch.isPresent()) {
-            // Email exists - this requires account merge (I3.T4)
-            LOG.warnf("Email already registered with different provider: email=%s, existingProvider=%s",
-                    userInfo.email(), emailMatch.get().oauthProvider);
-            throw new IllegalStateException(
-                    "Email already registered. Account linking will be supported in a future update.");
+            // Email exists - merge anonymous account into existing user (I3.T4)
+            User existingUser = emailMatch.get();
+            LOG.infof("Email %s already exists (provider: %s), will merge anonymous account into existing user %s",
+                    userInfo.email(), existingUser.oauthProvider, existingUser.id);
+            finalUser = existingUser;
+        } else {
+            // Create new authenticated user
+            User newUser = new User();
+            newUser.email = userInfo.email();
+            newUser.oauthProvider = "google";
+            newUser.oauthId = userInfo.sub();
+            newUser.displayName = userInfo.name();
+            newUser.avatarUrl = userInfo.picture();
+            newUser.isAnonymous = false;
+            newUser.preferences = Map.of(); // Initialize JSONB column (non-null)
+            newUser.directoryKarma = 0;
+            newUser.directoryTrustLevel = User.TRUST_LEVEL_UNTRUSTED;
+            newUser.createdAt = Instant.now();
+            newUser.updatedAt = Instant.now();
+            newUser.persist();
+
+            LOG.infof("Created new user via Google OAuth: userId=%s, email=%s", newUser.id, newUser.email);
+            finalUser = newUser;
         }
 
-        // Create new authenticated user
-        User newUser = new User();
-        newUser.email = userInfo.email();
-        newUser.oauthProvider = "google";
-        newUser.oauthId = userInfo.sub();
-        newUser.displayName = userInfo.name();
-        newUser.avatarUrl = userInfo.picture();
-        newUser.isAnonymous = false;
-        newUser.preferences = Map.of(); // Initialize JSONB column (non-null)
-        newUser.directoryKarma = 0;
-        newUser.directoryTrustLevel = User.TRUST_LEVEL_UNTRUSTED;
-        newUser.createdAt = Instant.now();
-        newUser.updatedAt = Instant.now();
-        newUser.persist();
+        // 6. Handle anonymous account upgrade (I3.T4)
+        if (sessionId != null && !sessionId.equals(finalUser.id.toString())) {
+            try {
+                UUID anonymousUserId = UUID.fromString(sessionId);
+                User anonymousUser = User.findById(anonymousUserId);
 
-        LOG.infof("Created new user via Google OAuth: userId=%s, email=%s", newUser.id, newUser.email);
-
-        // TODO (I3.T4): Check if sessionId is anonymous user and merge data
-        if (sessionId != null && !sessionId.equals(newUser.id.toString())) {
-            LOG.warnf("Anonymous account upgrade not yet implemented (I3.T4): sessionId=%s, newUserId=%s", sessionId,
-                    newUser.id);
+                if (anonymousUser != null && anonymousUser.isAnonymous) {
+                    userMergeService.upgradeAnonymousAccount(anonymousUser, finalUser);
+                    LOG.infof("Merged anonymous user %s into authenticated user %s", anonymousUserId, finalUser.id);
+                }
+            } catch (IllegalArgumentException e) {
+                LOG.warnf("Invalid sessionId format: %s", sessionId);
+            }
         }
 
-        return newUser;
+        return finalUser;
     }
 
     /**
@@ -301,46 +316,58 @@ public class OAuthService {
 
         // Check if email already exists with different provider
         Optional<User> emailMatch = User.findByEmail(userInfo.email());
+        User finalUser;
+
         if (emailMatch.isPresent()) {
-            // Email exists - this requires account merge (I3.T4)
-            LOG.warnf("Email already registered with different provider: email=%s, existingProvider=%s",
-                    userInfo.email(), emailMatch.get().oauthProvider);
-            throw new IllegalStateException(
-                    "Email already registered. Account linking will be supported in a future update.");
+            // Email exists - merge anonymous account into existing user (I3.T4)
+            User existingUser = emailMatch.get();
+            LOG.infof("Email %s already exists (provider: %s), will merge anonymous account into existing user %s",
+                    userInfo.email(), existingUser.oauthProvider, existingUser.id);
+            finalUser = existingUser;
+        } else {
+            // Extract avatar URL from nested picture structure
+            String avatarUrl = null;
+            if (userInfo.picture() != null && userInfo.picture().data() != null) {
+                avatarUrl = userInfo.picture().data().url();
+            }
+
+            // Create new authenticated user
+            User newUser = new User();
+            newUser.email = userInfo.email();
+            newUser.oauthProvider = "facebook";
+            newUser.oauthId = userInfo.id();
+            newUser.displayName = userInfo.name();
+            newUser.avatarUrl = avatarUrl;
+            newUser.isAnonymous = false;
+            newUser.preferences = Map.of(); // Initialize JSONB column (non-null)
+            newUser.directoryKarma = 0;
+            newUser.directoryTrustLevel = User.TRUST_LEVEL_UNTRUSTED;
+            newUser.createdAt = Instant.now();
+            newUser.updatedAt = Instant.now();
+            newUser.persist();
+
+            LOG.infof("Created new user via Facebook OAuth: userId=%s, email=%s", newUser.id, newUser.email);
+            finalUser = newUser;
         }
 
-        // Extract avatar URL from nested picture structure
-        String avatarUrl = null;
-        if (userInfo.picture() != null && userInfo.picture().data() != null) {
-            avatarUrl = userInfo.picture().data().url();
-        }
+        // 6. Handle anonymous account upgrade (I3.T4)
+        if (sessionId != null && !sessionId.equals(finalUser.id.toString())) {
+            try {
+                UUID anonymousUserId = UUID.fromString(sessionId);
+                User anonymousUser = User.findById(anonymousUserId);
 
-        // Create new authenticated user
-        User newUser = new User();
-        newUser.email = userInfo.email();
-        newUser.oauthProvider = "facebook";
-        newUser.oauthId = userInfo.id();
-        newUser.displayName = userInfo.name();
-        newUser.avatarUrl = avatarUrl;
-        newUser.isAnonymous = false;
-        newUser.preferences = Map.of(); // Initialize JSONB column (non-null)
-        newUser.directoryKarma = 0;
-        newUser.directoryTrustLevel = User.TRUST_LEVEL_UNTRUSTED;
-        newUser.createdAt = Instant.now();
-        newUser.updatedAt = Instant.now();
-        newUser.persist();
-
-        LOG.infof("Created new user via Facebook OAuth: userId=%s, email=%s", newUser.id, newUser.email);
-
-        // TODO (I3.T4): Check if sessionId is anonymous user and merge data
-        if (sessionId != null && !sessionId.equals(newUser.id.toString())) {
-            LOG.warnf("Anonymous account upgrade not yet implemented (I3.T4): sessionId=%s, newUserId=%s", sessionId,
-                    newUser.id);
+                if (anonymousUser != null && anonymousUser.isAnonymous) {
+                    userMergeService.upgradeAnonymousAccount(anonymousUser, finalUser);
+                    LOG.infof("Merged anonymous user %s into authenticated user %s", anonymousUserId, finalUser.id);
+                }
+            } catch (IllegalArgumentException e) {
+                LOG.warnf("Invalid sessionId format: %s", sessionId);
+            }
         }
 
         // Note: Token expiration (tokenResponse.expiresIn()) will be stored in I3.T5 for token refresh
 
-        return newUser;
+        return finalUser;
     }
 
     /**
@@ -456,40 +483,52 @@ public class OAuthService {
 
         // Check if email already exists with different provider
         Optional<User> emailMatch = User.findByEmail(idTokenClaims.email());
+        User finalUser;
+
         if (emailMatch.isPresent()) {
-            // Email exists - this requires account merge (I3.T4)
-            LOG.warnf("Email already registered with different provider: email=%s, existingProvider=%s",
-                    idTokenClaims.email(), emailMatch.get().oauthProvider);
-            throw new IllegalStateException(
-                    "Email already registered. Account linking will be supported in a future update.");
+            // Email exists - merge anonymous account into existing user (I3.T4)
+            User existingUser = emailMatch.get();
+            LOG.infof("Email %s already exists (provider: %s), will merge anonymous account into existing user %s",
+                    idTokenClaims.email(), existingUser.oauthProvider, existingUser.id);
+            finalUser = existingUser;
+        } else {
+            // Create new authenticated user
+            User newUser = new User();
+            newUser.email = idTokenClaims.email();
+            newUser.oauthProvider = "apple";
+            newUser.oauthId = idTokenClaims.sub();
+            newUser.displayName = displayName;
+            newUser.avatarUrl = null; // Apple doesn't provide avatar URL
+            newUser.isAnonymous = false;
+            newUser.preferences = Map.of(); // Initialize JSONB column (non-null)
+            newUser.directoryKarma = 0;
+            newUser.directoryTrustLevel = User.TRUST_LEVEL_UNTRUSTED;
+            newUser.createdAt = Instant.now();
+            newUser.updatedAt = Instant.now();
+            newUser.persist();
+
+            LOG.infof("Created new user via Apple OAuth: userId=%s, email=%s", newUser.id, newUser.email);
+            finalUser = newUser;
         }
 
-        // Create new authenticated user
-        User newUser = new User();
-        newUser.email = idTokenClaims.email();
-        newUser.oauthProvider = "apple";
-        newUser.oauthId = idTokenClaims.sub();
-        newUser.displayName = displayName;
-        newUser.avatarUrl = null; // Apple doesn't provide avatar URL
-        newUser.isAnonymous = false;
-        newUser.preferences = Map.of(); // Initialize JSONB column (non-null)
-        newUser.directoryKarma = 0;
-        newUser.directoryTrustLevel = User.TRUST_LEVEL_UNTRUSTED;
-        newUser.createdAt = Instant.now();
-        newUser.updatedAt = Instant.now();
-        newUser.persist();
+        // 6. Handle anonymous account upgrade (I3.T4)
+        if (sessionId != null && !sessionId.equals(finalUser.id.toString())) {
+            try {
+                UUID anonymousUserId = UUID.fromString(sessionId);
+                User anonymousUser = User.findById(anonymousUserId);
 
-        LOG.infof("Created new user via Apple OAuth: userId=%s, email=%s", newUser.id, newUser.email);
-
-        // TODO (I3.T4): Check if sessionId is anonymous user and merge data
-        if (sessionId != null && !sessionId.equals(newUser.id.toString())) {
-            LOG.warnf("Anonymous account upgrade not yet implemented (I3.T4): sessionId=%s, newUserId=%s", sessionId,
-                    newUser.id);
+                if (anonymousUser != null && anonymousUser.isAnonymous) {
+                    userMergeService.upgradeAnonymousAccount(anonymousUser, finalUser);
+                    LOG.infof("Merged anonymous user %s into authenticated user %s", anonymousUserId, finalUser.id);
+                }
+            } catch (IllegalArgumentException e) {
+                LOG.warnf("Invalid sessionId format: %s", sessionId);
+            }
         }
 
         // Note: Token expiration (tokenResponse.expiresIn()) will be stored in I3.T5 for token refresh
 
-        return newUser;
+        return finalUser;
     }
 
     /**
