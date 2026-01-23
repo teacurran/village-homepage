@@ -13,6 +13,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -87,6 +88,7 @@ public class AiUsageTrackingService {
      * <li>Budget usage percentage gauge for real-time monitoring</li>
      * </ul>
      */
+    @PostConstruct
     public void init() {
         // AI API request counters
         taggingRequests = Counter.builder("ai.api.requests").tag("service", "tagging")

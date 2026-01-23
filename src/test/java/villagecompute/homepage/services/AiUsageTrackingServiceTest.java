@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
 import jakarta.inject.Inject;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import villagecompute.homepage.api.types.AiUsageReportType;
 import villagecompute.homepage.api.types.CacheStatsType;
 import villagecompute.homepage.data.models.AiUsageTracking;
+import villagecompute.homepage.testing.H2TestResource;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -32,6 +34,7 @@ import java.time.YearMonth;
  * Tests usage logging, cost estimation, cache statistics, and report generation.
  */
 @QuarkusTest
+@QuarkusTestResource(H2TestResource.class)
 class AiUsageTrackingServiceTest {
 
     @Inject
@@ -42,9 +45,6 @@ class AiUsageTrackingServiceTest {
     void setUp() {
         // Clean up existing usage records
         AiUsageTracking.deleteAll();
-
-        // Initialize metrics (normally done at startup)
-        usageTrackingService.init();
     }
 
     @Test
