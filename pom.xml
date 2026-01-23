@@ -268,7 +268,8 @@
             <artifactId>quarkus-test-h2</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- NOTE: H2 retained for test compatibility. PostgreSQL via @TestProfile requires removing H2 or using test containers resource -->
+        <!-- NOTE: H2 required for legacy tests using H2TestResource -->
+        <!-- New tests using PostgreSQLTestProfile override H2 with PostgreSQL Testcontainers -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5-mockito</artifactId>
@@ -383,11 +384,9 @@
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
-                        <!-- Force PostgreSQL for all tests (overrides quarkus-test-h2 dependency) -->
-                        <quarkus.profile>test</quarkus.profile>
-                        <quarkus.datasource.db-kind>postgresql</quarkus.datasource.db-kind>
-                        <quarkus.datasource.devservices.enabled>true</quarkus.datasource.devservices.enabled>
-                        <quarkus.test.integration-test-profile>test</quarkus.test.integration-test-profile>
+                        <!-- NOTE: datasource configuration managed by test profiles (PostgreSQLTestProfile vs H2TestResource) -->
+                        <!-- Tests using @TestProfile(PostgreSQLTestProfile.class) get PostgreSQL Testcontainers -->
+                        <!-- Legacy tests using @QuarkusTestResource(H2TestResource.class) get H2 in-memory -->
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

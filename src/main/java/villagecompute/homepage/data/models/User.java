@@ -263,7 +263,7 @@ public class User extends PanacheEntityBase {
     public static User createAnonymous() {
         User user = new User();
         user.isAnonymous = true;
-        user.preferences = Map.of();
+        user.preferences = new java.util.HashMap<>();
         user.directoryKarma = 0;
         user.directoryTrustLevel = TRUST_LEVEL_UNTRUSTED;
         user.analyticsConsent = false;
@@ -300,7 +300,7 @@ public class User extends PanacheEntityBase {
         user.displayName = displayName;
         user.avatarUrl = avatarUrl;
         user.isAnonymous = false;
-        user.preferences = Map.of();
+        user.preferences = new java.util.HashMap<>();
         user.directoryKarma = 0;
         user.directoryTrustLevel = TRUST_LEVEL_UNTRUSTED;
         user.analyticsConsent = false;

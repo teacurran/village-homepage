@@ -75,6 +75,7 @@ test-results/
 .env
 .env.local
 .env.*.local
+.env.test
 
 # Secret files and credentials (Security: I1.T9)
 *.p8

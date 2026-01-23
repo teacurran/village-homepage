@@ -290,27 +290,13 @@ gdpr:
       sdk:
         # Disable telemetry in tests to avoid noise
         disabled: true
-    datasource:
-      db-kind: h2
-      username: sa
-      password: sa
-      jdbc:
-        url: jdbc:h2:mem:homepage-tests;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
-        driver: org.h2.Driver
-      devservices:
-        enabled: false
+    # NOTE: Datasource configuration moved to application-test.properties
+    # Tests using @TestProfile(PostgreSQLTestProfile.class) use PostgreSQL Testcontainers
+    # Legacy tests using @QuarkusTestResource(H2TestResource.class) use H2 in-memory
     # Disable S3 dev services in tests
     s3:
       devservices:
         enabled: false
-    # Tests use in-memory H2 to avoid external Postgres dependency
-    hibernate-orm:
-      database:
-        # Create/drop schema for test isolation
-        generation: drop-and-create
-      # Suppress unnecessary warnings in tests
-      log:
-        sql: false
     # Disable Elasticsearch in tests (use in-memory indexing)
     hibernate-search-orm:
       elasticsearch:

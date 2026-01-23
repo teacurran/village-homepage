@@ -86,7 +86,7 @@ public final class TestFixtures {
         user.email = email;
         user.displayName = displayName;
         user.isAnonymous = false;
-        user.preferences = Map.of();
+        user.preferences = new java.util.HashMap<>(); // CRITICAL: Use mutable HashMap for JSONB serialization
         user.directoryKarma = 0;
         user.directoryTrustLevel = TRUST_LEVEL_UNTRUSTED;
         user.analyticsConsent = false;

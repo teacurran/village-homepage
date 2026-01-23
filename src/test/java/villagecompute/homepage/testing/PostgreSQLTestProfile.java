@@ -32,18 +32,29 @@ import java.util.Map;
 public class PostgreSQLTestProfile implements QuarkusTestProfile {
 
     @Override
+    public boolean disableGlobalTestResources() {
+        // CRITICAL: Disable H2TestResource and other global test resources
+        // This ensures PostgreSQL Testcontainers is used instead of H2
+        return true;
+    }
+
+    @Override
     public Map<String, String> getConfigOverrides() {
         // Override datasource configuration to use PostgreSQL 17 + PostGIS with dev services
-        return Map.of(
-                "quarkus.datasource.db-kind", "postgresql",
-                "quarkus.datasource.username", "test",
-                "quarkus.datasource.password", "test",
-                "quarkus.datasource.devservices.enabled", "true",
-                "quarkus.datasource.devservices.image-name", "postgis/postgis:17-3.5-alpine",
-                "quarkus.datasource.devservices.init-script-path", "db/init-test-postgis.sql",
-                "quarkus.hibernate-orm.database.generation", "drop-and-create",
-                "quarkus.hibernate-orm.log.sql", "false",
-                "quarkus.hibernate-orm.sql-load-script", "no-file");
+        // CRITICAL: These settings override H2TestResource AND environment variables to force PostgreSQL Testcontainers
+        // NOTE: We DON'T set jdbc.url, username, or password - Dev Services will auto-configure Testcontainers
+        return new java.util.HashMap<>(Map.ofEntries(
+                Map.entry("quarkus.datasource.db-kind", "postgresql"),
+                Map.entry("quarkus.datasource.jdbc.driver", "org.postgresql.Driver"),
+                Map.entry("quarkus.datasource.devservices.enabled", "true"),
+                Map.entry("quarkus.datasource.devservices.image-name", "postgis/postgis:17-3.5-alpine"),
+                Map.entry("quarkus.datasource.devservices.init-script-path", "db/init-test-postgis.sql"),
+                Map.entry("quarkus.hibernate-orm.database.generation", "drop-and-create"),
+                Map.entry("quarkus.hibernate-orm.dialect", "org.hibernate.dialect.PostgreSQLDialect"),
+                Map.entry("quarkus.hibernate-orm.log.sql", "true"),
+                Map.entry("quarkus.hibernate-orm.sql-load-script", "no-file"),
+                // CRITICAL: Enable Jackson JSON-B handling for JSONB columns (fixes Map serialization)
+                Map.entry("quarkus.hibernate-orm.mapping.jackson.convert-to-json-mode", "enabled")));
     }
 
     @Override
