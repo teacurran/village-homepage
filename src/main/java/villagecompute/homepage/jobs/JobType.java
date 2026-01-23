@@ -249,6 +249,23 @@ public enum JobType {
     AI_CATEGORIZATION(JobQueue.BULK, "Marketplace AI categorization (hourly, P2/P10 budget enforced)"),
 
     /**
+     * Analyzes marketplace listings for fraud indicators using AI.
+     * <p>
+     * Detects scam patterns, prohibited items, suspicious language, and pricing anomalies. Auto-approves low-risk
+     * listings (&lt;30% confidence), auto-flags high-risk listings (&gt;70% confidence), and queues medium-risk
+     * listings (30-70%) for manual review.
+     * <p>
+     * <b>Cadence:</b> After new listing creation (async)
+     * <p>
+     * <b>Handler:</b> FraudDetectionJobHandler
+     * <p>
+     * <b>Policy P2/P10:</b> Shares $500/month budget with feed tagging and categorization
+     * <p>
+     * <b>Feature F12.9:</b> Automated fraud detection with confidence-based moderation workflow
+     */
+    FRAUD_DETECTION(JobQueue.BULK, "Marketplace fraud detection (on-demand, P2/P10 budget enforced)"),
+
+    /**
      * Resizes and optimizes uploaded marketplace listing images.
      * <p>
      * Generates 3 variants: thumbnail (150x150), list (300x225), full (1200x900). WebP conversion is currently stubbed

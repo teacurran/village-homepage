@@ -7,6 +7,7 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.FraudAnalysisResultType;
 import villagecompute.homepage.data.models.AiUsageTracking;
+import villagecompute.homepage.data.models.ListingFlag;
 import villagecompute.homepage.data.models.MarketplaceListing;
 import villagecompute.homepage.data.models.MarketplaceCategory;
 import java.math.BigDecimal;
@@ -59,9 +60,8 @@ public class FraudDetectionService {
     @Inject
     ObjectMapper objectMapper;
 
-    // NOTE: LangChain4j integration - uncomment when anthropic API key is configured
-    // @Inject
-    // ChatLanguageModel chatModel;
+    @Inject
+    dev.langchain4j.model.chat.ChatModel chatModel;
 
     /**
      * Analyzes a marketplace listing for fraud indicators.
@@ -142,11 +142,7 @@ public class FraudDetectionService {
         LOG.debugf("Sending fraud detection request to Claude: title=\"%s\"", title);
 
         // Call Claude via LangChain4j
-        // NOTE: Uncomment when API key is configured
-        // String response = chatModel.generate(prompt);
-
-        // TODO: Remove this stub when LangChain4j is properly configured
-        String response = generateStubResponse(title, description, price);
+        String response = chatModel.chat(prompt);
 
         // Parse response
         FraudAnalysisResultType result = parseAiResponse(response);
@@ -392,42 +388,122 @@ public class FraudDetectionService {
     }
 
     /**
-     * Stub response generator for development/testing.
+     * Analyzes a directory site submission for fraud indicators.
      *
      * <p>
-     * TODO: Remove this method when LangChain4j is properly configured.
+     * Checks site description and title for spam patterns, malicious content, or policy violations.
      *
-     * @param title
-     *            listing title
-     * @param description
-     *            listing description
-     * @param price
-     *            listing price
-     * @return mock JSON response
+     * @param site
+     *            the directory site to analyze
+     * @return fraud analysis result with score and reasons
      */
-    private String generateStubResponse(String title, String description, BigDecimal price) {
-        // Simple keyword-based fraud detection for testing
-        String combined = ((title != null ? title : "") + " " + (description != null ? description : "")).toLowerCase();
+    public FraudAnalysisResultType analyzeSiteSubmission(villagecompute.homepage.data.models.DirectorySite site) {
+        if (site == null) {
+            LOG.warn("Cannot analyze null directory site");
+            return FraudAnalysisResultType.clean(PROMPT_VERSION);
+        }
 
-        boolean suspicious = combined.contains("wire transfer") || combined.contains("act now")
-                || combined.contains("limited time");
+        // Analyze title and description (similar to listing analysis)
+        return analyzeListingContent(site.title, site.description, null, "Directory Site");
+    }
 
-        if (suspicious) {
-            return """
-                    {
-                      "is_suspicious": true,
-                      "confidence": 0.75,
-                      "reasons": ["Suspicious payment method or urgency tactics detected"]
-                    }
-                    """;
+    /**
+     * Analyzes user behavior based on historical flags and reports.
+     *
+     * <p>
+     * Checks if user has pattern of creating flagged listings or receiving policy violations.
+     *
+     * @param user
+     *            the user to analyze
+     * @return fraud analysis result indicating user trustworthiness
+     */
+    public FraudAnalysisResultType analyzeUserBehavior(villagecompute.homepage.data.models.User user) {
+        if (user == null) {
+            LOG.warn("Cannot analyze null user");
+            return FraudAnalysisResultType.clean(PROMPT_VERSION);
+        }
+
+        // Query user's listing flags
+        long flagCount = ListingFlag.count("userId = ?1", user.id);
+
+        // Simple heuristic: users with 5+ flags considered high risk
+        if (flagCount >= 5) {
+            return FraudAnalysisResultType.suspicious(BigDecimal.valueOf(0.80),
+                    List.of("User has " + flagCount + " flagged listings"), "user-behavior-v1.0");
+        } else if (flagCount >= 2) {
+            return FraudAnalysisResultType.suspicious(BigDecimal.valueOf(0.50),
+                    List.of("User has " + flagCount + " flagged listings"), "user-behavior-v1.0");
         } else {
-            return """
-                    {
-                      "is_suspicious": false,
-                      "confidence": 0.85,
-                      "reasons": []
-                    }
-                    """;
+            return FraudAnalysisResultType.clean("user-behavior-v1.0");
+        }
+    }
+
+    /**
+     * Auto-flags high-risk listing and updates moderation status.
+     *
+     * <p>
+     * Creates ListingFlag record and updates listing moderationStatus based on risk score:
+     * <ul>
+     * <li>High risk (&gt;0.70): Create ListingFlag, keep status as PENDING for review</li>
+     * <li>Medium risk (0.30-0.70): No flag, keep as PENDING for manual review</li>
+     * <li>Low risk (&lt;0.30): Auto-approve listing (set status to APPROVED)</li>
+     * </ul>
+     *
+     * @param listingId
+     *            the listing UUID
+     * @param result
+     *            the fraud analysis result
+     */
+    public void autoFlagHighRisk(UUID listingId, FraudAnalysisResultType result) {
+        MarketplaceListing listing = MarketplaceListing.findById(listingId);
+        if (listing == null) {
+            LOG.warnf("Cannot auto-flag listing %s - not found", listingId);
+            return;
+        }
+
+        BigDecimal confidence = result.confidence();
+
+        try {
+            // High risk (>0.70): Create flag and log
+            if (confidence.compareTo(BigDecimal.valueOf(0.70)) > 0) {
+                ListingFlag flag = new ListingFlag();
+                flag.listingId = listingId;
+                flag.userId = listing.userId; // System-generated flag
+                flag.reason = "AI fraud detection: high risk";
+                flag.details = "Automated fraud detection flagged this listing for review";
+                flag.status = "pending";
+                flag.fraudScore = result.fraudScore();
+
+                // Convert reasons list to JSON string
+                try {
+                    flag.fraudReasons = new com.fasterxml.jackson.databind.ObjectMapper()
+                            .writeValueAsString(result.reasons());
+                } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                    LOG.errorf(e, "Failed to serialize fraud reasons: %s", result.reasons());
+                    flag.fraudReasons = "[]";
+                }
+
+                flag.persist();
+
+                LOG.infof("Auto-flagged high-risk listing: id=%s, confidence=%.2f, reasons=%s", listingId, confidence,
+                        result.reasons());
+            }
+            // Low risk (<0.30): Auto-approve
+            else if (confidence.compareTo(BigDecimal.valueOf(0.30)) < 0) {
+                // Update listing status to active (approved)
+                listing.status = "active";
+                listing.persist();
+
+                LOG.infof("Auto-approved low-risk listing: id=%s, confidence=%.2f", listingId, confidence);
+            }
+            // Medium risk (0.30-0.70): Leave as PENDING for manual review
+            else {
+                LOG.debugf("Medium-risk listing queued for manual review: id=%s, confidence=%.2f", listingId,
+                        confidence);
+            }
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to auto-flag listing: id=%s", listingId);
         }
     }
 
