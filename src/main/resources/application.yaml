@@ -29,6 +29,14 @@ quarkus:
       connect-timeout: 10000
       read-timeout: 10000
 
+    # Apple OAuth REST client (Policy P1, Feature F1)
+    apple-oauth:
+      url: https://appleid.apple.com
+      scope: jakarta.inject.Singleton
+      # Connection timeout for OAuth API calls
+      connect-timeout: 10000
+      read-timeout: 10000
+
   # S3 Configuration - Disable DevServices (use MinIO from docker-compose)
   s3:
     devservices:
@@ -207,6 +215,12 @@ villagecompute:
       bootstrap:
         max-requests: ${BOOTSTRAP_MAX_REQUESTS:5}
         window-seconds: ${BOOTSTRAP_WINDOW_SECONDS:3600}
+
+  # Apple Sign-In JWT Configuration (Feature I3.T3)
+  apple:
+    team-id: ${APPLE_TEAM_ID:}
+    key-id: ${APPLE_KEY_ID:}
+    private-key-path: ${APPLE_PRIVATE_KEY_PATH:/secrets/apple-auth-key.p8}
 
   # Stripe Payment Integration (Policy P3, Feature F12.8)
   stripe:

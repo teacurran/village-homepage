@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -409,6 +410,117 @@ public class AuthResource {
         } catch (Exception e) {
             // Unexpected error (network, API, etc.)
             LOG.errorf(e, "Facebook OAuth callback failed: %s", e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Authentication failed. Please try again.")).build();
+        }
+    }
+
+    /**
+     * Initiate Apple OAuth login flow.
+     *
+     * <p>
+     * Generates authorization URL with CSRF state token. The state token is stored in the database with a 5-minute
+     * expiration and validated during the callback.
+     *
+     * @param uriInfo
+     *            URI context for building redirect URI
+     * @param headers
+     *            HTTP headers for extracting session cookie
+     * @return OAuth URL response with authorization URL and state token
+     */
+    @GET
+    @Path("/apple/login")
+    public Response appleLogin(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
+        // Extract or generate session ID (anonymous cookie or new UUID)
+        String sessionId = extractSessionId(headers);
+
+        // Build redirect URI for OAuth callback
+        String redirectUri = uriInfo.getBaseUriBuilder().path("api/auth/apple/callback").build().toString();
+
+        OAuthUrlResponseType response = oauthService.initiateAppleLogin(sessionId, redirectUri);
+        LOG.infof("Initiated Apple OAuth login: sessionId=%s, state=%s", sessionId, response.state());
+
+        return Response.ok(response).build();
+    }
+
+    /**
+     * Handle Apple OAuth callback.
+     *
+     * <p>
+     * Validates state token, exchanges authorization code for access token, parses ID token to extract user profile,
+     * and creates or links user account. On success, issues JWT session token and redirects to homepage.
+     *
+     * <p>
+     * Apple-specific: This endpoint accepts POST with form parameters (response_mode=form_post) instead of GET with
+     * query parameters. This is more secure as credentials are not exposed in browser history.
+     *
+     * @param code
+     *            authorization code from Apple
+     * @param state
+     *            CSRF state token
+     * @param error
+     *            error code (if user cancelled or error occurred)
+     * @param uriInfo
+     *            URI context for building redirect URI
+     * @return redirect to homepage with JWT token on success, error response on failure
+     */
+    @POST
+    @Path("/apple/callback")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response appleCallback(@FormParam("code") String code, @FormParam("state") String state,
+            @FormParam("error") String error, @Context UriInfo uriInfo) {
+
+        // Handle OAuth errors (user cancellation, permission denial, etc.)
+        if (error != null) {
+            LOG.warnf("Apple OAuth error: error=%s", error);
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Authentication cancelled or failed: " + error)).build();
+        }
+
+        // Validate required parameters
+        if (code == null || code.isBlank()) {
+            LOG.warn("Apple OAuth callback missing code parameter");
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Missing authorization code"))
+                    .build();
+        }
+
+        if (state == null || state.isBlank()) {
+            LOG.warn("Apple OAuth callback missing state parameter");
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Missing state parameter"))
+                    .build();
+        }
+
+        // Build redirect URI (must match initiation request)
+        String redirectUri = uriInfo.getBaseUriBuilder().path("api/auth/apple/callback").build().toString();
+
+        try {
+            // Complete OAuth flow
+            User user = oauthService.handleAppleCallback(code, state, redirectUri);
+
+            // Create JWT session (reuse bootstrap logic)
+            AuthIdentityService.BootstrapSession session = authService.createSessionForUser(user);
+
+            // Redirect to homepage with JWT token in query parameter
+            // TODO (I3.T6): Use secure HttpOnly cookie instead of query parameter
+            URI homepageUri = uriInfo.getBaseUriBuilder().path("/").queryParam("token", session.jwt()).build();
+
+            LOG.infof("Apple OAuth success: userId=%s, email=%s, redirecting to homepage", user.id, user.email);
+            return Response.seeOther(homepageUri).build();
+
+        } catch (SecurityException e) {
+            // Invalid or expired state token
+            LOG.errorf(e, "Apple OAuth callback security exception: %s", e.getMessage());
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity(new ErrorResponse("Invalid or expired state token")).build();
+
+        } catch (IllegalStateException e) {
+            // Email already exists with different provider
+            LOG.errorf(e, "Apple OAuth callback state exception: %s", e.getMessage());
+            return Response.status(Response.Status.CONFLICT).entity(new ErrorResponse(e.getMessage())).build();
+
+        } catch (Exception e) {
+            // Unexpected error (network, API, JWT parsing, etc.)
+            LOG.errorf(e, "Apple OAuth callback failed: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new ErrorResponse("Authentication failed. Please try again.")).build();
         }
