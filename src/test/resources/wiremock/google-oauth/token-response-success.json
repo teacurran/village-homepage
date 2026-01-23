@@ -1,0 +1,7 @@
+{
+  "access_token": "ya29.test-google-token",
+  "expires_in": 3599,
+  "token_type": "Bearer",
+  "scope": "openid email profile",
+  "refresh_token": "1//0gHdj8s-test-refresh"
+}

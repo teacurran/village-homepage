@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import jakarta.transaction.Transactional;
 
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;

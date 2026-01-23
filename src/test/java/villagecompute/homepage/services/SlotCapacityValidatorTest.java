@@ -3,6 +3,7 @@ package villagecompute.homepage.services;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+import jakarta.transaction.Transactional;
 import villagecompute.homepage.exceptions.ValidationException;
 
 import java.util.List;

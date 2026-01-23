@@ -97,6 +97,138 @@ public final class TestFixtures {
         return user;
     }
 
+    /**
+     * Creates an authenticated OAuth user for testing.
+     *
+     * <p>
+     * Default values:
+     * <ul>
+     * <li>isAnonymous: false</li>
+     * <li>directoryTrustLevel: {@link TestConstants#TRUST_LEVEL_UNTRUSTED}</li>
+     * <li>avatarUrl: {@link TestConstants#AVATAR_URL}</li>
+     * </ul>
+     *
+     * @param email
+     *            the user's email address
+     * @param provider
+     *            the OAuth provider ('google', 'facebook', 'apple')
+     * @param providerId
+     *            the OAuth provider's user ID
+     * @return persisted User entity with OAuth credentials
+     */
+    public static User createOAuthUser(String email, String provider, String providerId) {
+        return createOAuthUser(email, provider, providerId, email.split("@")[0]);
+    }
+
+    /**
+     * Creates an authenticated OAuth user with custom display name.
+     *
+     * @param email
+     *            the user's email address
+     * @param provider
+     *            the OAuth provider ('google', 'facebook', 'apple')
+     * @param providerId
+     *            the OAuth provider's user ID
+     * @param displayName
+     *            the user's display name
+     * @return persisted User entity with OAuth credentials
+     */
+    public static User createOAuthUser(String email, String provider, String providerId, String displayName) {
+        User user = new User();
+        user.email = email;
+        user.oauthProvider = provider;
+        user.oauthId = providerId;
+        user.displayName = displayName;
+        user.avatarUrl = AVATAR_URL;
+        user.isAnonymous = false;
+        user.preferences = new java.util.HashMap<>();
+        user.directoryKarma = 0;
+        user.directoryTrustLevel = TRUST_LEVEL_UNTRUSTED;
+        user.analyticsConsent = false;
+        user.isBanned = false;
+        user.createdAt = Instant.now();
+        user.updatedAt = Instant.now();
+        user.lastActiveAt = Instant.now();
+        user.persist();
+        return user;
+    }
+
+    /**
+     * Creates an anonymous user for testing account merge scenarios.
+     *
+     * <p>
+     * Default values:
+     * <ul>
+     * <li>isAnonymous: true</li>
+     * <li>email: null</li>
+     * <li>oauthProvider: null</li>
+     * <li>oauthId: null</li>
+     * </ul>
+     *
+     * @param sessionHash
+     *            the anonymous session hash (for test reference, not stored in User entity)
+     * @return persisted anonymous User entity
+     */
+    public static User createAnonymousUser(String sessionHash) {
+        User user = new User();
+        // Note: sessionHash is not a User field - it's tracked via cookies in production
+        // For tests, we pass it as parameter but don't store it in the entity
+        user.isAnonymous = true;
+        user.displayName = "Anonymous " + sessionHash.substring(0, 8);
+        user.preferences = new java.util.HashMap<>();
+        user.directoryKarma = 0;
+        user.directoryTrustLevel = TRUST_LEVEL_UNTRUSTED;
+        user.analyticsConsent = false;
+        user.isBanned = false;
+        user.createdAt = Instant.now();
+        user.updatedAt = Instant.now();
+        user.lastActiveAt = Instant.now();
+        user.persist();
+        return user;
+    }
+
+    /**
+     * Creates an anonymous user with test data for merge testing.
+     *
+     * <p>
+     * Creates an anonymous user and associates:
+     * <ul>
+     * <li>One marketplace listing (active, 30-day expiration)</li>
+     * <li>One notification (unread)</li>
+     * <li>Preferences with theme settings</li>
+     * </ul>
+     *
+     * <p>
+     * This fixture is useful for testing account upgrade and data preservation during merge operations.
+     *
+     * @param sessionHash
+     *            the anonymous session hash
+     * @return persisted anonymous User entity with associated data
+     */
+    public static User createAnonymousUserWithData(String sessionHash) {
+        User user = createAnonymousUser(sessionHash);
+
+        // Add preferences
+        user.preferences = new java.util.HashMap<>();
+        user.preferences.put("theme", "dark");
+        user.preferences.put("notifications_enabled", true);
+        user.persist();
+
+        // Add marketplace listing
+        createTestListing(user);
+
+        // Add notification
+        UserNotification notification = new UserNotification();
+        notification.userId = user.id;
+        notification.type = "system";
+        notification.title = "Welcome";
+        notification.message = "Welcome to Village Homepage";
+        notification.createdAt = Instant.now();
+        notification.persist();
+
+        return user;
+    }
+
     // ========== MARKETPLACE LISTING FIXTURES ==========
 
     /**

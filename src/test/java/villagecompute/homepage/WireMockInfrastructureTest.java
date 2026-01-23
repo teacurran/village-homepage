@@ -4,6 +4,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.TestTransaction;
 import org.junit.jupiter.api.Test;
+import jakarta.transaction.Transactional;
 import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
 import java.net.URI;
@@ -33,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class WireMockInfrastructureTest extends WireMockTestBase {
 
     @Test
-    @TestTransaction
+    @Transactional
     public void testWireMockServerStarts() {
         assertNotNull(wireMockServer, "WireMock server should be initialized");
         assertTrue(wireMockServer.isRunning(), "WireMock server should be running");
@@ -41,7 +42,7 @@ public class WireMockInfrastructureTest extends WireMockTestBase {
     }
 
     @Test
-    @TestTransaction
+    @Transactional
     public void testAlphaVantageStubLoads() throws Exception {
         // Configure stub
         stubAlphaVantageStockQuote("AAPL");
@@ -62,7 +63,7 @@ public class WireMockInfrastructureTest extends WireMockTestBase {
     }
 
     @Test
-    @TestTransaction
+    @Transactional
     public void testOpenMeteoStubLoads() throws Exception {
         // Configure stub
         stubOpenMeteoForecast(37.7749, -122.4194);
@@ -83,7 +84,7 @@ public class WireMockInfrastructureTest extends WireMockTestBase {
     }
 
     @Test
-    @TestTransaction
+    @Transactional
     public void testNwsStubLoads() throws Exception {
         // Configure stub
         stubNwsForecast("MTR", 90, 105);
@@ -103,7 +104,7 @@ public class WireMockInfrastructureTest extends WireMockTestBase {
     }
 
     @Test
-    @TestTransaction
+    @Transactional
     public void testMetaGraphStubLoads() throws Exception {
         // Configure stub
         stubMetaGraphInstagramPosts("17841405793187218");
@@ -124,7 +125,7 @@ public class WireMockInfrastructureTest extends WireMockTestBase {
     }
 
     @Test
-    @TestTransaction
+    @Transactional
     public void testAnthropicStubLoads() throws Exception {
         // Configure stub
         stubAnthropicAiTagging();
@@ -146,7 +147,7 @@ public class WireMockInfrastructureTest extends WireMockTestBase {
     }
 
     @Test
-    @TestTransaction
+    @Transactional
     public void testCustomStubResponse() throws Exception {
         // Configure stub with custom response
         String customResponse = "{\"Global Quote\":{\"01. symbol\":\"GOOGL\",\"05. price\":\"140.25\"}}";
@@ -167,7 +168,7 @@ public class WireMockInfrastructureTest extends WireMockTestBase {
     }
 
     @Test
-    @TestTransaction
+    @Transactional
     public void testServerResetBetweenTests() {
         // This test verifies that stubs from previous tests don't leak
         // WireMock server should be clean at the start of each test

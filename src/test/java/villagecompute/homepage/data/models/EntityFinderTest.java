@@ -4,6 +4,7 @@ import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import org.junit.jupiter.api.Test;
+import jakarta.transaction.Transactional;
 import villagecompute.homepage.BaseIntegrationTest;
 import villagecompute.homepage.TestConstants;
 import villagecompute.homepage.TestFixtures;
@@ -64,7 +65,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests User.findByEmail() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFindByEmail() {
         User user = TestFixtures.createTestUser();
 
@@ -78,7 +79,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests User.findByEmail() - not found case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFindByEmailNotFound() {
         Optional<User> found = User.findByEmail("nonexistent@example.com");
 
@@ -89,7 +90,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests User.findByOAuth() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFindByOAuth() {
         User user = TestFixtures.createTestUser();
         user.oauthProvider = OAUTH_PROVIDER_GOOGLE;
@@ -106,7 +107,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests User.findByOAuth() - null provider handling.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFindByOAuthNullProvider() {
         Optional<User> found = User.findByOAuth(null, OAUTH_GOOGLE_ID);
 
@@ -117,7 +118,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests User.findByAdminRole() - returns admins with specific role.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFindByAdminRoleSpecific() {
         User opsAdmin = TestFixtures.createTestUser(VALID_EMAIL, "Ops Admin");
         opsAdmin.adminRole = User.ROLE_OPS;
@@ -138,7 +139,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests User.findByAdminRole() - returns admin users.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFindByAdminRole() {
         User admin = TestFixtures.createTestUser(VALID_EMAIL, "Admin User");
         admin.adminRole = User.ROLE_SUPER_ADMIN;
@@ -157,7 +158,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests User.findByAdminRole() - empty result.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFindByAdminRoleEmpty() {
         TestFixtures.createTestUser();
 
@@ -170,7 +171,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests User.findPendingPurge() - returns users scheduled for deletion.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFindPendingPurge() {
         User user = TestFixtures.createTestUser();
         user.deletedAt = Instant.now().minus(31, ChronoUnit.DAYS);
@@ -188,7 +189,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests RssSource.findByUrl() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testRssSourceFindByUrl() {
         RssSource source = TestFixtures.createTestRssSource();
 
@@ -202,7 +203,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests RssSource.findByUrl() - not found case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testRssSourceFindByUrlNotFound() {
         Optional<RssSource> found = RssSource.findByUrl("https://nonexistent.example.com/feed.xml");
 
@@ -213,7 +214,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests RssSource.findActive() - returns only active sources.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testRssSourceFindActive() {
         RssSource activeSource = TestFixtures.createTestRssSource();
         activeSource.isActive = true;
@@ -235,7 +236,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests RssSource.findDueForRefresh() - temporal query.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testRssSourceFindDueForRefresh() {
         RssSource dueSource = TestFixtures.createTestRssSource();
         dueSource.lastFetchedAt = Instant.now().minus(2, ChronoUnit.HOURS);
@@ -254,7 +255,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests FeedItem.findByGuid() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testFeedItemFindByGuid() {
         RssSource source = TestFixtures.createTestRssSource();
         FeedItem item = TestFixtures.createTestFeedItem(source);
@@ -270,7 +271,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests FeedItem.findByGuid() - not found case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testFeedItemFindByGuidNotFound() {
         Optional<FeedItem> found = FeedItem.findByGuid("nonexistent-guid-12345");
 
@@ -281,7 +282,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests FeedItem.findBySource() - returns items for source.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testFeedItemFindBySource() {
         RssSource source = TestFixtures.createTestRssSource();
         FeedItem item = TestFixtures.createTestFeedItem(source);
@@ -296,7 +297,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests FeedItem.findRecent() - temporal query.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testFeedItemFindRecent() {
         RssSource source = TestFixtures.createTestRssSource();
         FeedItem recentItem = TestFixtures.createTestFeedItem(source);
@@ -313,7 +314,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests FeedItem.findUntagged() - returns items without AI tags.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testFeedItemFindUntagged() {
         RssSource source = TestFixtures.createTestRssSource();
         FeedItem untaggedItem = TestFixtures.createTestFeedItem(source);
@@ -331,7 +332,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests MarketplaceListing.findByUserId() - returns user's listings.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testMarketplaceListingFindByUserId() {
         User user = TestFixtures.createTestUser();
         MarketplaceListing listing = TestFixtures.createTestListing(user);
@@ -346,7 +347,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests MarketplaceListing.findByUserId() - empty result.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testMarketplaceListingFindByUserIdEmpty() {
         User user = TestFixtures.createTestUser();
 
@@ -359,7 +360,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests MarketplaceListing.findByStatus() - status filtering.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testMarketplaceListingFindByStatus() {
         User user = TestFixtures.createTestUser();
         MarketplaceListing activeListing = TestFixtures.createTestListing(user);
@@ -376,7 +377,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests MarketplaceListing.findExpired() - temporal query.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testMarketplaceListingFindExpired() {
         User user = TestFixtures.createTestUser();
         MarketplaceListing expiredListing = TestFixtures.createTestListing(user);
@@ -401,7 +402,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectoryCategory.findBySlug() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectoryCategoryFindBySlug() {
         DirectoryCategory category = TestFixtures.createTestDirectoryCategory();
 
@@ -415,7 +416,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectoryCategory.findBySlug() - not found case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectoryCategoryFindBySlugNotFound() {
         Optional<DirectoryCategory> found = DirectoryCategory.findBySlug("nonexistent-slug");
 
@@ -426,7 +427,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectoryCategory.findRootCategories() - returns top-level categories.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectoryCategoryFindRootCategories() {
         DirectoryCategory rootCategory = TestFixtures.createTestDirectoryCategory();
         rootCategory.parentId = null;
@@ -442,7 +443,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectoryCategory.findByParentId() - returns child categories.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectoryCategoryFindByParentId() {
         DirectoryCategory parent = TestFixtures.createTestDirectoryCategory();
         DirectoryCategory child = TestFixtures.createTestDirectoryCategory();
@@ -461,7 +462,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectoryCategory.findAllOrdered() - returns all categories ordered.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectoryCategoryFindAllOrdered() {
         DirectoryCategory category1 = TestFixtures.createTestDirectoryCategory();
         DirectoryCategory category2 = TestFixtures.createTestDirectoryCategory();
@@ -481,7 +482,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySite.findByUrl() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteFindByUrl() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite site = TestFixtures.createTestDirectorySite(submitter);
@@ -496,7 +497,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySite.findByUrl() - not found case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteFindByUrlNotFound() {
         Optional<DirectorySite> found = DirectorySite.findByUrl("https://nonexistent.example.com");
 
@@ -507,7 +508,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySite.findByUserId() - returns sites submitted by user.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteFindByUserId() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite site = TestFixtures.createTestDirectorySite(submitter);
@@ -522,7 +523,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySite.findByStatus() - status filtering.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteFindByStatus() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite publishedSite = TestFixtures.createTestDirectorySite(submitter);
@@ -539,7 +540,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySite.findPendingModeration() - returns sites awaiting moderation.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteFindPendingModeration() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite site = TestFixtures.createTestDirectorySite(submitter);
@@ -556,7 +557,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySite.findDeadSites() - returns sites marked as dead.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteFindDeadSites() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite deadSite = TestFixtures.createTestDirectorySite(submitter);
@@ -572,7 +573,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySite.findByDomain() - returns sites from same domain.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteFindByDomain() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite site = TestFixtures.createTestDirectorySite(submitter);
@@ -589,7 +590,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySiteCategory.findBySiteId() - returns categories for site.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteCategoryFindBySiteId() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite site = TestFixtures.createTestDirectorySite(submitter);
@@ -614,7 +615,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySiteCategory.findByCategoryId() - returns sites in category.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteCategoryFindByCategoryId() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite site = TestFixtures.createTestDirectorySite(submitter);
@@ -639,7 +640,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectorySiteCategory.findBySiteAndCategory() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectorySiteCategoryFindBySiteAndCategory() {
         User submitter = TestFixtures.createTestUser();
         DirectorySite site = TestFixtures.createTestDirectorySite(submitter);
@@ -666,7 +667,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectoryVote.findByUserAndSiteCategory() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectoryVoteFindByUserAndSiteCategory() {
         User voter = TestFixtures.createTestUser();
         User submitter = TestFixtures.createTestUser(VALID_EMAIL_2, "Submitter");
@@ -699,7 +700,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectoryVote.findBySiteCategoryId() - returns votes for site-category.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectoryVoteFindBySiteCategoryId() {
         User voter = TestFixtures.createTestUser();
         User submitter = TestFixtures.createTestUser(VALID_EMAIL_2, "Submitter");
@@ -732,7 +733,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DirectoryVote.findByUserId() - returns user's votes.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDirectoryVoteFindByUserId() {
         User voter = TestFixtures.createTestUser();
         User submitter = TestFixtures.createTestUser(VALID_EMAIL_2, "Submitter");
@@ -770,7 +771,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests UserFeedSubscription.findActiveByUser() - returns user's active subscriptions.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFeedSubscriptionFindActiveByUser() {
         User user = TestFixtures.createTestUser();
         RssSource source = TestFixtures.createTestRssSource();
@@ -791,7 +792,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests UserFeedSubscription.findActiveBySource() - returns source's active subscribers.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFeedSubscriptionFindActiveBySource() {
         User user = TestFixtures.createTestUser();
         RssSource source = TestFixtures.createTestRssSource();
@@ -812,7 +813,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests UserFeedSubscription.findByUserAndSource() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testUserFeedSubscriptionFindByUserAndSource() {
         User user = TestFixtures.createTestUser();
         RssSource source = TestFixtures.createTestRssSource();
@@ -834,7 +835,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests SocialPost.findRecentByToken() - returns posts for social token.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testSocialPostFindRecentByToken() {
         User user = TestFixtures.createTestUser();
         SocialToken token = new SocialToken();
@@ -870,7 +871,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests SocialPost.findByPlatformPostId() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testSocialPostFindByPlatformPostId() {
         User user = TestFixtures.createTestUser();
         SocialToken token = new SocialToken();
@@ -906,7 +907,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests SocialPost.findExpired() - returns posts with stale fetch timestamps.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testSocialPostFindExpired() {
         User user = TestFixtures.createTestUser();
         SocialToken token = new SocialToken();
@@ -944,7 +945,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests SocialToken.findActiveByUserAndPlatform() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testSocialTokenFindActiveByUserAndPlatform() {
         User user = TestFixtures.createTestUser();
         SocialToken token = new SocialToken();
@@ -967,7 +968,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests SocialToken.findActiveByUser() - returns user's active tokens.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testSocialTokenFindActiveByUser() {
         User user = TestFixtures.createTestUser();
         SocialToken token = new SocialToken();
@@ -990,7 +991,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests SocialToken.findAllActive() - returns all active tokens.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testSocialTokenFindAllActive() {
         User user = TestFixtures.createTestUser();
         SocialToken activeToken = new SocialToken();
@@ -1013,7 +1014,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests SocialToken.findExpiringSoon() - temporal query.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testSocialTokenFindExpiringSoon() {
         User user = TestFixtures.createTestUser();
         SocialToken expiringSoonToken = new SocialToken();
@@ -1038,7 +1039,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests PaymentRefund.findByPaymentIntent() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testPaymentRefundFindByPaymentIntent() {
         PaymentRefund refund = new PaymentRefund();
         refund.stripePaymentIntentId = "pi_test_12345";
@@ -1061,7 +1062,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests PaymentRefund.findPending() - returns pending refunds.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testPaymentRefundFindPending() {
         PaymentRefund refund = new PaymentRefund();
         refund.stripePaymentIntentId = "pi_test_99999";
@@ -1083,7 +1084,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests PaymentRefund.findByUserId() - returns user's refunds.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testPaymentRefundFindByUserId() {
         User user = TestFixtures.createTestUser();
         PaymentRefund refund = new PaymentRefund();
@@ -1106,7 +1107,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests PaymentRefund.countChargebacks() - counts chargebacks for user.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testPaymentRefundCountChargebacks() {
         User user = TestFixtures.createTestUser();
         PaymentRefund chargeback = new PaymentRefund();
@@ -1130,7 +1131,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests ImpersonationAudit.findByImpersonator() - returns admin's impersonations.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testImpersonationAuditFindByImpersonator() {
         User admin = TestFixtures.createTestUser();
         admin.adminRole = User.ROLE_SUPER_ADMIN;
@@ -1155,7 +1156,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests ImpersonationAudit.findByTarget() - returns impersonations of user.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testImpersonationAuditFindByTarget() {
         User admin = TestFixtures.createTestUser();
         admin.adminRole = User.ROLE_SUPER_ADMIN;
@@ -1180,7 +1181,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests ImpersonationAudit.findActive() - returns active impersonation sessions.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testImpersonationAuditFindActive() {
         User admin = TestFixtures.createTestUser();
         admin.adminRole = User.ROLE_SUPER_ADMIN;
@@ -1208,7 +1209,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests AccountMergeAudit.findPendingPurge() - returns audits ready for purge.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testAccountMergeAuditFindPendingPurge() {
         User anonymous = TestFixtures.createTestUser();
         User authenticated = TestFixtures.createTestUser(VALID_EMAIL_2, "Authenticated User");
@@ -1236,7 +1237,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests AccountMergeAudit.findByAuthenticatedUser() - returns audits for authenticated user.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testAccountMergeAuditFindByAuthenticatedUser() {
         User anonymous = TestFixtures.createTestUser();
         User authenticated = TestFixtures.createTestUser(VALID_EMAIL_2, "Authenticated User");
@@ -1266,7 +1267,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests GdprRequest.findByUser() - returns user's GDPR requests.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testGdprRequestFindByUser() {
         User user = TestFixtures.createTestUser();
         GdprRequest request = new GdprRequest();
@@ -1290,7 +1291,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests GdprRequest.findByStatus() - status filtering.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testGdprRequestFindByStatus() {
         User user = TestFixtures.createTestUser();
         GdprRequest request = new GdprRequest();
@@ -1316,7 +1317,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests DelayedJob.findReadyJobs() - returns jobs ready to execute.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testDelayedJobFindReadyJobs() {
         DelayedJob job = new DelayedJob();
         job.jobType = villagecompute.homepage.jobs.JobType.RSS_FEED_REFRESH;
@@ -1341,7 +1342,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests ListingPromotion.findActiveFeatured() - returns active promotions.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testListingPromotionFindActiveFeatured() {
         User user = TestFixtures.createTestUser();
         MarketplaceListing listing = TestFixtures.createTestListing(user);
@@ -1365,7 +1366,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests ReservedUsername.findByUsername() - success case.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testReservedUsernameFindByUsername() {
         ReservedUsername reserved = new ReservedUsername();
         reserved.username = "admin";
@@ -1382,7 +1383,7 @@ public class EntityFinderTest extends BaseIntegrationTest {
      * Tests ProfileCuratedArticle.findByProfile() - returns profile's curated articles.
      */
     @Test
-    @TestTransaction
+    @Transactional
     public void testProfileCuratedArticleFindByProfile() {
         User user = TestFixtures.createTestUser();
         // Create a UserProfile first

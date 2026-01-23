@@ -13,6 +13,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
 import org.junit.jupiter.api.Test;
+import jakarta.transaction.Transactional;
 
 /**
  * Unit tests for {@link StockService}.

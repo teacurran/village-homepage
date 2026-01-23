@@ -288,6 +288,135 @@ public abstract class WireMockTestBase extends BaseIntegrationTest {
     }
 
     /**
+     * Stubs a successful Google OAuth token exchange response.
+     *
+     * <p>
+     * Uses the default success stub file: google-oauth/token-response-success.json
+     *
+     * <p>
+     * Matches requests to: POST /token
+     *
+     * @throws RuntimeException
+     *             if stub file cannot be loaded
+     */
+    protected void stubGoogleTokenExchange() {
+        String responseBody = loadStubFile("wiremock/google-oauth/token-response-success.json");
+        stubGoogleTokenExchange(responseBody);
+    }
+
+    /**
+     * Stubs a Google OAuth token exchange response with custom JSON.
+     *
+     * <p>
+     * Matches requests to: POST /token
+     *
+     * @param responseBodyJson
+     *            the custom JSON response body
+     */
+    protected void stubGoogleTokenExchange(String responseBodyJson) {
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/token")).willReturn(WireMock.aResponse()
+                .withStatus(200).withHeader("Content-Type", "application/json").withBody(responseBodyJson)));
+    }
+
+    /**
+     * Stubs a Google OAuth token exchange error response.
+     *
+     * <p>
+     * Uses the error stub file: google-oauth/token-response-invalid-code.json
+     *
+     * <p>
+     * Returns HTTP 400 Bad Request
+     *
+     * @throws RuntimeException
+     *             if stub file cannot be loaded
+     */
+    protected void stubGoogleTokenExchangeError() {
+        String responseBody = loadStubFile("wiremock/google-oauth/token-response-invalid-code.json");
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/token")).willReturn(WireMock.aResponse()
+                .withStatus(400).withHeader("Content-Type", "application/json").withBody(responseBody)));
+    }
+
+    /**
+     * Stubs a successful Google OAuth user info response.
+     *
+     * <p>
+     * Uses the default success stub file: google-oauth/userinfo-response-success.json
+     *
+     * <p>
+     * Matches requests to: GET /oauth2/v3/userinfo
+     *
+     * @throws RuntimeException
+     *             if stub file cannot be loaded
+     */
+    protected void stubGoogleUserInfo() {
+        String responseBody = loadStubFile("wiremock/google-oauth/userinfo-response-success.json");
+        stubGoogleUserInfo(responseBody);
+    }
+
+    /**
+     * Stubs a Google OAuth user info response with custom JSON.
+     *
+     * <p>
+     * Matches requests to: GET /oauth2/v3/userinfo
+     *
+     * @param responseBodyJson
+     *            the custom JSON response body
+     */
+    protected void stubGoogleUserInfo(String responseBodyJson) {
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/oauth2/v3/userinfo")).willReturn(WireMock
+                .aResponse().withStatus(200).withHeader("Content-Type", "application/json").withBody(responseBodyJson)));
+    }
+
+    /**
+     * Stubs a successful Apple OAuth token exchange response.
+     *
+     * <p>
+     * Uses the default success stub file: apple-oauth/token-response-success.json
+     *
+     * <p>
+     * Matches requests to: POST /auth/token
+     *
+     * @throws RuntimeException
+     *             if stub file cannot be loaded
+     */
+    protected void stubAppleTokenExchange() {
+        String responseBody = loadStubFile("wiremock/apple-oauth/token-response-success.json");
+        stubAppleTokenExchange(responseBody);
+    }
+
+    /**
+     * Stubs an Apple OAuth token exchange response with custom JSON.
+     *
+     * <p>
+     * Matches requests to: POST /auth/token
+     *
+     * @param responseBodyJson
+     *            the custom JSON response body
+     */
+    protected void stubAppleTokenExchange(String responseBodyJson) {
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/auth/token")).willReturn(WireMock.aResponse()
+                .withStatus(200).withHeader("Content-Type", "application/json").withBody(responseBodyJson)));
+    }
+
+    /**
+     * Stubs an Apple OAuth token exchange error response.
+     *
+     * <p>
+     * Uses the error stub file: apple-oauth/token-response-invalid-code.json
+     *
+     * <p>
+     * Returns HTTP 400 Bad Request
+     *
+     * @throws RuntimeException
+     *             if stub file cannot be loaded
+     */
+    protected void stubAppleTokenExchangeError() {
+        String responseBody = loadStubFile("wiremock/apple-oauth/token-response-invalid-code.json");
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/auth/token")).willReturn(WireMock.aResponse()
+                .withStatus(400).withHeader("Content-Type", "application/json").withBody(responseBody)));
+    }
+
+    /**
      * Loads a stub JSON file from the test resources directory.
      *
      * <p>

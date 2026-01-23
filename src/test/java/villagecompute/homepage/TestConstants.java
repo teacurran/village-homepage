@@ -81,6 +81,61 @@ public final class TestConstants {
     /** Test avatar URL. */
     public static final String AVATAR_URL = "https://example.com/avatar.jpg";
 
+    // OAuth flow test data
+    /** Test OAuth authorization code. */
+    public static final String TEST_OAUTH_CODE = "test-auth-code-12345";
+
+    /** Test OAuth state token. */
+    public static final String TEST_OAUTH_STATE = "test-state-token";
+
+    /** Test OAuth redirect URI. */
+    public static final String TEST_OAUTH_REDIRECT_URI = "http://localhost:8080/oauth/callback";
+
+    // Google OAuth test data
+    /** Test Google OAuth access token. */
+    public static final String TEST_GOOGLE_ACCESS_TOKEN = "ya29.test-google-token";
+
+    /** Test Google OAuth user ID. */
+    public static final String TEST_GOOGLE_USER_ID = "google-user-12345";
+
+    /** Test Google OAuth email. */
+    public static final String TEST_GOOGLE_EMAIL = "test@gmail.com";
+
+    /** Test Google OAuth display name. */
+    public static final String TEST_GOOGLE_NAME = "Google Test User";
+
+    /** Test Google OAuth refresh token. */
+    public static final String TEST_GOOGLE_REFRESH_TOKEN = "1//0gHdj8s-test-refresh";
+
+    // Facebook OAuth test data
+    /** Test Facebook OAuth access token. */
+    public static final String TEST_FACEBOOK_ACCESS_TOKEN = "EAAtest-facebook-token";
+
+    /** Test Facebook OAuth user ID. */
+    public static final String TEST_FACEBOOK_USER_ID = "facebook-user-12345";
+
+    /** Test Facebook OAuth email. */
+    public static final String TEST_FACEBOOK_EMAIL = "test@facebook.com";
+
+    /** Test Facebook OAuth display name. */
+    public static final String TEST_FACEBOOK_NAME = "Facebook Test User";
+
+    // Apple OAuth test data
+    /** Test Apple OAuth ID token (JWT). */
+    public static final String TEST_APPLE_ID_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test";
+
+    /** Test Apple OAuth user ID (sub claim). */
+    public static final String TEST_APPLE_USER_ID = "apple-user-12345";
+
+    /** Test Apple OAuth email. */
+    public static final String TEST_APPLE_EMAIL = "test@appleid.com";
+
+    /** Test Apple OAuth display name. */
+    public static final String TEST_APPLE_NAME = "Apple Test User";
+
+    /** Test Apple OAuth refresh token. */
+    public static final String TEST_APPLE_REFRESH_TOKEN = "apple-refresh-token-test";
+
     // ========== WIDGET DOMAIN ==========
 
     /** Widget ID: news. */

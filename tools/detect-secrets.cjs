@@ -180,7 +180,9 @@ const EXCLUDED_PATTERNS = [
     /docker-compose\.yml$/,  // Dev environment with safe defaults
     /mvnw$/,  // Maven wrapper (contains MVNW_PASSWORD env var references, not secrets)
     /mvnw\.cmd$/,  // Maven wrapper (Windows)
-    /docs\/ops\/dev-services\.md$/  // Documentation with dev credentials
+    /docs\/ops\/dev-services\.md$/,  // Documentation with dev credentials
+    /src\/test\/resources\/wiremock\//,  // WireMock test stubs with test OAuth tokens
+    /src\/test\/java\/villagecompute\/homepage\/integration\/oauth\//  // OAuth integration tests with test tokens
 ];
 
 /**

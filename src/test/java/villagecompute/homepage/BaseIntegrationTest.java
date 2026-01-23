@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * This class provides:
  * <ul>
  * <li>Testcontainers PostgreSQL 17 with PostGIS extension (via application-test.properties)</li>
- * <li>@TestTransaction annotation ensures database rollback after each test</li>
+ * <li>@Transactional annotation ensures database rollback after each test</li>
  * <li>Helper methods for common entity assertions (assertEntityExists, assertEntityDeleted)</li>
  * <li>Lifecycle hooks for setup/teardown if needed by subclasses</li>
  * </ul>
@@ -71,13 +71,13 @@ public abstract class BaseIntegrationTest {
      * does nothing.
      *
      * <p>
-     * Note: If using @TestTransaction, database changes are automatically rolled back. Manual cleanup is usually not
+     * Note: If using @Transactional, database changes are automatically rolled back. Manual cleanup is usually not
      * required.
      */
     @AfterEach
     protected void tearDown() {
         // Subclasses can override for custom teardown
-        // Database is automatically rolled back by @TestTransaction (if used)
+        // Database is automatically rolled back by @Transactional (if used)
     }
 
     /**
