@@ -91,6 +91,16 @@ public class AuthIdentityService {
     Optional<String> cookieDomain;
 
     @ConfigProperty(
+            name = "villagecompute.auth.session.cookie.name",
+            defaultValue = "vu_session")
+    String sessionCookieName;
+
+    @ConfigProperty(
+            name = "villagecompute.auth.session.cookie.max-age",
+            defaultValue = "86400")
+    int sessionCookieMaxAge;
+
+    @ConfigProperty(
             name = "villagecompute.auth.bootstrap.token")
     Optional<String> bootstrapToken;
 
@@ -559,6 +569,66 @@ public class AuthIdentityService {
         } else {
             return ImpersonationAudit.findByTarget(userId);
         }
+    }
+
+    /**
+     * Check if cookie security (Secure flag) is enabled.
+     *
+     * <p>
+     * Returns the configured value for the cookie secure flag. In production, this should always be true (HTTPS-only).
+     * In development, it may be false to allow HTTP testing.
+     *
+     * @return true if cookies should have Secure flag (HTTPS-only), false otherwise
+     */
+    public boolean isCookieSecure() {
+        return cookieSecure;
+    }
+
+    /**
+     * Get the anonymous cookie name.
+     *
+     * @return the configured anonymous cookie name (default: vu_anon_id)
+     */
+    public String getAnonymousCookieName() {
+        return anonymousCookieName;
+    }
+
+    /**
+     * Get the session cookie name.
+     *
+     * @return the configured session cookie name (default: vu_session)
+     */
+    public String getSessionCookieName() {
+        return sessionCookieName;
+    }
+
+    /**
+     * Build a secure cookie with consistent security attributes.
+     *
+     * <p>
+     * Creates a NewCookie with the following security attributes:
+     * <ul>
+     * <li>HttpOnly: true (prevents JavaScript access, XSS protection)</li>
+     * <li>Secure: dynamic based on environment (HTTPS-only in production)</li>
+     * <li>SameSite: Lax (CSRF protection while allowing OAuth redirects)</li>
+     * <li>Domain: optional subdomain sharing (configured via villagecompute.auth.cookie.domain)</li>
+     * </ul>
+     *
+     * @param name
+     *            the cookie name
+     * @param value
+     *            the cookie value
+     * @param maxAge
+     *            the cookie max age in seconds (0 to delete, -1 for session, positive for TTL)
+     * @return the configured NewCookie instance
+     */
+    public NewCookie buildSecureCookie(String name, String value, int maxAge) {
+        NewCookie.Builder builder = new NewCookie.Builder(name).value(value).path("/").maxAge(maxAge)
+                .httpOnly(cookieHttpOnly).secure(cookieSecure).sameSite(mapSameSite(cookieSameSite));
+
+        cookieDomain.filter(s -> !s.isBlank()).ifPresent(builder::domain);
+
+        return builder.build();
     }
 
     public enum BootstrapValidationResult {

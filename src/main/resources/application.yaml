@@ -194,6 +194,13 @@ villagecompute:
       # Domain for production subdomain sharing (optional, defaults to current host)
       domain: ${COOKIE_DOMAIN:}
 
+    # Session cookie settings (authenticated users)
+    session:
+      cookie:
+        name: vu_session
+        max-age: 86400  # 24 hours in seconds
+        # Inherits secure, http-only, same-site, and domain from anonymous cookie settings
+
     # Bootstrap superuser token (Policy P1)
     # One-time use token for first admin creation
     # Stored in Kubernetes secret: homepage-bootstrap-credentials
@@ -310,7 +317,6 @@ gdpr:
         otlp:
           # Local Jaeger from docker-compose
           endpoint: http://localhost:4318
-    # OIDC dev overrides - disable secure cookies for HTTP
   # Development cookie settings (HTTP-compatible)
   villagecompute:
     auth:

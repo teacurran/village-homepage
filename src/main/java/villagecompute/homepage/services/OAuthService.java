@@ -80,20 +80,9 @@ public class OAuthService {
      */
     @Transactional
     public OAuthUrlResponseType initiateGoogleLogin(String sessionId, String redirectUri) {
-        String state = generateState();
-
-        // Store state token in database with 5-minute expiration
-        OAuthState oauthState = new OAuthState();
-        oauthState.state = state;
-        oauthState.sessionId = sessionId;
-        oauthState.provider = "google";
-        oauthState.createdAt = Instant.now();
-        oauthState.expiresAt = Instant.now().plus(STATE_TTL_MINUTES, ChronoUnit.MINUTES);
-        oauthState.persist();
-
+        String state = generateState(sessionId, "google");
         String authUrl = googleClient.getAuthorizationUrl(redirectUri, state);
         LOG.infof("Initiated Google OAuth login: sessionId=%s, state=%s", sessionId, state);
-
         return new OAuthUrlResponseType(authUrl, state);
     }
 
@@ -128,17 +117,7 @@ public class OAuthService {
     @Transactional
     public User handleGoogleCallback(String code, String state, String redirectUri) {
         // 1. Validate state token
-        Optional<OAuthState> stateRecord = OAuthState.findByStateAndProvider(state, "google");
-        if (stateRecord.isEmpty()) {
-            LOG.warnf("Invalid or expired OAuth state: state=%s", state);
-            throw new SecurityException("Invalid or expired state token");
-        }
-
-        String sessionId = stateRecord.get().sessionId;
-
-        // 2. Delete state (single-use token)
-        stateRecord.get().delete();
-        LOG.infof("Validated and deleted OAuth state: state=%s, sessionId=%s", state, sessionId);
+        String sessionId = validateState(state, "google");
 
         // 3. Exchange code for token
         GoogleTokenResponseType tokenResponse = googleClient.exchangeCodeForToken(code, redirectUri);
@@ -230,20 +209,9 @@ public class OAuthService {
      */
     @Transactional
     public OAuthUrlResponseType initiateFacebookLogin(String sessionId, String redirectUri) {
-        String state = generateState();
-
-        // Store state token in database with 5-minute expiration
-        OAuthState oauthState = new OAuthState();
-        oauthState.state = state;
-        oauthState.sessionId = sessionId;
-        oauthState.provider = "facebook";
-        oauthState.createdAt = Instant.now();
-        oauthState.expiresAt = Instant.now().plus(STATE_TTL_MINUTES, ChronoUnit.MINUTES);
-        oauthState.persist();
-
+        String state = generateState(sessionId, "facebook");
         String authUrl = facebookClient.getAuthorizationUrl(redirectUri, state);
         LOG.infof("Initiated Facebook OAuth login: sessionId=%s, state=%s", sessionId, state);
-
         return new OAuthUrlResponseType(authUrl, state);
     }
 
@@ -287,17 +255,7 @@ public class OAuthService {
     @Transactional
     public User handleFacebookCallback(String code, String state, String redirectUri) {
         // 1. Validate state token
-        Optional<OAuthState> stateRecord = OAuthState.findByStateAndProvider(state, "facebook");
-        if (stateRecord.isEmpty()) {
-            LOG.warnf("Invalid or expired OAuth state: state=%s", state);
-            throw new SecurityException("Invalid or expired state token");
-        }
-
-        String sessionId = stateRecord.get().sessionId;
-
-        // 2. Delete state (single-use token)
-        stateRecord.get().delete();
-        LOG.infof("Validated and deleted OAuth state: state=%s, sessionId=%s", state, sessionId);
+        String sessionId = validateState(state, "facebook");
 
         // 3. Exchange code for token
         FacebookTokenResponseType tokenResponse = facebookClient.exchangeCodeForToken(code, redirectUri);
@@ -401,20 +359,9 @@ public class OAuthService {
      */
     @Transactional
     public OAuthUrlResponseType initiateAppleLogin(String sessionId, String redirectUri) {
-        String state = generateState();
-
-        // Store state token in database with 5-minute expiration
-        OAuthState oauthState = new OAuthState();
-        oauthState.state = state;
-        oauthState.sessionId = sessionId;
-        oauthState.provider = "apple";
-        oauthState.createdAt = Instant.now();
-        oauthState.expiresAt = Instant.now().plus(STATE_TTL_MINUTES, ChronoUnit.MINUTES);
-        oauthState.persist();
-
+        String state = generateState(sessionId, "apple");
         String authUrl = appleClient.getAuthorizationUrl(redirectUri, state);
         LOG.infof("Initiated Apple OAuth login: sessionId=%s, state=%s", sessionId, state);
-
         return new OAuthUrlResponseType(authUrl, state);
     }
 
@@ -458,17 +405,7 @@ public class OAuthService {
     @Transactional
     public User handleAppleCallback(String code, String state, String redirectUri) {
         // 1. Validate state token
-        Optional<OAuthState> stateRecord = OAuthState.findByStateAndProvider(state, "apple");
-        if (stateRecord.isEmpty()) {
-            LOG.warnf("Invalid or expired OAuth state: state=%s", state);
-            throw new SecurityException("Invalid or expired state token");
-        }
-
-        String sessionId = stateRecord.get().sessionId;
-
-        // 2. Delete state (single-use token)
-        stateRecord.get().delete();
-        LOG.infof("Validated and deleted OAuth state: state=%s, sessionId=%s", state, sessionId);
+        String sessionId = validateState(state, "apple");
 
         // 3. Exchange code for token
         AppleTokenResponseType tokenResponse = appleClient.exchangeCodeForToken(code, redirectUri);
@@ -556,10 +493,79 @@ public class OAuthService {
     }
 
     /**
+     * Generate and store OAuth state token with 5-minute expiration.
+     *
+     * <p>
+     * State tokens are cryptographically random UUID v4 values that prevent CSRF attacks. Each token is stored in the
+     * database with a session ID association and automatically expires after 5 minutes.
+     *
+     * @param sessionId
+     *            the anonymous session hash or authenticated user ID
+     * @param provider
+     *            the OAuth provider ('google', 'facebook', 'apple')
+     * @return the generated state token (UUID v4)
+     */
+    @Transactional
+    public String generateState(String sessionId, String provider) {
+        String state = UUID.randomUUID().toString();
+
+        OAuthState oauthState = new OAuthState();
+        oauthState.state = state;
+        oauthState.sessionId = sessionId;
+        oauthState.provider = provider;
+        oauthState.createdAt = Instant.now();
+        oauthState.expiresAt = Instant.now().plus(STATE_TTL_MINUTES, ChronoUnit.MINUTES);
+        oauthState.persist();
+
+        LOG.infof("SECURITY: Generated OAuth state: provider=%s, sessionId=%s, state=%s, expiresAt=%s", provider,
+                sessionId, state, oauthState.expiresAt);
+
+        return state;
+    }
+
+    /**
+     * Validate and consume OAuth state token (single-use).
+     *
+     * <p>
+     * Validates that the state token exists, matches the provider, and hasn't expired. The token is immediately deleted
+     * after validation to prevent replay attacks.
+     *
+     * @param state
+     *            the state token from OAuth callback
+     * @param provider
+     *            the OAuth provider
+     * @return the session ID associated with the state
+     * @throws SecurityException
+     *             if state is invalid or expired
+     */
+    @Transactional
+    public String validateState(String state, String provider) {
+        Optional<OAuthState> stateRecord = OAuthState.findByStateAndProvider(state, provider);
+
+        if (stateRecord.isEmpty()) {
+            LOG.warnf("SECURITY: Invalid or expired OAuth state: provider=%s, state=%s", provider, state);
+            throw new SecurityException("Invalid or expired state token");
+        }
+
+        String sessionId = stateRecord.get().sessionId;
+        Instant expiresAt = stateRecord.get().expiresAt;
+
+        // Delete state token (single-use)
+        stateRecord.get().delete();
+
+        LOG.infof("SECURITY: Validated OAuth state: provider=%s, sessionId=%s, state=%s, expiresAt=%s", provider,
+                sessionId, state, expiresAt);
+
+        return sessionId;
+    }
+
+    /**
      * Generate cryptographically random state token.
      *
      * @return UUID v4 as string (122 bits of entropy)
+     * @deprecated Use {@link #generateState(String, String)} instead
      */
+    @Deprecated
     private String generateState() {
         return UUID.randomUUID().toString();
     }

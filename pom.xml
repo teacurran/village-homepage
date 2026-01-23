@@ -288,6 +288,11 @@
             <scope>test</scope>
         </dependency>
         <!-- NOTE: H2 required for legacy tests using H2TestResource -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- New tests using PostgreSQLTestProfile override H2 with PostgreSQL Testcontainers -->
         <dependency>
             <groupId>io.quarkus</groupId>

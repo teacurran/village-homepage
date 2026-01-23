@@ -198,6 +198,39 @@ public class AuthResource {
     }
 
     /**
+     * Logout endpoint - terminates authenticated session and clears cookies.
+     *
+     * <p>
+     * Clears both authenticated session cookie (vu_session) and anonymous cookie (vu_anon_id). Optionally revokes OAuth
+     * tokens with providers (not implemented in v1).
+     *
+     * <p>
+     * Security Notes:
+     * <ul>
+     * <li>Returns 204 No Content (not 200 OK) per REST best practices</li>
+     * <li>Sets cookie Max-Age=0 to delete cookies (not expired date)</li>
+     * <li>No redirect - client handles post-logout navigation</li>
+     * </ul>
+     *
+     * @param headers
+     *            HTTP headers containing cookies
+     * @return 204 No Content with cookie deletion headers
+     */
+    @POST
+    @Path("/logout")
+    public Response logout(@Context HttpHeaders headers) {
+        LOG.infof("User logout requested");
+
+        // Create expired cookies to delete existing cookies
+        NewCookie sessionCookie = authService.buildSecureCookie(authService.getSessionCookieName(), "", 0);
+        NewCookie anonCookie = authService.buildSecureCookie(authService.getAnonymousCookieName(), "", 0);
+
+        LOG.infof("User logged out successfully");
+
+        return Response.noContent().cookie(sessionCookie, anonCookie).build();
+    }
+
+    /**
      * Initiate Google OAuth login flow.
      *
      * <p>
