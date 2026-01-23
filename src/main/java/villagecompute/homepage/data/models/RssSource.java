@@ -161,7 +161,7 @@ public class RssSource extends PanacheEntityBase {
         if (url == null || url.isBlank()) {
             return Optional.empty();
         }
-        return find(JPQL_FIND_BY_URL, Parameters.with("url", url)).firstResultOptional();
+        return find("#" + QUERY_FIND_BY_URL, Parameters.with("url", url)).firstResultOptional();
     }
 
     /**
@@ -170,7 +170,7 @@ public class RssSource extends PanacheEntityBase {
      * @return List of active sources
      */
     public static List<RssSource> findActive() {
-        return find(JPQL_FIND_ACTIVE).list();
+        return find("#" + QUERY_FIND_ACTIVE).list();
     }
 
     /**
@@ -184,7 +184,7 @@ public class RssSource extends PanacheEntityBase {
         if (category == null || category.isBlank()) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_CATEGORY, Parameters.with("category", category)).list();
+        return find("#" + QUERY_FIND_BY_CATEGORY, Parameters.with("category", category)).list();
     }
 
     /**
@@ -193,7 +193,7 @@ public class RssSource extends PanacheEntityBase {
      * @return List of system feeds (curated by VillageCompute)
      */
     public static List<RssSource> findSystemFeeds() {
-        return find(JPQL_FIND_SYSTEM_FEEDS).list();
+        return find("#" + QUERY_FIND_SYSTEM_FEEDS).list();
     }
 
     /**
@@ -207,7 +207,7 @@ public class RssSource extends PanacheEntityBase {
         if (userId == null) {
             return List.of();
         }
-        return find(JPQL_FIND_USER_FEEDS, Parameters.with("userId", userId)).list();
+        return find("#" + QUERY_FIND_USER_FEEDS, Parameters.with("userId", userId)).list();
     }
 
     /**
@@ -218,7 +218,7 @@ public class RssSource extends PanacheEntityBase {
     public static List<RssSource> findDueForRefresh() {
         // Fetch all active sources and filter in Java for database compatibility
         // In production with PostgreSQL, this could be optimized with a native query using interval arithmetic
-        List<RssSource> activeSources = find(JPQL_FIND_DUE_FOR_REFRESH).list();
+        List<RssSource> activeSources = find("#" + QUERY_FIND_DUE_FOR_REFRESH).list();
         Instant now = Instant.now();
 
         return activeSources.stream().filter(source -> {

@@ -157,7 +157,7 @@ public class FeedItem extends PanacheEntityBase {
         if (guid == null || guid.isBlank()) {
             return Optional.empty();
         }
-        return find(JPQL_FIND_BY_GUID, Parameters.with("guid", guid)).firstResultOptional();
+        return find("#" + QUERY_FIND_BY_GUID, Parameters.with("guid", guid)).firstResultOptional();
     }
 
     /**
@@ -171,7 +171,7 @@ public class FeedItem extends PanacheEntityBase {
         if (sourceId == null) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_SOURCE, Parameters.with("sourceId", sourceId)).list();
+        return find("#" + QUERY_FIND_BY_SOURCE, Parameters.with("sourceId", sourceId)).list();
     }
 
     /**
@@ -182,7 +182,7 @@ public class FeedItem extends PanacheEntityBase {
      * @return List of recent feed items
      */
     public static List<FeedItem> findRecent(int limit) {
-        return find(JPQL_FIND_RECENT).page(0, limit).list();
+        return find("#" + QUERY_FIND_RECENT).page(0, limit).list();
     }
 
     /**
@@ -195,7 +195,7 @@ public class FeedItem extends PanacheEntityBase {
      * @return List of recent feed items
      */
     public static List<FeedItem> findRecent(int offset, int limit) {
-        return find(JPQL_FIND_RECENT).page(offset / limit, limit).list();
+        return find("#" + QUERY_FIND_RECENT).page(offset / limit, limit).list();
     }
 
     /**
@@ -204,7 +204,7 @@ public class FeedItem extends PanacheEntityBase {
      * @return List of untagged feed items
      */
     public static List<FeedItem> findUntagged() {
-        return find(JPQL_FIND_UNTAGGED).list();
+        return find("#" + QUERY_FIND_UNTAGGED).list();
     }
 
     /**
@@ -218,7 +218,7 @@ public class FeedItem extends PanacheEntityBase {
         if (contentHash == null || contentHash.isBlank()) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_CONTENT_HASH, Parameters.with("contentHash", contentHash)).list();
+        return find("#" + QUERY_FIND_BY_CONTENT_HASH, Parameters.with("contentHash", contentHash)).list();
     }
 
     /**
