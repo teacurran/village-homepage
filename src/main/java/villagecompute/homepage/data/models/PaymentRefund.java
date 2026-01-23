@@ -82,6 +82,9 @@ import java.util.UUID;
 @NamedQuery(
         name = PaymentRefund.QUERY_COUNT_CHARGEBACKS,
         query = PaymentRefund.JPQL_COUNT_CHARGEBACKS)
+@NamedQuery(
+        name = PaymentRefund.QUERY_FIND_BY_STRIPE_REFUND_ID,
+        query = PaymentRefund.JPQL_FIND_BY_STRIPE_REFUND_ID)
 public class PaymentRefund extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(PaymentRefund.class);
@@ -100,6 +103,9 @@ public class PaymentRefund extends PanacheEntityBase {
 
     public static final String JPQL_COUNT_CHARGEBACKS = "SELECT COUNT(p) FROM PaymentRefund p WHERE p.userId = ?1 AND p.reason = 'chargeback'";
     public static final String QUERY_COUNT_CHARGEBACKS = "PaymentRefund.countChargebacks";
+
+    public static final String JPQL_FIND_BY_STRIPE_REFUND_ID = "FROM PaymentRefund WHERE stripeRefundId = :stripeRefundId";
+    public static final String QUERY_FIND_BY_STRIPE_REFUND_ID = "PaymentRefund.findByStripeRefundId";
 
     @Id
     @GeneratedValue
@@ -211,6 +217,24 @@ public class PaymentRefund extends PanacheEntityBase {
             return Optional.empty();
         }
         return find(JPQL_FIND_BY_PAYMENT_INTENT, paymentIntentId).firstResultOptional();
+    }
+
+    /**
+     * Finds a refund by Stripe Refund ID.
+     *
+     * <p>
+     * Used for webhook idempotency and refund status tracking after Stripe processing.
+     *
+     * @param stripeRefundId
+     *            Stripe Refund ID
+     * @return Optional containing the refund if found
+     */
+    public static Optional<PaymentRefund> findByStripeRefundId(String stripeRefundId) {
+        if (stripeRefundId == null || stripeRefundId.isBlank()) {
+            return Optional.empty();
+        }
+        return find("#" + QUERY_FIND_BY_STRIPE_REFUND_ID,
+                io.quarkus.panache.common.Parameters.with("stripeRefundId", stripeRefundId)).firstResultOptional();
     }
 
     /**

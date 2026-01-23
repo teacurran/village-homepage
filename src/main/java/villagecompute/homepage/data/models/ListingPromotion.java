@@ -78,6 +78,9 @@ import java.util.UUID;
 @NamedQuery(
         name = ListingPromotion.QUERY_CHECK_RECENT_BUMP,
         query = ListingPromotion.JPQL_CHECK_RECENT_BUMP)
+@NamedQuery(
+        name = ListingPromotion.QUERY_FIND_ACTIVE_BY_LISTING,
+        query = ListingPromotion.JPQL_FIND_ACTIVE_BY_LISTING)
 public class ListingPromotion extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(ListingPromotion.class);
@@ -96,6 +99,9 @@ public class ListingPromotion extends PanacheEntityBase {
 
     public static final String JPQL_CHECK_RECENT_BUMP = "SELECT COUNT(lp) FROM ListingPromotion lp WHERE lp.listingId = :listingId AND lp.type = 'bump' AND lp.createdAt >= :cutoff";
     public static final String QUERY_CHECK_RECENT_BUMP = "ListingPromotion.checkRecentBump";
+
+    public static final String JPQL_FIND_ACTIVE_BY_LISTING = "SELECT lp FROM ListingPromotion lp WHERE lp.listingId = :listingId AND (lp.expiresAt IS NULL OR lp.expiresAt > CURRENT_TIMESTAMP) ORDER BY lp.startsAt DESC";
+    public static final String QUERY_FIND_ACTIVE_BY_LISTING = "ListingPromotion.findActiveByListingId";
 
     /** Featured promotion duration: 7 days from activation. */
     public static final Duration FEATURED_DURATION = Duration.ofDays(7);
@@ -160,6 +166,28 @@ public class ListingPromotion extends PanacheEntityBase {
             return List.of();
         }
         return find(JPQL_FIND_BY_LISTING_ID, io.quarkus.panache.common.Parameters.with("listingId", listingId)).list();
+    }
+
+    /**
+     * Finds active promotions for a specific listing (not expired).
+     *
+     * <p>
+     * Active means: expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP
+     *
+     * <p>
+     * This covers both permanent promotions (bump with NULL expiration) and time-limited promotions (featured with
+     * future expiration).
+     *
+     * @param listingId
+     *            the listing UUID
+     * @return List of active promotions for the listing, ordered by starts_at DESC
+     */
+    public static List<ListingPromotion> findActiveByListingId(UUID listingId) {
+        if (listingId == null) {
+            return List.of();
+        }
+        return find("#" + QUERY_FIND_ACTIVE_BY_LISTING,
+                io.quarkus.panache.common.Parameters.with("listingId", listingId)).list();
     }
 
     /**

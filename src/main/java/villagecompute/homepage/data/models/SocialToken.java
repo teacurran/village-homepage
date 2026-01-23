@@ -62,6 +62,9 @@ import java.util.UUID;
 @NamedQuery(
         name = SocialToken.QUERY_FIND_EXPIRING_SOON,
         query = SocialToken.JPQL_FIND_EXPIRING_SOON)
+@NamedQuery(
+        name = SocialToken.QUERY_FIND_EXPIRED,
+        query = SocialToken.JPQL_FIND_EXPIRED)
 public class SocialToken extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(SocialToken.class);
@@ -77,6 +80,9 @@ public class SocialToken extends PanacheEntityBase {
 
     public static final String JPQL_FIND_EXPIRING_SOON = "SELECT st FROM SocialToken st WHERE st.revokedAt IS NULL AND st.expiresAt <= :threshold ORDER BY st.expiresAt";
     public static final String QUERY_FIND_EXPIRING_SOON = "SocialToken.findExpiringSoon";
+
+    public static final String JPQL_FIND_EXPIRED = "SELECT st FROM SocialToken st WHERE st.revokedAt IS NULL AND st.expiresAt < CURRENT_TIMESTAMP ORDER BY st.expiresAt";
+    public static final String QUERY_FIND_EXPIRED = "SocialToken.findExpired";
 
     @Id
     @GeneratedValue(
@@ -195,6 +201,18 @@ public class SocialToken extends PanacheEntityBase {
     public static List<SocialToken> findExpiringSoon(int daysAhead) {
         Instant threshold = Instant.now().plus(daysAhead, ChronoUnit.DAYS);
         return find(JPQL_FIND_EXPIRING_SOON, io.quarkus.panache.common.Parameters.with("threshold", threshold)).list();
+    }
+
+    /**
+     * Finds all non-revoked tokens that have already expired.
+     * <p>
+     * Used by cleanup jobs to identify tokens past their expiration timestamp. Uses database CURRENT_TIMESTAMP for
+     * accurate server-side comparison.
+     *
+     * @return list of expired tokens
+     */
+    public static List<SocialToken> findExpired() {
+        return find("#" + QUERY_FIND_EXPIRED).list();
     }
 
     /**

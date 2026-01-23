@@ -51,6 +51,9 @@ import java.util.UUID;
 @NamedQuery(
         name = ImpersonationAudit.QUERY_FIND_ACTIVE,
         query = ImpersonationAudit.JPQL_FIND_ACTIVE)
+@NamedQuery(
+        name = ImpersonationAudit.QUERY_FIND_RECENT,
+        query = ImpersonationAudit.JPQL_FIND_RECENT)
 public class ImpersonationAudit extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(ImpersonationAudit.class);
@@ -63,6 +66,9 @@ public class ImpersonationAudit extends PanacheEntityBase {
 
     public static final String JPQL_FIND_ACTIVE = "FROM ImpersonationAudit WHERE endedAt IS NULL ORDER BY startedAt DESC";
     public static final String QUERY_FIND_ACTIVE = "ImpersonationAudit.findActive";
+
+    public static final String JPQL_FIND_RECENT = "FROM ImpersonationAudit WHERE createdAt >= :threshold ORDER BY createdAt DESC";
+    public static final String QUERY_FIND_RECENT = "ImpersonationAudit.findRecent";
 
     @Id
     @GeneratedValue
@@ -137,6 +143,22 @@ public class ImpersonationAudit extends PanacheEntityBase {
      */
     public static List<ImpersonationAudit> findActive() {
         return find(JPQL_FIND_ACTIVE).list();
+    }
+
+    /**
+     * Finds impersonation audit entries from the last N days.
+     *
+     * <p>
+     * Useful for admin dashboards showing recent impersonation activity. Per acceptance criteria, results are ordered
+     * by createdAt DESC.
+     *
+     * @param daysBack
+     *            number of days to look back (typically 90 for compliance)
+     * @return list of recent impersonation audit entries
+     */
+    public static List<ImpersonationAudit> findRecent(int daysBack) {
+        Instant threshold = Instant.now().minus(daysBack, java.time.temporal.ChronoUnit.DAYS);
+        return find("#" + QUERY_FIND_RECENT, io.quarkus.panache.common.Parameters.with("threshold", threshold)).list();
     }
 
     /**

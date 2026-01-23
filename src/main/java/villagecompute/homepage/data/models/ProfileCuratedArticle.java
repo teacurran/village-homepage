@@ -75,18 +75,24 @@ import java.util.UUID;
 @NamedQuery(
         name = ProfileCuratedArticle.QUERY_FIND_BY_FEED_ITEM,
         query = ProfileCuratedArticle.JPQL_FIND_BY_FEED_ITEM)
+@NamedQuery(
+        name = ProfileCuratedArticle.QUERY_FIND_BY_USER_ID,
+        query = ProfileCuratedArticle.JPQL_FIND_BY_USER_ID)
 public class ProfileCuratedArticle extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(ProfileCuratedArticle.class);
 
-    public static final String JPQL_FIND_BY_PROFILE = "FROM ProfileCuratedArticle WHERE profileId = ?1 ORDER BY createdAt DESC";
+    public static final String JPQL_FIND_BY_PROFILE = "FROM ProfileCuratedArticle WHERE profileId = :profileId ORDER BY createdAt DESC";
     public static final String QUERY_FIND_BY_PROFILE = "ProfileCuratedArticle.findByProfile";
 
-    public static final String JPQL_FIND_ACTIVE = "FROM ProfileCuratedArticle WHERE profileId = ?1 AND isActive = true ORDER BY createdAt DESC";
+    public static final String JPQL_FIND_ACTIVE = "FROM ProfileCuratedArticle WHERE profileId = :profileId AND isActive = true ORDER BY createdAt DESC";
     public static final String QUERY_FIND_ACTIVE = "ProfileCuratedArticle.findActive";
 
-    public static final String JPQL_FIND_BY_FEED_ITEM = "FROM ProfileCuratedArticle WHERE feedItemId = ?1";
+    public static final String JPQL_FIND_BY_FEED_ITEM = "FROM ProfileCuratedArticle WHERE feedItemId = :feedItemId";
     public static final String QUERY_FIND_BY_FEED_ITEM = "ProfileCuratedArticle.findByFeedItem";
+
+    public static final String JPQL_FIND_BY_USER_ID = "SELECT pca FROM ProfileCuratedArticle pca JOIN UserProfile up ON pca.profileId = up.id WHERE up.userId = :userId ORDER BY pca.createdAt DESC";
+    public static final String QUERY_FIND_BY_USER_ID = "ProfileCuratedArticle.findByUserId";
 
     @Id
     @GeneratedValue
@@ -166,7 +172,8 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
         if (profileId == null) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_PROFILE, profileId).list();
+        return find("#" + QUERY_FIND_BY_PROFILE, io.quarkus.panache.common.Parameters.with("profileId", profileId))
+                .list();
     }
 
     /**
@@ -180,7 +187,7 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
         if (profileId == null) {
             return List.of();
         }
-        return find(JPQL_FIND_ACTIVE, profileId).list();
+        return find("#" + QUERY_FIND_ACTIVE, io.quarkus.panache.common.Parameters.with("profileId", profileId)).list();
     }
 
     /**
@@ -194,7 +201,25 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
         if (feedItemId == null) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_FEED_ITEM, feedItemId).list();
+        return find("#" + QUERY_FIND_BY_FEED_ITEM, io.quarkus.panache.common.Parameters.with("feedItemId", feedItemId))
+                .list();
+    }
+
+    /**
+     * Finds all curated articles for a user by userId (joins through UserProfile).
+     *
+     * <p>
+     * Useful for admin dashboards and user data exports where userId is known but profileId is not.
+     *
+     * @param userId
+     *            user UUID
+     * @return list of articles for the user, ordered by creation date DESC
+     */
+    public static List<ProfileCuratedArticle> findByUserId(UUID userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return find("#" + QUERY_FIND_BY_USER_ID, io.quarkus.panache.common.Parameters.with("userId", userId)).list();
     }
 
     /**

@@ -52,6 +52,9 @@ import java.util.UUID;
 @NamedQuery(
         name = AccountMergeAudit.QUERY_FIND_BY_AUTHENTICATED_USER,
         query = AccountMergeAudit.JPQL_FIND_BY_AUTHENTICATED_USER)
+@NamedQuery(
+        name = AccountMergeAudit.QUERY_FIND_BY_SOURCE_OR_TARGET,
+        query = AccountMergeAudit.JPQL_FIND_BY_SOURCE_OR_TARGET)
 public class AccountMergeAudit extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(AccountMergeAudit.class);
@@ -61,6 +64,9 @@ public class AccountMergeAudit extends PanacheEntityBase {
 
     public static final String JPQL_FIND_BY_AUTHENTICATED_USER = "SELECT a FROM AccountMergeAudit a WHERE a.authenticatedUserId = :authenticatedUserId ORDER BY a.consentTimestamp DESC";
     public static final String QUERY_FIND_BY_AUTHENTICATED_USER = "AccountMergeAudit.findByAuthenticatedUser";
+
+    public static final String JPQL_FIND_BY_SOURCE_OR_TARGET = "SELECT a FROM AccountMergeAudit a WHERE a.anonymousUserId = :userId OR a.authenticatedUserId = :userId ORDER BY a.createdAt DESC";
+    public static final String QUERY_FIND_BY_SOURCE_OR_TARGET = "AccountMergeAudit.findBySourceOrTargetUserId";
 
     @Id
     @GeneratedValue
@@ -148,6 +154,25 @@ public class AccountMergeAudit extends PanacheEntityBase {
         }
         return find(JPQL_FIND_BY_AUTHENTICATED_USER,
                 io.quarkus.panache.common.Parameters.with("authenticatedUserId", authenticatedUserId)).list();
+    }
+
+    /**
+     * Finds all merge audit records where the userId appears as either source (anonymous) or target (authenticated).
+     *
+     * <p>
+     * Critical for compliance investigations - shows full merge history regardless of user role in the merge. Per
+     * acceptance criteria, results ordered by createdAt DESC.
+     *
+     * @param userId
+     *            the user ID to search for (in either role)
+     * @return list of merge audit records involving this user
+     */
+    public static List<AccountMergeAudit> findBySourceOrTargetUserId(UUID userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return find("#" + QUERY_FIND_BY_SOURCE_OR_TARGET, io.quarkus.panache.common.Parameters.with("userId", userId))
+                .list();
     }
 
     /**

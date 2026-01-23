@@ -59,7 +59,7 @@ public class ReservedUsername extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(ReservedUsername.class);
 
-    public static final String JPQL_FIND_BY_USERNAME = "SELECT ru FROM ReservedUsername ru WHERE ru.username = :username";
+    public static final String JPQL_FIND_BY_USERNAME = "SELECT ru FROM ReservedUsername ru WHERE LOWER(ru.username) = LOWER(:username)";
     public static final String QUERY_FIND_BY_USERNAME = "ReservedUsername.findByUsername";
 
     public static final String JPQL_FIND_BY_REASON = "SELECT ru FROM ReservedUsername ru WHERE ru.reason LIKE :reasonPattern";

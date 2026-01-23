@@ -61,6 +61,12 @@ import java.util.Optional;
 @NamedQuery(
         name = SocialPost.QUERY_FIND_EXPIRED,
         query = SocialPost.JPQL_FIND_EXPIRED)
+@NamedQuery(
+        name = SocialPost.QUERY_FIND_BY_USER_ID,
+        query = SocialPost.JPQL_FIND_BY_USER_ID)
+@NamedQuery(
+        name = SocialPost.QUERY_FIND_RECENT,
+        query = SocialPost.JPQL_FIND_RECENT)
 public class SocialPost extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(SocialPost.class);
@@ -79,6 +85,12 @@ public class SocialPost extends PanacheEntityBase {
 
     public static final String JPQL_FIND_EXPIRED = "FROM SocialPost WHERE fetchedAt < ?1 AND isArchived = false";
     public static final String QUERY_FIND_EXPIRED = "SocialPost.findExpired";
+
+    public static final String JPQL_FIND_BY_USER_ID = "SELECT sp FROM SocialPost sp JOIN SocialToken st ON sp.socialTokenId = st.id WHERE st.userId = :userId AND sp.isArchived = false ORDER BY sp.postedAt DESC";
+    public static final String QUERY_FIND_BY_USER_ID = "SocialPost.findByUserId";
+
+    public static final String JPQL_FIND_RECENT = "FROM SocialPost WHERE fetchedAt >= :threshold AND isArchived = false ORDER BY fetchedAt DESC";
+    public static final String QUERY_FIND_RECENT = "SocialPost.findRecent";
 
     @Id
     @GeneratedValue(
@@ -179,6 +191,38 @@ public class SocialPost extends PanacheEntityBase {
             return List.of();
         }
         return find("socialTokenId = ?1 ORDER BY postedAt DESC", socialTokenId).list();
+    }
+
+    /**
+     * Finds all non-archived posts for a user across all their social tokens.
+     *
+     * <p>
+     * Joins through SocialToken to find posts by userId. Useful for displaying user's social feed in one place.
+     *
+     * @param userId
+     *            user UUID
+     * @return list of posts for the user, ordered by posted_at DESC
+     */
+    public static List<SocialPost> findByUserId(java.util.UUID userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return find("#" + QUERY_FIND_BY_USER_ID, io.quarkus.panache.common.Parameters.with("userId", userId)).list();
+    }
+
+    /**
+     * Finds posts fetched within the last N days (recent activity).
+     *
+     * <p>
+     * Returns posts where fetchedAt >= (NOW - N days). Useful for monitoring feed freshness.
+     *
+     * @param daysBack
+     *            number of days to look back (typically 30)
+     * @return list of recently fetched posts
+     */
+    public static List<SocialPost> findRecent(int daysBack) {
+        Instant threshold = Instant.now().minus(daysBack, ChronoUnit.DAYS);
+        return find("#" + QUERY_FIND_RECENT, io.quarkus.panache.common.Parameters.with("threshold", threshold)).list();
     }
 
     /**
