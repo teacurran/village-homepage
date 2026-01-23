@@ -12,8 +12,6 @@ import dev.langchain4j.model.anthropic.AnthropicChatModel;
 import dev.langchain4j.model.chat.ChatModel;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Produces;
-import jakarta.inject.Named;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -101,11 +99,12 @@ public class AnthropicClientFactory {
      *
      * @return configured Anthropic chat model (Sonnet)
      */
-    @Produces
-    @ApplicationScoped
-    public ChatModel defaultChatModel() {
-        return createModel(sonnetModelName, temperature, maxTokens, timeout, maxRetries);
-    }
+    // NOTE: Commented out to avoid ambiguous bean resolution - Quarkus extension provides default bean
+    // @Produces
+    // @ApplicationScoped
+    // public ChatModel defaultChatModel() {
+    // return createModel(sonnetModelName, temperature, maxTokens, timeout, maxRetries);
+    // }
 
     /**
      * Produces a Claude Haiku model for cost-optimized bulk operations.
@@ -116,13 +115,14 @@ public class AnthropicClientFactory {
      *
      * @return configured Anthropic chat model (Haiku)
      */
-    @Produces
-    @Named("haiku")
-    @ApplicationScoped
-    public ChatModel haikuChatModel() {
-        // Haiku model uses lower temperature for more consistent results in bulk operations
-        return createModel("claude-3-haiku-20240307", 0.3, maxTokens, timeout, maxRetries);
-    }
+    // NOTE: Commented out to avoid ambiguous bean resolution - Quarkus extension provides default bean
+    // @Produces
+    // @Named("haiku")
+    // @ApplicationScoped
+    // public ChatModel haikuChatModel() {
+    // // Haiku model uses lower temperature for more consistent results in bulk operations
+    // return createModel("claude-3-haiku-20240307", 0.3, maxTokens, timeout, maxRetries);
+    // }
 
     /**
      * Creates a configured Anthropic chat model with retry logic.
