@@ -1,6 +1,7 @@
 package villagecompute.homepage.data.models;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
 import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
 import org.hibernate.search.mapper.pojo.mapping.definition.annotation.Indexed;
@@ -42,6 +43,24 @@ import java.util.UUID;
 @Table(
         name = "directory_sites")
 @Indexed
+@NamedQuery(
+        name = DirectorySite.QUERY_FIND_BY_URL,
+        query = DirectorySite.JPQL_FIND_BY_URL)
+@NamedQuery(
+        name = DirectorySite.QUERY_FIND_BY_USER_ID,
+        query = DirectorySite.JPQL_FIND_BY_USER_ID)
+@NamedQuery(
+        name = DirectorySite.QUERY_FIND_BY_STATUS,
+        query = DirectorySite.JPQL_FIND_BY_STATUS)
+@NamedQuery(
+        name = DirectorySite.QUERY_FIND_PENDING_MODERATION,
+        query = DirectorySite.JPQL_FIND_PENDING_MODERATION)
+@NamedQuery(
+        name = DirectorySite.QUERY_FIND_BY_DOMAIN,
+        query = DirectorySite.JPQL_FIND_BY_DOMAIN)
+@NamedQuery(
+        name = DirectorySite.QUERY_FIND_DEAD_SITES,
+        query = DirectorySite.JPQL_FIND_DEAD_SITES)
 public class DirectorySite extends PanacheEntityBase {
 
     @Id
@@ -121,6 +140,25 @@ public class DirectorySite extends PanacheEntityBase {
             nullable = false)
     public Instant updatedAt;
 
+    // JPQL query constants for named queries
+    public static final String JPQL_FIND_BY_URL = "FROM DirectorySite WHERE url = :url";
+    public static final String QUERY_FIND_BY_URL = "DirectorySite.findByUrl";
+
+    public static final String JPQL_FIND_BY_USER_ID = "FROM DirectorySite WHERE submittedByUserId = :userId";
+    public static final String QUERY_FIND_BY_USER_ID = "DirectorySite.findByUserId";
+
+    public static final String JPQL_FIND_BY_STATUS = "FROM DirectorySite WHERE status = :status";
+    public static final String QUERY_FIND_BY_STATUS = "DirectorySite.findByStatus";
+
+    public static final String JPQL_FIND_PENDING_MODERATION = "FROM DirectorySite WHERE status = 'pending' ORDER BY createdAt ASC";
+    public static final String QUERY_FIND_PENDING_MODERATION = "DirectorySite.findPendingModeration";
+
+    public static final String JPQL_FIND_BY_DOMAIN = "FROM DirectorySite WHERE domain = :domain";
+    public static final String QUERY_FIND_BY_DOMAIN = "DirectorySite.findByDomain";
+
+    public static final String JPQL_FIND_DEAD_SITES = "FROM DirectorySite WHERE isDead = true ORDER BY lastCheckedAt DESC";
+    public static final String QUERY_FIND_DEAD_SITES = "DirectorySite.findDeadSites";
+
     /**
      * Find a site by its normalized URL.
      *
@@ -129,7 +167,7 @@ public class DirectorySite extends PanacheEntityBase {
      * @return Optional containing the site if found
      */
     public static Optional<DirectorySite> findByUrl(String url) {
-        return find("url", url).firstResultOptional();
+        return find("#" + QUERY_FIND_BY_URL, Parameters.with("url", url)).firstResultOptional();
     }
 
     /**
@@ -140,7 +178,7 @@ public class DirectorySite extends PanacheEntityBase {
      * @return List of sites submitted by the user
      */
     public static List<DirectorySite> findByUserId(UUID userId) {
-        return find("submittedByUserId", userId).list();
+        return find("#" + QUERY_FIND_BY_USER_ID, Parameters.with("userId", userId)).list();
     }
 
     /**
@@ -151,7 +189,7 @@ public class DirectorySite extends PanacheEntityBase {
      * @return List of sites with the given status
      */
     public static List<DirectorySite> findByStatus(String status) {
-        return find("status", status).list();
+        return find("#" + QUERY_FIND_BY_STATUS, Parameters.with("status", status)).list();
     }
 
     /**
@@ -160,7 +198,7 @@ public class DirectorySite extends PanacheEntityBase {
      * @return List of pending sites ordered by creation date
      */
     public static List<DirectorySite> findPendingModeration() {
-        return find("status = 'pending' ORDER BY createdAt ASC").list();
+        return find("#" + QUERY_FIND_PENDING_MODERATION).list();
     }
 
     /**
@@ -171,7 +209,7 @@ public class DirectorySite extends PanacheEntityBase {
      * @return List of sites from the same domain
      */
     public static List<DirectorySite> findByDomain(String domain) {
-        return find("domain", domain).list();
+        return find("#" + QUERY_FIND_BY_DOMAIN, Parameters.with("domain", domain)).list();
     }
 
     /**
@@ -180,7 +218,7 @@ public class DirectorySite extends PanacheEntityBase {
      * @return List of dead sites ordered by last check date
      */
     public static List<DirectorySite> findDeadSites() {
-        return find("isDead = true ORDER BY lastCheckedAt DESC").list();
+        return find("#" + QUERY_FIND_DEAD_SITES).list();
     }
 
     /**

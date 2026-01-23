@@ -1,6 +1,7 @@
 package villagecompute.homepage.data.models;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -40,6 +41,9 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "directory_site_categories")
+@NamedQuery(
+        name = DirectorySiteCategory.QUERY_FIND_TOP_RANKED,
+        query = DirectorySiteCategory.JPQL_FIND_TOP_RANKED)
 public class DirectorySiteCategory extends PanacheEntityBase {
 
     @Id
@@ -97,6 +101,10 @@ public class DirectorySiteCategory extends PanacheEntityBase {
             nullable = false)
     public Instant updatedAt;
 
+    // JPQL query constants for named queries
+    public static final String JPQL_FIND_TOP_RANKED = "FROM DirectorySiteCategory WHERE categoryId = :categoryId AND status = 'approved' ORDER BY score DESC, upvotes DESC";
+    public static final String QUERY_FIND_TOP_RANKED = "DirectorySiteCategory.findTopRanked";
+
     /**
      * Find all categories a site is in.
      *
@@ -117,6 +125,19 @@ public class DirectorySiteCategory extends PanacheEntityBase {
      */
     public static List<DirectorySiteCategory> findByCategoryId(UUID categoryId) {
         return find("categoryId", categoryId).list();
+    }
+
+    /**
+     * Find top-ranked approved sites in a category.
+     *
+     * @param categoryId
+     *            Category ID to search for
+     * @param limit
+     *            Maximum number of results to return
+     * @return List of top-ranked approved sites, sorted by score and upvotes descending
+     */
+    public static List<DirectorySiteCategory> findTopRanked(UUID categoryId, int limit) {
+        return find("#" + QUERY_FIND_TOP_RANKED, Parameters.with("categoryId", categoryId)).page(0, limit).list();
     }
 
     /**

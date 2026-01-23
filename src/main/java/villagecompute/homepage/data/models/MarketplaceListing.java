@@ -196,8 +196,8 @@ public class MarketplaceListing extends PanacheEntityBase {
      *
      * <p>
      * Performance: Query uses GIST spatial index on geo_cities.location (created in migration
-     * 20250110001800_create_geo_tables.sql) to achieve sub-100ms response times per Policy P11 for radius queries up
-     * to 100 miles.
+     * 20250110001800_create_geo_tables.sql) to achieve sub-100ms response times per Policy P11 for radius queries up to
+     * 100 miles.
      *
      * <p>
      * This is a native SQL query constant (not JPQL) due to lack of JPA entity mapping for geo_cities reference table.
@@ -217,11 +217,8 @@ public class MarketplaceListing extends PanacheEntityBase {
      * <pre>
      * // Find listings within 50 miles of Seattle (80467 meters)
      * List&lt;MarketplaceListing&gt; results = getEntityManager()
-     *         .createNativeQuery(JPQL_FIND_WITHIN_RADIUS, MarketplaceListing.class)
-     *         .setParameter("longitude", -122.3321)
-     *         .setParameter("latitude", 47.6062)
-     *         .setParameter("radiusMeters", 80467.0)
-     *         .getResultList();
+     *         .createNativeQuery(JPQL_FIND_WITHIN_RADIUS, MarketplaceListing.class).setParameter("longitude", -122.3321)
+     *         .setParameter("latitude", 47.6062).setParameter("radiusMeters", 80467.0).getResultList();
      * </pre>
      *
      * <p>
@@ -230,8 +227,7 @@ public class MarketplaceListing extends PanacheEntityBase {
      * meter-based distance calculations.
      */
     public static final String JPQL_FIND_WITHIN_RADIUS = "SELECT ml.* FROM marketplace_listings ml "
-            + "JOIN geo_cities gc ON ml.geo_city_id = gc.id "
-            + "WHERE ml.status = 'active' "
+            + "JOIN geo_cities gc ON ml.geo_city_id = gc.id " + "WHERE ml.status = 'active' "
             + "AND ST_DWithin(gc.location, ST_MakePoint(:longitude, :latitude)::geography, :radiusMeters) "
             + "ORDER BY ml.created_at DESC";
 
