@@ -9,13 +9,11 @@ import villagecompute.homepage.TestConstants;
 import villagecompute.homepage.TestFixtures;
 import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static villagecompute.homepage.TestConstants.*;
@@ -39,16 +37,14 @@ import static villagecompute.homepage.TestConstants.*;
  * <b>Coverage Target:</b> ≥95% line and branch coverage for all entity static finder methods.
  *
  * <p>
- * <b>Entities Tested (23 entities with @NamedQuery):</b>
- * User, Homepage, RssSource, FeedItem, MarketplaceListing, MarketplaceMessage, ListingFlag,
- * DirectoryCategory, DirectorySite, DirectorySiteCategory, DirectoryVote, UserFeedSubscription,
- * SocialPost, SocialToken, PaymentRefund, ImpersonationAudit, AccountMergeAudit, GdprRequest,
- * DelayedJob, ListingPromotion, ReservedUsername, ProfileCuratedArticle, DirectoryAiSuggestion,
- * AiUsageTracking
+ * <b>Entities Tested (23 entities with @NamedQuery):</b> User, Homepage, RssSource, FeedItem, MarketplaceListing,
+ * MarketplaceMessage, ListingFlag, DirectoryCategory, DirectorySite, DirectorySiteCategory, DirectoryVote,
+ * UserFeedSubscription, SocialPost, SocialToken, PaymentRefund, ImpersonationAudit, AccountMergeAudit, GdprRequest,
+ * DelayedJob, ListingPromotion, ReservedUsername, ProfileCuratedArticle, DirectoryAiSuggestion, AiUsageTracking
  *
  * <p>
- * <b>Hibernate Validation:</b> Application startup validates all named queries have valid JPQL.
- * Invalid JPQL will cause application startup failure (configured via quarkus.hibernate-orm settings).
+ * <b>Hibernate Validation:</b> Application startup validates all named queries have valid JPQL. Invalid JPQL will cause
+ * application startup failure (configured via quarkus.hibernate-orm settings).
  *
  * <p>
  * <b>Ref:</b> Task I2.T8, Foundation Blueprint Section 3.5 (Testing Strategy)

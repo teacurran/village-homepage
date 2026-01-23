@@ -44,6 +44,9 @@ import java.util.UUID;
 @Table(
         name = "user_feed_subscriptions")
 @NamedQuery(
+        name = UserFeedSubscription.QUERY_FIND_BY_USER_ID,
+        query = UserFeedSubscription.JPQL_FIND_BY_USER_ID)
+@NamedQuery(
         name = UserFeedSubscription.QUERY_FIND_ACTIVE_BY_USER,
         query = UserFeedSubscription.JPQL_FIND_ACTIVE_BY_USER)
 @NamedQuery(
@@ -55,6 +58,9 @@ import java.util.UUID;
 public class UserFeedSubscription extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(UserFeedSubscription.class);
+
+    public static final String JPQL_FIND_BY_USER_ID = "FROM UserFeedSubscription WHERE userId = :userId ORDER BY subscribedAt DESC";
+    public static final String QUERY_FIND_BY_USER_ID = "UserFeedSubscription.findByUserId";
 
     public static final String JPQL_FIND_ACTIVE_BY_USER = "FROM UserFeedSubscription WHERE userId = :userId AND unsubscribedAt IS NULL";
     public static final String QUERY_FIND_ACTIVE_BY_USER = "UserFeedSubscription.findActiveByUser";
@@ -89,6 +95,20 @@ public class UserFeedSubscription extends PanacheEntityBase {
     @Column(
             name = "unsubscribed_at")
     public Instant unsubscribedAt;
+
+    /**
+     * Finds all subscriptions for a user (both active and unsubscribed). Ordered by subscription date (newest first).
+     *
+     * @param userId
+     *            the user's UUID
+     * @return List of all subscriptions (empty list if userId is null)
+     */
+    public static List<UserFeedSubscription> findByUserId(UUID userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return find(JPQL_FIND_BY_USER_ID, Parameters.with("userId", userId)).list();
+    }
 
     /**
      * Finds all active subscriptions for a user.
