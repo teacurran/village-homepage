@@ -384,10 +384,10 @@
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
-                        <!-- NOTE: datasource configuration managed by test profiles (PostgreSQLTestProfile vs H2TestResource) -->
-                        <!-- Tests using @TestProfile(PostgreSQLTestProfile.class) get PostgreSQL Testcontainers -->
-                        <!-- Legacy tests using @QuarkusTestResource(H2TestResource.class) get H2 in-memory -->
                     </systemPropertyVariables>
+                    <!-- @{argLine} is set by JaCoCo plugin - append to it rather than replacing -->
+                    <!-- PostgreSQLTestProfile handles datasource configuration overrides -->
+                    <argLine>@{argLine}</argLine>
                 </configuration>
             </plugin>
 

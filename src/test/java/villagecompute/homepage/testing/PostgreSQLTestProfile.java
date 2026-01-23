@@ -43,12 +43,12 @@ public class PostgreSQLTestProfile implements QuarkusTestProfile {
         // Override datasource configuration to use PostgreSQL 17 + PostGIS with dev services
         // CRITICAL: These settings override H2TestResource AND environment variables to force PostgreSQL Testcontainers
         // NOTE: We DON'T set jdbc.url, username, or password - Dev Services will auto-configure Testcontainers
+        // NOTE: No init script needed - PostGIS extensions are pre-installed in postgis/postgis image
         return new java.util.HashMap<>(Map.ofEntries(
                 Map.entry("quarkus.datasource.db-kind", "postgresql"),
                 Map.entry("quarkus.datasource.jdbc.driver", "org.postgresql.Driver"),
                 Map.entry("quarkus.datasource.devservices.enabled", "true"),
                 Map.entry("quarkus.datasource.devservices.image-name", "postgis/postgis:17-3.5-alpine"),
-                Map.entry("quarkus.datasource.devservices.init-script-path", "db/init-test-postgis.sql"),
                 Map.entry("quarkus.hibernate-orm.database.generation", "drop-and-create"),
                 Map.entry("quarkus.hibernate-orm.dialect", "org.hibernate.dialect.PostgreSQLDialect"),
                 Map.entry("quarkus.hibernate-orm.log.sql", "true"),

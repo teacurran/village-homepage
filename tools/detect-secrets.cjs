@@ -176,6 +176,7 @@ const EXCLUDED_PATTERNS = [
     /config\/secrets-template\.yaml$/,  // Safe - template only
     /tools\/detect-secrets\.cjs$/,  // This file (contains example patterns)
     /docs\/ops\/security\.md$/,  // Documentation with safe examples
+    /docs\/testing\/coverage-verification\.md$/,  // Test documentation with error messages
     /docker-compose\.yml$/,  // Dev environment with safe defaults
     /mvnw$/,  // Maven wrapper (contains MVNW_PASSWORD env var references, not secrets)
     /mvnw\.cmd$/,  // Maven wrapper (Windows)
