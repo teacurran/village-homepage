@@ -21,6 +21,14 @@ quarkus:
       connect-timeout: 10000
       read-timeout: 10000
 
+    # Facebook OAuth REST client (Policy P1, Feature F1)
+    facebook-oauth:
+      url: https://graph.facebook.com/v18.0
+      scope: jakarta.inject.Singleton
+      # Connection timeout for OAuth API calls
+      connect-timeout: 10000
+      read-timeout: 10000
+
   # S3 Configuration - Disable DevServices (use MinIO from docker-compose)
   s3:
     devservices:

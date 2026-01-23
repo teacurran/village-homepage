@@ -224,6 +224,70 @@ public abstract class WireMockTestBase extends BaseIntegrationTest {
     }
 
     /**
+     * Stubs a successful Facebook OAuth token exchange response.
+     *
+     * <p>
+     * Uses the default success stub file: facebook-oauth/token-response-success.json
+     *
+     * <p>
+     * Matches requests to: POST /oauth/access_token
+     *
+     * @throws RuntimeException
+     *             if stub file cannot be loaded
+     */
+    protected void stubFacebookTokenExchange() {
+        String responseBody = loadStubFile("wiremock/facebook-oauth/token-response-success.json");
+        stubFacebookTokenExchange(responseBody);
+    }
+
+    /**
+     * Stubs a Facebook OAuth token exchange response with custom JSON.
+     *
+     * <p>
+     * Matches requests to: POST /oauth/access_token
+     *
+     * @param responseBodyJson
+     *            the custom JSON response body
+     */
+    protected void stubFacebookTokenExchange(String responseBodyJson) {
+        wireMockServer
+                .stubFor(WireMock.post(WireMock.urlPathEqualTo("/oauth/access_token")).willReturn(WireMock.aResponse()
+                        .withStatus(200).withHeader("Content-Type", "application/json").withBody(responseBodyJson)));
+    }
+
+    /**
+     * Stubs a successful Facebook Graph API user info response.
+     *
+     * <p>
+     * Uses the default success stub file: facebook-oauth/user-info-success.json
+     *
+     * <p>
+     * Matches requests to: GET /me?fields=id,name,email,picture
+     *
+     * @throws RuntimeException
+     *             if stub file cannot be loaded
+     */
+    protected void stubFacebookUserInfo() {
+        String responseBody = loadStubFile("wiremock/facebook-oauth/user-info-success.json");
+        stubFacebookUserInfo(responseBody);
+    }
+
+    /**
+     * Stubs a Facebook Graph API user info response with custom JSON.
+     *
+     * <p>
+     * Matches requests to: GET /me?fields=id,name,email,picture
+     *
+     * @param responseBodyJson
+     *            the custom JSON response body
+     */
+    protected void stubFacebookUserInfo(String responseBodyJson) {
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/me"))
+                .withQueryParam("fields", WireMock.equalTo("id,name,email,picture")).willReturn(WireMock.aResponse()
+                        .withStatus(200).withHeader("Content-Type", "application/json").withBody(responseBodyJson)));
+    }
+
+    /**
      * Loads a stub JSON file from the test resources directory.
      *
      * <p>
