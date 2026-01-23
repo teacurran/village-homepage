@@ -74,6 +74,11 @@ quarkus:
 
   # Hibernate ORM Configuration
   hibernate-orm:
+    # Database schema management (Policy I2: Named query validation)
+    database:
+      generation: none
+    sql-load-script: no-file
+
     # JSON format mapping for database columns (JSONB support)
     # Uses global formatting facilities for JSON serialization/deserialization
     mapping:
