@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -90,12 +91,20 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "marketplace_messages")
+@NamedQuery(name = MarketplaceMessage.QUERY_FIND_BY_LISTING_ID, query = MarketplaceMessage.JPQL_FIND_BY_LISTING_ID)
+@NamedQuery(name = MarketplaceMessage.QUERY_FIND_BY_THREAD_ID, query = MarketplaceMessage.JPQL_FIND_BY_THREAD_ID)
+@NamedQuery(name = MarketplaceMessage.QUERY_FIND_BY_MESSAGE_ID, query = MarketplaceMessage.JPQL_FIND_BY_MESSAGE_ID)
 public class MarketplaceMessage extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(MarketplaceMessage.class);
 
+    public static final String JPQL_FIND_BY_LISTING_ID = "SELECT m FROM MarketplaceMessage m WHERE m.listingId = ?1 ORDER BY m.createdAt ASC";
     public static final String QUERY_FIND_BY_LISTING_ID = "MarketplaceMessage.findByListingId";
+
+    public static final String JPQL_FIND_BY_THREAD_ID = "SELECT m FROM MarketplaceMessage m WHERE m.threadId = ?1 ORDER BY m.createdAt ASC";
     public static final String QUERY_FIND_BY_THREAD_ID = "MarketplaceMessage.findByThreadId";
+
+    public static final String JPQL_FIND_BY_MESSAGE_ID = "SELECT m FROM MarketplaceMessage m WHERE m.messageId = ?1";
     public static final String QUERY_FIND_BY_MESSAGE_ID = "MarketplaceMessage.findByMessageId";
 
     @Id
@@ -190,7 +199,7 @@ public class MarketplaceMessage extends PanacheEntityBase {
         if (listingId == null) {
             return List.of();
         }
-        return find("listingId = ?1 ORDER BY createdAt ASC", listingId).list();
+        return find(JPQL_FIND_BY_LISTING_ID, listingId).list();
     }
 
     /**
@@ -208,7 +217,7 @@ public class MarketplaceMessage extends PanacheEntityBase {
         if (threadId == null) {
             return List.of();
         }
-        return find("threadId = ?1 ORDER BY createdAt ASC", threadId).list();
+        return find(JPQL_FIND_BY_THREAD_ID, threadId).list();
     }
 
     /**
@@ -226,7 +235,7 @@ public class MarketplaceMessage extends PanacheEntityBase {
         if (messageId == null || messageId.isBlank()) {
             return Optional.empty();
         }
-        return find("messageId = ?1", messageId).firstResultOptional();
+        return find(JPQL_FIND_BY_MESSAGE_ID, messageId).firstResultOptional();
     }
 
     /**

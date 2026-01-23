@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -59,14 +60,38 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "directory_categories")
+@NamedQuery(
+        name = DirectoryCategory.QUERY_FIND_ROOT_CATEGORIES,
+        query = DirectoryCategory.JPQL_FIND_ROOT_CATEGORIES)
+@NamedQuery(
+        name = DirectoryCategory.QUERY_FIND_BY_PARENT_ID,
+        query = DirectoryCategory.JPQL_FIND_BY_PARENT_ID)
+@NamedQuery(
+        name = DirectoryCategory.QUERY_FIND_BY_SLUG,
+        query = DirectoryCategory.JPQL_FIND_BY_SLUG)
+@NamedQuery(
+        name = DirectoryCategory.QUERY_FIND_ACTIVE,
+        query = DirectoryCategory.JPQL_FIND_ACTIVE)
+@NamedQuery(
+        name = DirectoryCategory.QUERY_FIND_ALL_ORDERED,
+        query = DirectoryCategory.JPQL_FIND_ALL_ORDERED)
 public class DirectoryCategory extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(DirectoryCategory.class);
 
+    public static final String JPQL_FIND_ROOT_CATEGORIES = "FROM DirectoryCategory WHERE parentId IS NULL AND isActive = true ORDER BY sortOrder";
     public static final String QUERY_FIND_ROOT_CATEGORIES = "DirectoryCategory.findRootCategories";
+
+    public static final String JPQL_FIND_BY_PARENT_ID = "FROM DirectoryCategory WHERE parentId = ?1 AND isActive = true ORDER BY sortOrder";
     public static final String QUERY_FIND_BY_PARENT_ID = "DirectoryCategory.findByParentId";
+
+    public static final String JPQL_FIND_BY_SLUG = "FROM DirectoryCategory WHERE slug = ?1";
     public static final String QUERY_FIND_BY_SLUG = "DirectoryCategory.findBySlug";
+
+    public static final String JPQL_FIND_ACTIVE = "FROM DirectoryCategory WHERE isActive = true ORDER BY sortOrder";
     public static final String QUERY_FIND_ACTIVE = "DirectoryCategory.findActive";
+
+    public static final String JPQL_FIND_ALL_ORDERED = "FROM DirectoryCategory ORDER BY parentId NULLS FIRST, sortOrder";
     public static final String QUERY_FIND_ALL_ORDERED = "DirectoryCategory.findAllOrdered";
 
     @Id
@@ -130,7 +155,7 @@ public class DirectoryCategory extends PanacheEntityBase {
      * @return List of root categories ordered by sort_order
      */
     public static List<DirectoryCategory> findRootCategories() {
-        return find("parentId IS NULL AND isActive = true ORDER BY sortOrder").list();
+        return find(JPQL_FIND_ROOT_CATEGORIES).list();
     }
 
     /**
@@ -147,7 +172,7 @@ public class DirectoryCategory extends PanacheEntityBase {
         if (parentId == null) {
             return List.of();
         }
-        return find("parentId = ?1 AND isActive = true ORDER BY sortOrder", parentId).list();
+        return find(JPQL_FIND_BY_PARENT_ID, parentId).list();
     }
 
     /**
@@ -164,7 +189,7 @@ public class DirectoryCategory extends PanacheEntityBase {
         if (slug == null || slug.isBlank()) {
             return Optional.empty();
         }
-        return find("slug = ?1", slug).firstResultOptional();
+        return find(JPQL_FIND_BY_SLUG, slug).firstResultOptional();
     }
 
     /**
@@ -176,7 +201,7 @@ public class DirectoryCategory extends PanacheEntityBase {
      * @return List of all active categories
      */
     public static List<DirectoryCategory> findActive() {
-        return find("isActive = true ORDER BY sortOrder").list();
+        return find(JPQL_FIND_ACTIVE).list();
     }
 
     /**
@@ -188,7 +213,7 @@ public class DirectoryCategory extends PanacheEntityBase {
      * @return List of all categories ordered hierarchically
      */
     public static List<DirectoryCategory> findAllOrdered() {
-        return find("ORDER BY parentId NULLS FIRST, sortOrder").list();
+        return find(JPQL_FIND_ALL_ORDERED).list();
     }
 
     /**

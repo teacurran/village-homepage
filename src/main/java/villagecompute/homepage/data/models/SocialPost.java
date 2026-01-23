@@ -10,6 +10,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -51,6 +52,15 @@ import java.util.Optional;
 @Entity
 @Table(
         name = "social_posts")
+@NamedQuery(
+        name = SocialPost.QUERY_FIND_RECENT_BY_TOKEN,
+        query = SocialPost.JPQL_FIND_RECENT_BY_TOKEN)
+@NamedQuery(
+        name = SocialPost.QUERY_FIND_BY_PLATFORM_POST_ID,
+        query = SocialPost.JPQL_FIND_BY_PLATFORM_POST_ID)
+@NamedQuery(
+        name = SocialPost.QUERY_FIND_EXPIRED,
+        query = SocialPost.JPQL_FIND_EXPIRED)
 public class SocialPost extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(SocialPost.class);
@@ -61,8 +71,13 @@ public class SocialPost extends PanacheEntityBase {
     public static final String POST_TYPE_STORY = "story";
     public static final String POST_TYPE_REEL = "reel";
 
+    public static final String JPQL_FIND_RECENT_BY_TOKEN = "FROM SocialPost WHERE socialTokenId = ?1 AND isArchived = false ORDER BY postedAt DESC";
     public static final String QUERY_FIND_RECENT_BY_TOKEN = "SocialPost.findRecentByToken";
+
+    public static final String JPQL_FIND_BY_PLATFORM_POST_ID = "FROM SocialPost WHERE platform = ?1 AND platformPostId = ?2";
     public static final String QUERY_FIND_BY_PLATFORM_POST_ID = "SocialPost.findByPlatformPostId";
+
+    public static final String JPQL_FIND_EXPIRED = "FROM SocialPost WHERE fetchedAt < ?1 AND isArchived = false";
     public static final String QUERY_FIND_EXPIRED = "SocialPost.findExpired";
 
     @Id
@@ -149,9 +164,7 @@ public class SocialPost extends PanacheEntityBase {
         if (socialTokenId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_RECENT_BY_TOKEN
-                + " WHERE social_token_id = ?1 AND is_archived = false ORDER BY posted_at DESC", socialTokenId)
-                .page(0, limit).list();
+        return find(JPQL_FIND_RECENT_BY_TOKEN, socialTokenId).page(0, limit).list();
     }
 
     /**
@@ -165,7 +178,7 @@ public class SocialPost extends PanacheEntityBase {
         if (socialTokenId == null) {
             return List.of();
         }
-        return find("social_token_id = ?1 ORDER BY posted_at DESC", socialTokenId).list();
+        return find("socialTokenId = ?1 ORDER BY postedAt DESC", socialTokenId).list();
     }
 
     /**
@@ -181,8 +194,7 @@ public class SocialPost extends PanacheEntityBase {
         if (platform == null || platformPostId == null) {
             return Optional.empty();
         }
-        return find("#" + QUERY_FIND_BY_PLATFORM_POST_ID + " WHERE platform = ?1 AND platform_post_id = ?2", platform,
-                platformPostId).firstResultOptional();
+        return find(JPQL_FIND_BY_PLATFORM_POST_ID, platform, platformPostId).firstResultOptional();
     }
 
     /**
@@ -192,7 +204,7 @@ public class SocialPost extends PanacheEntityBase {
      */
     public static List<SocialPost> findExpired() {
         Instant threshold = Instant.now().minus(90, ChronoUnit.DAYS);
-        return find("#" + QUERY_FIND_EXPIRED + " WHERE fetched_at < ?1 AND is_archived = false", threshold).list();
+        return find(JPQL_FIND_EXPIRED, threshold).list();
     }
 
     /**
@@ -277,7 +289,7 @@ public class SocialPost extends PanacheEntityBase {
         if (socialTokenId == null) {
             return 0;
         }
-        List<SocialPost> posts = find("social_token_id = ?1 AND is_archived = false", socialTokenId).list();
+        List<SocialPost> posts = find("socialTokenId = ?1 AND isArchived = false", socialTokenId).list();
         posts.forEach(SocialPost::archive);
         LOG.infof("Archived %d social posts for token %d", posts.size(), socialTokenId);
         return posts.size();

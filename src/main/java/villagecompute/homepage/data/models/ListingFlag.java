@@ -29,7 +29,25 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "listing_flags")
+@NamedQuery(
+        name = ListingFlag.QUERY_FIND_BY_LISTING,
+        query = ListingFlag.JPQL_FIND_BY_LISTING)
+@NamedQuery(
+        name = ListingFlag.QUERY_FIND_PENDING,
+        query = ListingFlag.JPQL_FIND_PENDING)
+@NamedQuery(
+        name = ListingFlag.QUERY_FIND_BY_STATUS,
+        query = ListingFlag.JPQL_FIND_BY_STATUS)
 public class ListingFlag extends PanacheEntityBase {
+
+    public static final String JPQL_FIND_BY_LISTING = "SELECT lf FROM ListingFlag lf WHERE lf.listingId = :listingId ORDER BY lf.createdAt DESC";
+    public static final String QUERY_FIND_BY_LISTING = "ListingFlag.findByListing";
+
+    public static final String JPQL_FIND_PENDING = "SELECT lf FROM ListingFlag lf WHERE lf.status = 'pending' ORDER BY lf.createdAt DESC";
+    public static final String QUERY_FIND_PENDING = "ListingFlag.findPending";
+
+    public static final String JPQL_FIND_BY_STATUS = "SELECT lf FROM ListingFlag lf WHERE lf.status = :status ORDER BY lf.createdAt DESC";
+    public static final String QUERY_FIND_BY_STATUS = "ListingFlag.findByStatus";
 
     @Id
     @GeneratedValue(
@@ -91,21 +109,6 @@ public class ListingFlag extends PanacheEntityBase {
     public Instant updatedAt = Instant.now();
 
     /**
-     * Named query to find flags by email.
-     */
-    public static final String QUERY_FIND_BY_LISTING = "ListingFlag.findByListing";
-
-    /**
-     * Named query to find pending flags.
-     */
-    public static final String QUERY_FIND_PENDING = "ListingFlag.findPending";
-
-    /**
-     * Named query to find flags by status.
-     */
-    public static final String QUERY_FIND_BY_STATUS = "ListingFlag.findByStatus";
-
-    /**
      * Finds all flags for a specific listing.
      *
      * @param listingId
@@ -116,7 +119,8 @@ public class ListingFlag extends PanacheEntityBase {
         if (listingId == null) {
             return List.of();
         }
-        return list("listingId = ?1 ORDER BY createdAt DESC", listingId);
+        return list(JPQL_FIND_BY_LISTING, 
+                io.quarkus.panache.common.Parameters.with("listingId", listingId));
     }
 
     /**
@@ -125,7 +129,7 @@ public class ListingFlag extends PanacheEntityBase {
      * @return list of pending flags, newest first
      */
     public static List<ListingFlag> findPending() {
-        return list("status = 'pending' ORDER BY createdAt DESC");
+        return list(JPQL_FIND_PENDING);
     }
 
     /**
@@ -143,7 +147,8 @@ public class ListingFlag extends PanacheEntityBase {
         if (status == null) {
             return List.of();
         }
-        return find("status = ?1 ORDER BY createdAt DESC", status).page(offset / limit, limit).list();
+        return find(JPQL_FIND_BY_STATUS, 
+                io.quarkus.panache.common.Parameters.with("status", status)).page(offset / limit, limit).list();
     }
 
     /**

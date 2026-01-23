@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -66,14 +67,38 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "payment_refunds")
+@NamedQuery(
+        name = PaymentRefund.QUERY_FIND_PENDING,
+        query = PaymentRefund.JPQL_FIND_PENDING)
+@NamedQuery(
+        name = PaymentRefund.QUERY_FIND_BY_USER_ID,
+        query = PaymentRefund.JPQL_FIND_BY_USER_ID)
+@NamedQuery(
+        name = PaymentRefund.QUERY_FIND_BY_LISTING_ID,
+        query = PaymentRefund.JPQL_FIND_BY_LISTING_ID)
+@NamedQuery(
+        name = PaymentRefund.QUERY_FIND_BY_PAYMENT_INTENT,
+        query = PaymentRefund.JPQL_FIND_BY_PAYMENT_INTENT)
+@NamedQuery(
+        name = PaymentRefund.QUERY_COUNT_CHARGEBACKS,
+        query = PaymentRefund.JPQL_COUNT_CHARGEBACKS)
 public class PaymentRefund extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(PaymentRefund.class);
 
+    public static final String JPQL_FIND_PENDING = "FROM PaymentRefund WHERE status = 'pending' ORDER BY createdAt ASC";
     public static final String QUERY_FIND_PENDING = "PaymentRefund.findPending";
+
+    public static final String JPQL_FIND_BY_USER_ID = "FROM PaymentRefund WHERE userId = ?1 ORDER BY createdAt DESC";
     public static final String QUERY_FIND_BY_USER_ID = "PaymentRefund.findByUserId";
+
+    public static final String JPQL_FIND_BY_LISTING_ID = "FROM PaymentRefund WHERE listingId = ?1 ORDER BY createdAt DESC";
     public static final String QUERY_FIND_BY_LISTING_ID = "PaymentRefund.findByListingId";
+
+    public static final String JPQL_FIND_BY_PAYMENT_INTENT = "FROM PaymentRefund WHERE stripePaymentIntentId = ?1";
     public static final String QUERY_FIND_BY_PAYMENT_INTENT = "PaymentRefund.findByPaymentIntent";
+
+    public static final String JPQL_COUNT_CHARGEBACKS = "SELECT COUNT(p) FROM PaymentRefund p WHERE p.userId = ?1 AND p.reason = 'chargeback'";
     public static final String QUERY_COUNT_CHARGEBACKS = "PaymentRefund.countChargebacks";
 
     @Id
@@ -140,7 +165,7 @@ public class PaymentRefund extends PanacheEntityBase {
      * @return List of pending refunds
      */
     public static List<PaymentRefund> findPending() {
-        return find("status = 'pending' ORDER BY createdAt ASC").list();
+        return find(JPQL_FIND_PENDING).list();
     }
 
     /**
@@ -154,7 +179,7 @@ public class PaymentRefund extends PanacheEntityBase {
         if (userId == null) {
             return List.of();
         }
-        return find("userId = ?1 ORDER BY createdAt DESC", userId).list();
+        return find(JPQL_FIND_BY_USER_ID, userId).list();
     }
 
     /**
@@ -168,7 +193,7 @@ public class PaymentRefund extends PanacheEntityBase {
         if (listingId == null) {
             return List.of();
         }
-        return find("listingId = ?1 ORDER BY createdAt DESC", listingId).list();
+        return find(JPQL_FIND_BY_LISTING_ID, listingId).list();
     }
 
     /**
@@ -185,7 +210,7 @@ public class PaymentRefund extends PanacheEntityBase {
         if (paymentIntentId == null || paymentIntentId.isBlank()) {
             return Optional.empty();
         }
-        return find("stripePaymentIntentId = ?1", paymentIntentId).firstResultOptional();
+        return find(JPQL_FIND_BY_PAYMENT_INTENT, paymentIntentId).firstResultOptional();
     }
 
     /**
@@ -202,7 +227,7 @@ public class PaymentRefund extends PanacheEntityBase {
         if (userId == null) {
             return 0;
         }
-        return count("userId = ?1 AND reason = 'chargeback'", userId);
+        return find(JPQL_COUNT_CHARGEBACKS, userId).count();
     }
 
     /**

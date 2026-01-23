@@ -7,6 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -42,12 +43,26 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "user_feed_subscriptions")
+@NamedQuery(
+        name = UserFeedSubscription.QUERY_FIND_ACTIVE_BY_USER,
+        query = UserFeedSubscription.JPQL_FIND_ACTIVE_BY_USER)
+@NamedQuery(
+        name = UserFeedSubscription.QUERY_FIND_BY_USER_AND_SOURCE,
+        query = UserFeedSubscription.JPQL_FIND_BY_USER_AND_SOURCE)
+@NamedQuery(
+        name = UserFeedSubscription.QUERY_FIND_ACTIVE_BY_SOURCE,
+        query = UserFeedSubscription.JPQL_FIND_ACTIVE_BY_SOURCE)
 public class UserFeedSubscription extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(UserFeedSubscription.class);
 
+    public static final String JPQL_FIND_ACTIVE_BY_USER = "FROM UserFeedSubscription WHERE userId = :userId AND unsubscribedAt IS NULL";
     public static final String QUERY_FIND_ACTIVE_BY_USER = "UserFeedSubscription.findActiveByUser";
+
+    public static final String JPQL_FIND_BY_USER_AND_SOURCE = "FROM UserFeedSubscription WHERE userId = :userId AND sourceId = :sourceId";
     public static final String QUERY_FIND_BY_USER_AND_SOURCE = "UserFeedSubscription.findByUserAndSource";
+
+    public static final String JPQL_FIND_ACTIVE_BY_SOURCE = "FROM UserFeedSubscription WHERE sourceId = :sourceId AND unsubscribedAt IS NULL";
     public static final String QUERY_FIND_ACTIVE_BY_SOURCE = "UserFeedSubscription.findActiveBySource";
 
     @Id
@@ -86,8 +101,7 @@ public class UserFeedSubscription extends PanacheEntityBase {
         if (userId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_ACTIVE_BY_USER + " WHERE user_id = :userId AND unsubscribed_at IS NULL",
-                Parameters.with("userId", userId)).list();
+        return find(JPQL_FIND_ACTIVE_BY_USER, Parameters.with("userId", userId)).list();
     }
 
     /**
@@ -103,8 +117,8 @@ public class UserFeedSubscription extends PanacheEntityBase {
         if (userId == null || sourceId == null) {
             return Optional.empty();
         }
-        return find("#" + QUERY_FIND_BY_USER_AND_SOURCE + " WHERE user_id = :userId AND source_id = :sourceId",
-                Parameters.with("userId", userId).and("sourceId", sourceId)).firstResultOptional();
+        return find(JPQL_FIND_BY_USER_AND_SOURCE, Parameters.with("userId", userId).and("sourceId", sourceId))
+                .firstResultOptional();
     }
 
     /**
@@ -118,8 +132,7 @@ public class UserFeedSubscription extends PanacheEntityBase {
         if (sourceId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_ACTIVE_BY_SOURCE + " WHERE source_id = :sourceId AND unsubscribed_at IS NULL",
-                Parameters.with("sourceId", sourceId)).list();
+        return find(JPQL_FIND_ACTIVE_BY_SOURCE, Parameters.with("sourceId", sourceId)).list();
     }
 
     /**

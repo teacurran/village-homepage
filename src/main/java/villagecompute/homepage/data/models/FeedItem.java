@@ -7,6 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -53,14 +54,38 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "feed_items")
+@NamedQuery(
+        name = FeedItem.QUERY_FIND_BY_GUID,
+        query = FeedItem.JPQL_FIND_BY_GUID)
+@NamedQuery(
+        name = FeedItem.QUERY_FIND_BY_SOURCE,
+        query = FeedItem.JPQL_FIND_BY_SOURCE)
+@NamedQuery(
+        name = FeedItem.QUERY_FIND_RECENT,
+        query = FeedItem.JPQL_FIND_RECENT)
+@NamedQuery(
+        name = FeedItem.QUERY_FIND_UNTAGGED,
+        query = FeedItem.JPQL_FIND_UNTAGGED)
+@NamedQuery(
+        name = FeedItem.QUERY_FIND_BY_CONTENT_HASH,
+        query = FeedItem.JPQL_FIND_BY_CONTENT_HASH)
 public class FeedItem extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(FeedItem.class);
 
+    public static final String JPQL_FIND_BY_GUID = "SELECT f FROM FeedItem f WHERE f.itemGuid = :guid";
     public static final String QUERY_FIND_BY_GUID = "FeedItem.findByGuid";
+
+    public static final String JPQL_FIND_BY_SOURCE = "SELECT f FROM FeedItem f WHERE f.sourceId = :sourceId ORDER BY f.publishedAt DESC";
     public static final String QUERY_FIND_BY_SOURCE = "FeedItem.findBySource";
+
+    public static final String JPQL_FIND_RECENT = "SELECT f FROM FeedItem f ORDER BY f.publishedAt DESC";
     public static final String QUERY_FIND_RECENT = "FeedItem.findRecent";
+
+    public static final String JPQL_FIND_UNTAGGED = "SELECT f FROM FeedItem f WHERE f.aiTagged = false";
     public static final String QUERY_FIND_UNTAGGED = "FeedItem.findUntagged";
+
+    public static final String JPQL_FIND_BY_CONTENT_HASH = "SELECT f FROM FeedItem f WHERE f.contentHash = :contentHash";
     public static final String QUERY_FIND_BY_CONTENT_HASH = "FeedItem.findByContentHash";
 
     @Id
@@ -132,8 +157,7 @@ public class FeedItem extends PanacheEntityBase {
         if (guid == null || guid.isBlank()) {
             return Optional.empty();
         }
-        return find("#" + QUERY_FIND_BY_GUID + " WHERE item_guid = :guid", Parameters.with("guid", guid))
-                .firstResultOptional();
+        return find(JPQL_FIND_BY_GUID, Parameters.with("guid", guid)).firstResultOptional();
     }
 
     /**
@@ -147,8 +171,7 @@ public class FeedItem extends PanacheEntityBase {
         if (sourceId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_SOURCE + " WHERE source_id = :sourceId ORDER BY published_at DESC",
-                Parameters.with("sourceId", sourceId)).list();
+        return find(JPQL_FIND_BY_SOURCE, Parameters.with("sourceId", sourceId)).list();
     }
 
     /**
@@ -159,7 +182,7 @@ public class FeedItem extends PanacheEntityBase {
      * @return List of recent feed items
      */
     public static List<FeedItem> findRecent(int limit) {
-        return find("#" + QUERY_FIND_RECENT + " ORDER BY published_at DESC").page(0, limit).list();
+        return find(JPQL_FIND_RECENT).page(0, limit).list();
     }
 
     /**
@@ -172,7 +195,7 @@ public class FeedItem extends PanacheEntityBase {
      * @return List of recent feed items
      */
     public static List<FeedItem> findRecent(int offset, int limit) {
-        return find("#" + QUERY_FIND_RECENT + " ORDER BY published_at DESC").page(offset / limit, limit).list();
+        return find(JPQL_FIND_RECENT).page(offset / limit, limit).list();
     }
 
     /**
@@ -181,7 +204,7 @@ public class FeedItem extends PanacheEntityBase {
      * @return List of untagged feed items
      */
     public static List<FeedItem> findUntagged() {
-        return find("aiTagged = false").list();
+        return find(JPQL_FIND_UNTAGGED).list();
     }
 
     /**
@@ -195,8 +218,7 @@ public class FeedItem extends PanacheEntityBase {
         if (contentHash == null || contentHash.isBlank()) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_CONTENT_HASH + " WHERE content_hash = :contentHash",
-                Parameters.with("contentHash", contentHash)).list();
+        return find(JPQL_FIND_BY_CONTENT_HASH, Parameters.with("contentHash", contentHash)).list();
     }
 
     /**

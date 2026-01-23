@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.search.engine.backend.types.Sortable;
@@ -125,19 +126,51 @@ import java.util.UUID;
 @Table(
         name = "marketplace_listings")
 @Indexed
+@NamedQuery(
+        name = MarketplaceListing.QUERY_FIND_BY_USER_ID,
+        query = MarketplaceListing.JPQL_FIND_BY_USER_ID)
+@NamedQuery(
+        name = MarketplaceListing.QUERY_FIND_BY_CATEGORY_ID,
+        query = MarketplaceListing.JPQL_FIND_BY_CATEGORY_ID)
+@NamedQuery(
+        name = MarketplaceListing.QUERY_FIND_BY_STATUS,
+        query = MarketplaceListing.JPQL_FIND_BY_STATUS)
+@NamedQuery(
+        name = MarketplaceListing.QUERY_FIND_ACTIVE,
+        query = MarketplaceListing.JPQL_FIND_ACTIVE)
+@NamedQuery(
+        name = MarketplaceListing.QUERY_FIND_EXPIRED,
+        query = MarketplaceListing.JPQL_FIND_EXPIRED)
+@NamedQuery(
+        name = MarketplaceListing.QUERY_FIND_EXPIRING_WITHIN_DAYS,
+        query = MarketplaceListing.JPQL_FIND_EXPIRING_WITHIN_DAYS)
 public class MarketplaceListing extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(MarketplaceListing.class);
 
+    public static final String JPQL_FIND_BY_USER_ID = "FROM MarketplaceListing WHERE userId = ?1 ORDER BY createdAt DESC";
     public static final String QUERY_FIND_BY_USER_ID = "MarketplaceListing.findByUserId";
+
+    public static final String JPQL_FIND_BY_CATEGORY_ID = "FROM MarketplaceListing WHERE categoryId = ?1 AND status = 'active' ORDER BY createdAt DESC";
     public static final String QUERY_FIND_BY_CATEGORY_ID = "MarketplaceListing.findByCategoryId";
+
+    public static final String JPQL_FIND_BY_STATUS = "FROM MarketplaceListing WHERE status = ?1 ORDER BY createdAt DESC";
     public static final String QUERY_FIND_BY_STATUS = "MarketplaceListing.findByStatus";
+
+    public static final String JPQL_FIND_ACTIVE = "FROM MarketplaceListing WHERE status = 'active' ORDER BY createdAt DESC";
     public static final String QUERY_FIND_ACTIVE = "MarketplaceListing.findActive";
+
+    public static final String JPQL_FIND_EXPIRED = "FROM MarketplaceListing WHERE status = 'active' AND expiresAt <= ?1";
     public static final String QUERY_FIND_EXPIRED = "MarketplaceListing.findExpired";
+
+    public static final String JPQL_FIND_EXPIRING_WITHIN_DAYS = "FROM MarketplaceListing WHERE status = 'active' AND expiresAt > ?1 AND expiresAt <= ?2 AND reminderSent = false";
     public static final String QUERY_FIND_EXPIRING_WITHIN_DAYS = "MarketplaceListing.findExpiringWithinDays";
 
     /** Default expiration period: 30 days from activation. */
     public static final Duration DEFAULT_EXPIRATION_PERIOD = Duration.ofDays(30);
+
+
+    
 
     @Id
     @GeneratedValue
@@ -242,7 +275,7 @@ public class MarketplaceListing extends PanacheEntityBase {
         if (userId == null) {
             return List.of();
         }
-        return find("userId = ?1 ORDER BY createdAt DESC", userId).list();
+        return find(JPQL_FIND_BY_USER_ID, userId).list();
     }
 
     /**
@@ -259,7 +292,7 @@ public class MarketplaceListing extends PanacheEntityBase {
         if (categoryId == null) {
             return List.of();
         }
-        return find("categoryId = ?1 AND status = 'active' ORDER BY createdAt DESC", categoryId).list();
+        return find(JPQL_FIND_BY_CATEGORY_ID, categoryId).list();
     }
 
     /**
@@ -273,7 +306,7 @@ public class MarketplaceListing extends PanacheEntityBase {
         if (status == null || status.isBlank()) {
             return List.of();
         }
-        return find("status = ?1 ORDER BY createdAt DESC", status).list();
+        return find(JPQL_FIND_BY_STATUS, status).list();
     }
 
     /**
@@ -285,7 +318,7 @@ public class MarketplaceListing extends PanacheEntityBase {
      * @return List of active listings ordered by creation date (newest first)
      */
     public static List<MarketplaceListing> findActive() {
-        return find("status = 'active' ORDER BY createdAt DESC").list();
+        return find(JPQL_FIND_ACTIVE).list();
     }
 
     /**
@@ -298,7 +331,7 @@ public class MarketplaceListing extends PanacheEntityBase {
      * @return List of expired listings to be marked as 'expired' status
      */
     public static List<MarketplaceListing> findExpired() {
-        return find("status = 'active' AND expiresAt <= ?1", Instant.now()).list();
+        return find(JPQL_FIND_EXPIRED, Instant.now()).list();
     }
 
     /**
@@ -315,7 +348,7 @@ public class MarketplaceListing extends PanacheEntityBase {
     public static List<MarketplaceListing> findExpiringWithinDays(int days) {
         Instant now = Instant.now();
         Instant futureThreshold = now.plus(Duration.ofDays(days));
-        return find("status = 'active' AND expiresAt > ?1 AND expiresAt <= ?2 AND reminderSent = false", now,
+        return find(JPQL_FIND_EXPIRING_WITHIN_DAYS, now,
                 futureThreshold).list();
     }
 

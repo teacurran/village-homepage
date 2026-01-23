@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -62,14 +63,38 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "listing_promotions")
+@NamedQuery(
+        name = ListingPromotion.QUERY_FIND_BY_LISTING_ID,
+        query = ListingPromotion.JPQL_FIND_BY_LISTING_ID)
+@NamedQuery(
+        name = ListingPromotion.QUERY_FIND_ACTIVE_FEATURED,
+        query = ListingPromotion.JPQL_FIND_ACTIVE_FEATURED)
+@NamedQuery(
+        name = ListingPromotion.QUERY_FIND_EXPIRED_FEATURED,
+        query = ListingPromotion.JPQL_FIND_EXPIRED_FEATURED)
+@NamedQuery(
+        name = ListingPromotion.QUERY_FIND_BY_PAYMENT_INTENT,
+        query = ListingPromotion.JPQL_FIND_BY_PAYMENT_INTENT)
+@NamedQuery(
+        name = ListingPromotion.QUERY_CHECK_RECENT_BUMP,
+        query = ListingPromotion.JPQL_CHECK_RECENT_BUMP)
 public class ListingPromotion extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(ListingPromotion.class);
 
+    public static final String JPQL_FIND_BY_LISTING_ID = "SELECT lp FROM ListingPromotion lp WHERE lp.listingId = :listingId ORDER BY lp.createdAt DESC";
     public static final String QUERY_FIND_BY_LISTING_ID = "ListingPromotion.findByListingId";
+
+    public static final String JPQL_FIND_ACTIVE_FEATURED = "SELECT lp FROM ListingPromotion lp WHERE lp.listingId = :listingId AND lp.type = 'featured' AND lp.startsAt <= :now AND lp.expiresAt > :now";
     public static final String QUERY_FIND_ACTIVE_FEATURED = "ListingPromotion.findActiveFeatured";
+
+    public static final String JPQL_FIND_EXPIRED_FEATURED = "SELECT lp FROM ListingPromotion lp WHERE lp.type = 'featured' AND lp.expiresAt IS NOT NULL AND lp.expiresAt <= :now";
     public static final String QUERY_FIND_EXPIRED_FEATURED = "ListingPromotion.findExpiredFeatured";
+
+    public static final String JPQL_FIND_BY_PAYMENT_INTENT = "SELECT lp FROM ListingPromotion lp WHERE lp.stripePaymentIntentId = :paymentIntentId";
     public static final String QUERY_FIND_BY_PAYMENT_INTENT = "ListingPromotion.findByPaymentIntent";
+
+    public static final String JPQL_CHECK_RECENT_BUMP = "SELECT COUNT(lp) FROM ListingPromotion lp WHERE lp.listingId = :listingId AND lp.type = 'bump' AND lp.createdAt >= :cutoff";
     public static final String QUERY_CHECK_RECENT_BUMP = "ListingPromotion.checkRecentBump";
 
     /** Featured promotion duration: 7 days from activation. */
@@ -134,7 +159,8 @@ public class ListingPromotion extends PanacheEntityBase {
         if (listingId == null) {
             return List.of();
         }
-        return find("listingId = ?1 ORDER BY createdAt DESC", listingId).list();
+        return find(JPQL_FIND_BY_LISTING_ID, 
+                io.quarkus.panache.common.Parameters.with("listingId", listingId)).list();
     }
 
     /**
@@ -152,8 +178,8 @@ public class ListingPromotion extends PanacheEntityBase {
             return List.of();
         }
         Instant now = Instant.now();
-        return find("listingId = ?1 AND type = 'featured' AND startsAt <= ?2 AND expiresAt > ?2", listingId, now)
-                .list();
+        return find(JPQL_FIND_ACTIVE_FEATURED, 
+                io.quarkus.panache.common.Parameters.with("listingId", listingId).and("now", now)).list();
     }
 
     /**
@@ -167,7 +193,8 @@ public class ListingPromotion extends PanacheEntityBase {
      */
     public static List<ListingPromotion> findExpiredFeatured() {
         Instant now = Instant.now();
-        return find("type = 'featured' AND expiresAt IS NOT NULL AND expiresAt <= ?1", now).list();
+        return find(JPQL_FIND_EXPIRED_FEATURED, 
+                io.quarkus.panache.common.Parameters.with("now", now)).list();
     }
 
     /**
@@ -184,7 +211,8 @@ public class ListingPromotion extends PanacheEntityBase {
         if (paymentIntentId == null || paymentIntentId.isBlank()) {
             return Optional.empty();
         }
-        return find("stripePaymentIntentId = ?1", paymentIntentId).firstResultOptional();
+        return find(JPQL_FIND_BY_PAYMENT_INTENT, 
+                io.quarkus.panache.common.Parameters.with("paymentIntentId", paymentIntentId)).firstResultOptional();
     }
 
     /**
@@ -202,7 +230,8 @@ public class ListingPromotion extends PanacheEntityBase {
             return false;
         }
         Instant cutoff = Instant.now().minus(BUMP_COOLDOWN);
-        return count("listingId = ?1 AND type = 'bump' AND createdAt >= ?2", listingId, cutoff) > 0;
+        return count(JPQL_CHECK_RECENT_BUMP, 
+                io.quarkus.panache.common.Parameters.with("listingId", listingId).and("cutoff", cutoff)) > 0;
     }
 
     /**

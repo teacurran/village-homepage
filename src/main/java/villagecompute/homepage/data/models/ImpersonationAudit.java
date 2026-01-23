@@ -7,6 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -41,12 +42,26 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "impersonation_audit")
+@NamedQuery(
+        name = ImpersonationAudit.QUERY_FIND_BY_IMPERSONATOR,
+        query = ImpersonationAudit.JPQL_FIND_BY_IMPERSONATOR)
+@NamedQuery(
+        name = ImpersonationAudit.QUERY_FIND_BY_TARGET,
+        query = ImpersonationAudit.JPQL_FIND_BY_TARGET)
+@NamedQuery(
+        name = ImpersonationAudit.QUERY_FIND_ACTIVE,
+        query = ImpersonationAudit.JPQL_FIND_ACTIVE)
 public class ImpersonationAudit extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(ImpersonationAudit.class);
 
+    public static final String JPQL_FIND_BY_IMPERSONATOR = "FROM ImpersonationAudit WHERE impersonatorId = ?1 ORDER BY startedAt DESC";
     public static final String QUERY_FIND_BY_IMPERSONATOR = "ImpersonationAudit.findByImpersonator";
+
+    public static final String JPQL_FIND_BY_TARGET = "FROM ImpersonationAudit WHERE targetUserId = ?1 ORDER BY startedAt DESC";
     public static final String QUERY_FIND_BY_TARGET = "ImpersonationAudit.findByTarget";
+
+    public static final String JPQL_FIND_ACTIVE = "FROM ImpersonationAudit WHERE endedAt IS NULL ORDER BY startedAt DESC";
     public static final String QUERY_FIND_ACTIVE = "ImpersonationAudit.findActive";
 
     @Id
@@ -98,8 +113,7 @@ public class ImpersonationAudit extends PanacheEntityBase {
         if (impersonatorId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_IMPERSONATOR + " WHERE impersonator_id = ?1 ORDER BY started_at DESC",
-                impersonatorId).list();
+        return find(JPQL_FIND_BY_IMPERSONATOR, impersonatorId).list();
     }
 
     /**
@@ -113,8 +127,7 @@ public class ImpersonationAudit extends PanacheEntityBase {
         if (targetUserId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_TARGET + " WHERE target_user_id = ?1 ORDER BY started_at DESC", targetUserId)
-                .list();
+        return find(JPQL_FIND_BY_TARGET, targetUserId).list();
     }
 
     /**
@@ -123,7 +136,7 @@ public class ImpersonationAudit extends PanacheEntityBase {
      * @return list of active impersonation sessions, ordered by started_at DESC
      */
     public static List<ImpersonationAudit> findActive() {
-        return find("#" + QUERY_FIND_ACTIVE + " WHERE ended_at IS NULL ORDER BY started_at DESC").list();
+        return find(JPQL_FIND_ACTIVE).list();
     }
 
     /**
@@ -139,7 +152,7 @@ public class ImpersonationAudit extends PanacheEntityBase {
         if (impersonatorId == null || targetUserId == null) {
             return Optional.empty();
         }
-        return find("impersonator_id = ?1 AND target_user_id = ?2 AND ended_at IS NULL", impersonatorId, targetUserId)
+        return find("impersonatorId = ?1 AND targetUserId = ?2 AND endedAt IS NULL", impersonatorId, targetUserId)
                 .firstResultOptional();
     }
 

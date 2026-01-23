@@ -10,6 +10,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -52,6 +53,15 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "social_tokens")
+@NamedQuery(
+        name = SocialToken.QUERY_FIND_ACTIVE_BY_USER_AND_PLATFORM,
+        query = SocialToken.JPQL_FIND_ACTIVE_BY_USER_AND_PLATFORM)
+@NamedQuery(
+        name = SocialToken.QUERY_FIND_ALL_ACTIVE,
+        query = SocialToken.JPQL_FIND_ALL_ACTIVE)
+@NamedQuery(
+        name = SocialToken.QUERY_FIND_EXPIRING_SOON,
+        query = SocialToken.JPQL_FIND_EXPIRING_SOON)
 public class SocialToken extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(SocialToken.class);
@@ -59,8 +69,13 @@ public class SocialToken extends PanacheEntityBase {
     public static final String PLATFORM_INSTAGRAM = "instagram";
     public static final String PLATFORM_FACEBOOK = "facebook";
 
+    public static final String JPQL_FIND_ACTIVE_BY_USER_AND_PLATFORM = "SELECT st FROM SocialToken st WHERE st.userId = :userId AND st.platform = :platform AND st.revokedAt IS NULL";
     public static final String QUERY_FIND_ACTIVE_BY_USER_AND_PLATFORM = "SocialToken.findActiveByUserAndPlatform";
+
+    public static final String JPQL_FIND_ALL_ACTIVE = "SELECT st FROM SocialToken st WHERE st.revokedAt IS NULL ORDER BY st.userId, st.platform";
     public static final String QUERY_FIND_ALL_ACTIVE = "SocialToken.findAllActive";
+
+    public static final String JPQL_FIND_EXPIRING_SOON = "SELECT st FROM SocialToken st WHERE st.revokedAt IS NULL AND st.expiresAt <= :threshold ORDER BY st.expiresAt";
     public static final String QUERY_FIND_EXPIRING_SOON = "SocialToken.findExpiringSoon";
 
     @Id
@@ -138,8 +153,8 @@ public class SocialToken extends PanacheEntityBase {
         if (userId == null || platform == null) {
             return Optional.empty();
         }
-        return find("#" + QUERY_FIND_ACTIVE_BY_USER_AND_PLATFORM
-                + " WHERE user_id = ?1 AND platform = ?2 AND revoked_at IS NULL", userId, platform)
+        return find(JPQL_FIND_ACTIVE_BY_USER_AND_PLATFORM, 
+                io.quarkus.panache.common.Parameters.with("userId", userId).and("platform", platform))
                 .firstResultOptional();
     }
 
@@ -154,7 +169,7 @@ public class SocialToken extends PanacheEntityBase {
         if (userId == null) {
             return List.of();
         }
-        return find("user_id = ?1 AND revoked_at IS NULL", userId).list();
+        return find("userId = ?1 AND revokedAt IS NULL", userId).list();
     }
 
     /**
@@ -165,7 +180,7 @@ public class SocialToken extends PanacheEntityBase {
      * @return list of all active tokens
      */
     public static List<SocialToken> findAllActive() {
-        return find("#" + QUERY_FIND_ALL_ACTIVE + " WHERE revoked_at IS NULL ORDER BY user_id, platform").list();
+        return find(JPQL_FIND_ALL_ACTIVE).list();
     }
 
     /**
@@ -179,9 +194,8 @@ public class SocialToken extends PanacheEntityBase {
      */
     public static List<SocialToken> findExpiringSoon(int daysAhead) {
         Instant threshold = Instant.now().plus(daysAhead, ChronoUnit.DAYS);
-        return find(
-                "#" + QUERY_FIND_EXPIRING_SOON + " WHERE revoked_at IS NULL AND expires_at <= ?1 ORDER BY expires_at",
-                threshold).list();
+        return find(JPQL_FIND_EXPIRING_SOON, 
+                io.quarkus.panache.common.Parameters.with("threshold", threshold)).list();
     }
 
     /**

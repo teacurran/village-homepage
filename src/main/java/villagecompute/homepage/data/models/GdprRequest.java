@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -49,12 +50,26 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "gdpr_requests")
+@NamedQuery(
+        name = GdprRequest.QUERY_FIND_BY_USER,
+        query = GdprRequest.JPQL_FIND_BY_USER)
+@NamedQuery(
+        name = GdprRequest.QUERY_FIND_BY_STATUS,
+        query = GdprRequest.JPQL_FIND_BY_STATUS)
+@NamedQuery(
+        name = GdprRequest.QUERY_FIND_PENDING_EXPORTS,
+        query = GdprRequest.JPQL_FIND_PENDING_EXPORTS)
 public class GdprRequest extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(GdprRequest.class);
 
+    public static final String JPQL_FIND_BY_USER = "FROM GdprRequest WHERE userId = ?1 ORDER BY requestedAt DESC";
     public static final String QUERY_FIND_BY_USER = "GdprRequest.findByUser";
+
+    public static final String JPQL_FIND_BY_STATUS = "FROM GdprRequest WHERE status = ?1 ORDER BY requestedAt DESC";
     public static final String QUERY_FIND_BY_STATUS = "GdprRequest.findByStatus";
+
+    public static final String JPQL_FIND_PENDING_EXPORTS = "FROM GdprRequest WHERE requestType = ?1 AND status = ?2 AND signedUrlExpiresAt < CURRENT_TIMESTAMP";
     public static final String QUERY_FIND_PENDING_EXPORTS = "GdprRequest.findPendingExports";
 
     @Id
@@ -176,7 +191,7 @@ public class GdprRequest extends PanacheEntityBase {
         if (userId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_USER + " WHERE user_id = ?1 ORDER BY requested_at DESC", userId).list();
+        return find(JPQL_FIND_BY_USER, userId).list();
     }
 
     /**
@@ -190,7 +205,7 @@ public class GdprRequest extends PanacheEntityBase {
         if (status == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_STATUS + " WHERE status = ?1 ORDER BY requested_at DESC", status).list();
+        return find(JPQL_FIND_BY_STATUS, status).list();
     }
 
     /**
@@ -199,10 +214,7 @@ public class GdprRequest extends PanacheEntityBase {
      * @return list of export requests with expired signed URLs
      */
     public static List<GdprRequest> findExpiredExports() {
-        return find(
-                "#" + QUERY_FIND_PENDING_EXPORTS
-                        + " WHERE request_type = ?1 AND status = ?2 AND signed_url_expires_at < NOW()",
-                RequestType.EXPORT, RequestStatus.COMPLETED).list();
+        return find(JPQL_FIND_PENDING_EXPORTS, RequestType.EXPORT, RequestStatus.COMPLETED).list();
     }
 
     /**
@@ -216,7 +228,7 @@ public class GdprRequest extends PanacheEntityBase {
         if (userId == null) {
             return Optional.empty();
         }
-        return find("user_id = ?1 AND request_type = ?2 ORDER BY requested_at DESC", userId, RequestType.EXPORT)
+        return find("userId = ?1 AND requestType = ?2 ORDER BY requestedAt DESC", userId, RequestType.EXPORT)
                 .firstResultOptional();
     }
 
@@ -231,7 +243,7 @@ public class GdprRequest extends PanacheEntityBase {
         if (userId == null) {
             return Optional.empty();
         }
-        return find("user_id = ?1 AND request_type = ?2 ORDER BY requested_at DESC", userId, RequestType.DELETION)
+        return find("userId = ?1 AND requestType = ?2 ORDER BY requestedAt DESC", userId, RequestType.DELETION)
                 .firstResultOptional();
     }
 

@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -45,11 +46,20 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "account_merge_audit")
+@NamedQuery(
+        name = AccountMergeAudit.QUERY_FIND_PENDING_PURGE,
+        query = AccountMergeAudit.JPQL_FIND_PENDING_PURGE)
+@NamedQuery(
+        name = AccountMergeAudit.QUERY_FIND_BY_AUTHENTICATED_USER,
+        query = AccountMergeAudit.JPQL_FIND_BY_AUTHENTICATED_USER)
 public class AccountMergeAudit extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(AccountMergeAudit.class);
 
+    public static final String JPQL_FIND_PENDING_PURGE = "SELECT a FROM AccountMergeAudit a WHERE a.purgeAfter <= CURRENT_TIMESTAMP ORDER BY a.purgeAfter ASC";
     public static final String QUERY_FIND_PENDING_PURGE = "AccountMergeAudit.findPendingPurge";
+
+    public static final String JPQL_FIND_BY_AUTHENTICATED_USER = "SELECT a FROM AccountMergeAudit a WHERE a.authenticatedUserId = :authenticatedUserId ORDER BY a.consentTimestamp DESC";
     public static final String QUERY_FIND_BY_AUTHENTICATED_USER = "AccountMergeAudit.findByAuthenticatedUser";
 
     @Id
@@ -119,7 +129,7 @@ public class AccountMergeAudit extends PanacheEntityBase {
      * @return list of audit records ready for purge
      */
     public static List<AccountMergeAudit> findPendingPurge() {
-        return find("#" + QUERY_FIND_PENDING_PURGE + " WHERE purge_after <= NOW() ORDER BY purge_after ASC").list();
+        return find(JPQL_FIND_PENDING_PURGE).list();
     }
 
     /**
@@ -136,8 +146,8 @@ public class AccountMergeAudit extends PanacheEntityBase {
         if (authenticatedUserId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_AUTHENTICATED_USER
-                + " WHERE authenticated_user_id = ?1 ORDER BY consent_timestamp DESC", authenticatedUserId).list();
+        return find(JPQL_FIND_BY_AUTHENTICATED_USER, 
+                io.quarkus.panache.common.Parameters.with("authenticatedUserId", authenticatedUserId)).list();
     }
 
     /**

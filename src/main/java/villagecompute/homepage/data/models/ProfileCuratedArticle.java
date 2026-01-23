@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -65,13 +66,26 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "profile_curated_articles")
+@NamedQuery(
+        name = ProfileCuratedArticle.QUERY_FIND_BY_PROFILE,
+        query = ProfileCuratedArticle.JPQL_FIND_BY_PROFILE)
+@NamedQuery(
+        name = ProfileCuratedArticle.QUERY_FIND_ACTIVE,
+        query = ProfileCuratedArticle.JPQL_FIND_ACTIVE)
+@NamedQuery(
+        name = ProfileCuratedArticle.QUERY_FIND_BY_FEED_ITEM,
+        query = ProfileCuratedArticle.JPQL_FIND_BY_FEED_ITEM)
 public class ProfileCuratedArticle extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(ProfileCuratedArticle.class);
 
-    // Query name constants
+    public static final String JPQL_FIND_BY_PROFILE = "FROM ProfileCuratedArticle WHERE profileId = ?1 ORDER BY createdAt DESC";
     public static final String QUERY_FIND_BY_PROFILE = "ProfileCuratedArticle.findByProfile";
+
+    public static final String JPQL_FIND_ACTIVE = "FROM ProfileCuratedArticle WHERE profileId = ?1 AND isActive = true ORDER BY createdAt DESC";
     public static final String QUERY_FIND_ACTIVE = "ProfileCuratedArticle.findActive";
+
+    public static final String JPQL_FIND_BY_FEED_ITEM = "FROM ProfileCuratedArticle WHERE feedItemId = ?1";
     public static final String QUERY_FIND_BY_FEED_ITEM = "ProfileCuratedArticle.findByFeedItem";
 
     @Id
@@ -152,7 +166,7 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
         if (profileId == null) {
             return List.of();
         }
-        return find("profileId = ?1 ORDER BY createdAt DESC", profileId).list();
+        return find(JPQL_FIND_BY_PROFILE, profileId).list();
     }
 
     /**
@@ -166,7 +180,7 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
         if (profileId == null) {
             return List.of();
         }
-        return find("profileId = ?1 AND isActive = true ORDER BY createdAt DESC", profileId).list();
+        return find(JPQL_FIND_ACTIVE, profileId).list();
     }
 
     /**
@@ -180,7 +194,7 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
         if (feedItemId == null) {
             return List.of();
         }
-        return find("feedItemId = ?1", feedItemId).list();
+        return find(JPQL_FIND_BY_FEED_ITEM, feedItemId).list();
     }
 
     /**

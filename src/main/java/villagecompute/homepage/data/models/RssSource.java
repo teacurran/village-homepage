@@ -7,6 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -50,15 +51,44 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "rss_sources")
+@NamedQuery(
+        name = RssSource.QUERY_FIND_BY_URL,
+        query = RssSource.JPQL_FIND_BY_URL)
+@NamedQuery(
+        name = RssSource.QUERY_FIND_ACTIVE,
+        query = RssSource.JPQL_FIND_ACTIVE)
+@NamedQuery(
+        name = RssSource.QUERY_FIND_BY_CATEGORY,
+        query = RssSource.JPQL_FIND_BY_CATEGORY)
+@NamedQuery(
+        name = RssSource.QUERY_FIND_SYSTEM_FEEDS,
+        query = RssSource.JPQL_FIND_SYSTEM_FEEDS)
+@NamedQuery(
+        name = RssSource.QUERY_FIND_USER_FEEDS,
+        query = RssSource.JPQL_FIND_USER_FEEDS)
+@NamedQuery(
+        name = RssSource.QUERY_FIND_DUE_FOR_REFRESH,
+        query = RssSource.JPQL_FIND_DUE_FOR_REFRESH)
 public class RssSource extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(RssSource.class);
 
+    public static final String JPQL_FIND_BY_URL = "FROM RssSource WHERE url = :url";
     public static final String QUERY_FIND_BY_URL = "RssSource.findByUrl";
+
+    public static final String JPQL_FIND_ACTIVE = "FROM RssSource WHERE isActive = true";
     public static final String QUERY_FIND_ACTIVE = "RssSource.findActive";
+
+    public static final String JPQL_FIND_BY_CATEGORY = "FROM RssSource WHERE category = :category";
     public static final String QUERY_FIND_BY_CATEGORY = "RssSource.findByCategory";
+
+    public static final String JPQL_FIND_SYSTEM_FEEDS = "FROM RssSource WHERE isSystem = true";
     public static final String QUERY_FIND_SYSTEM_FEEDS = "RssSource.findSystemFeeds";
+
+    public static final String JPQL_FIND_USER_FEEDS = "FROM RssSource WHERE userId = :userId AND isSystem = false";
     public static final String QUERY_FIND_USER_FEEDS = "RssSource.findUserFeeds";
+
+    public static final String JPQL_FIND_DUE_FOR_REFRESH = "FROM RssSource WHERE isActive = true";
     public static final String QUERY_FIND_DUE_FOR_REFRESH = "RssSource.findDueForRefresh";
 
     @Id
@@ -131,7 +161,7 @@ public class RssSource extends PanacheEntityBase {
         if (url == null || url.isBlank()) {
             return Optional.empty();
         }
-        return find("#" + QUERY_FIND_BY_URL + " WHERE url = :url", Parameters.with("url", url)).firstResultOptional();
+        return find(JPQL_FIND_BY_URL, Parameters.with("url", url)).firstResultOptional();
     }
 
     /**
@@ -140,7 +170,7 @@ public class RssSource extends PanacheEntityBase {
      * @return List of active sources
      */
     public static List<RssSource> findActive() {
-        return find("#" + QUERY_FIND_ACTIVE + " WHERE is_active = true").list();
+        return find(JPQL_FIND_ACTIVE).list();
     }
 
     /**
@@ -154,8 +184,7 @@ public class RssSource extends PanacheEntityBase {
         if (category == null || category.isBlank()) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_CATEGORY + " WHERE category = :category", Parameters.with("category", category))
-                .list();
+        return find(JPQL_FIND_BY_CATEGORY, Parameters.with("category", category)).list();
     }
 
     /**
@@ -164,7 +193,7 @@ public class RssSource extends PanacheEntityBase {
      * @return List of system feeds (curated by VillageCompute)
      */
     public static List<RssSource> findSystemFeeds() {
-        return find("#" + QUERY_FIND_SYSTEM_FEEDS + " WHERE is_system = true").list();
+        return find(JPQL_FIND_SYSTEM_FEEDS).list();
     }
 
     /**
@@ -178,8 +207,7 @@ public class RssSource extends PanacheEntityBase {
         if (userId == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_USER_FEEDS + " WHERE user_id = :userId AND is_system = false",
-                Parameters.with("userId", userId)).list();
+        return find(JPQL_FIND_USER_FEEDS, Parameters.with("userId", userId)).list();
     }
 
     /**
@@ -190,7 +218,7 @@ public class RssSource extends PanacheEntityBase {
     public static List<RssSource> findDueForRefresh() {
         // Fetch all active sources and filter in Java for database compatibility
         // In production with PostgreSQL, this could be optimized with a native query using interval arithmetic
-        List<RssSource> activeSources = find("isActive = true").list();
+        List<RssSource> activeSources = find(JPQL_FIND_DUE_FOR_REFRESH).list();
         Instant now = Instant.now();
 
         return activeSources.stream().filter(source -> {

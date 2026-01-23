@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import org.jboss.logging.Logger;
 
@@ -48,12 +49,20 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "reserved_usernames")
+@NamedQuery(
+        name = ReservedUsername.QUERY_FIND_BY_USERNAME,
+        query = ReservedUsername.JPQL_FIND_BY_USERNAME)
+@NamedQuery(
+        name = ReservedUsername.QUERY_FIND_BY_REASON,
+        query = ReservedUsername.JPQL_FIND_BY_REASON)
 public class ReservedUsername extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(ReservedUsername.class);
 
-    // Query name constants
+    public static final String JPQL_FIND_BY_USERNAME = "SELECT ru FROM ReservedUsername ru WHERE ru.username = :username";
     public static final String QUERY_FIND_BY_USERNAME = "ReservedUsername.findByUsername";
+
+    public static final String JPQL_FIND_BY_REASON = "SELECT ru FROM ReservedUsername ru WHERE ru.reason LIKE :reasonPattern";
     public static final String QUERY_FIND_BY_REASON = "ReservedUsername.findByReason";
 
     @Id
@@ -102,7 +111,8 @@ public class ReservedUsername extends PanacheEntityBase {
             return Optional.empty();
         }
         String normalized = username.trim().toLowerCase();
-        return find("username = ?1", normalized).firstResultOptional();
+        return find(JPQL_FIND_BY_USERNAME, 
+                io.quarkus.panache.common.Parameters.with("username", normalized)).firstResultOptional();
     }
 
     /**
@@ -116,7 +126,8 @@ public class ReservedUsername extends PanacheEntityBase {
         if (reasonPattern == null || reasonPattern.isBlank()) {
             return List.of();
         }
-        return find("reason LIKE ?1", reasonPattern).list();
+        return find(JPQL_FIND_BY_REASON, 
+                io.quarkus.panache.common.Parameters.with("reasonPattern", reasonPattern)).list();
     }
 
     /**
