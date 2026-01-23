@@ -211,6 +211,12 @@
             <artifactId>quarkus-logging-json</artifactId>
         </dependency>
 
+        <!-- Fault Tolerance (Resilience4j) for Rate Limiting and Circuit Breaker (Feature I4.T6) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+        </dependency>
+
         <!-- OpenAPI Specification -->
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -420,6 +426,12 @@
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
+                    <!-- Unset .env datasource variables to allow Dev Services Testcontainers -->
+                    <environmentVariables>
+                        <QUARKUS_DATASOURCE_JDBC_URL></QUARKUS_DATASOURCE_JDBC_URL>
+                        <QUARKUS_DATASOURCE_USERNAME></QUARKUS_DATASOURCE_USERNAME>
+                        <QUARKUS_DATASOURCE_PASSWORD></QUARKUS_DATASOURCE_PASSWORD>
+                    </environmentVariables>
                     <!-- @{argLine} is set by JaCoCo plugin - append to it rather than replacing -->
                     <!-- PostgreSQLTestProfile handles datasource configuration overrides -->
                     <argLine>@{argLine}</argLine>

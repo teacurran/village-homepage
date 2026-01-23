@@ -23,11 +23,13 @@ import io.quarkus.narayana.jta.QuarkusTransaction;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import org.jboss.logging.Logger;
 
 import villagecompute.homepage.api.types.AiCategorySuggestionType;
 import villagecompute.homepage.api.types.ListingCategorizationResultType;
+import villagecompute.homepage.config.AiCacheConfig;
 import villagecompute.homepage.data.models.AiUsageTracking;
 import villagecompute.homepage.data.models.DirectoryCategory;
 import villagecompute.homepage.data.models.MarketplaceListing;
@@ -91,10 +93,17 @@ public class AiCategorizationService {
     private static final int MARKETPLACE_BATCH_SIZE = 50;
 
     @Inject
-    ChatModel chatModel;
+    @Named("haiku")
+    ChatModel chatModel; // Use Haiku model for bulk categorization (10x cheaper)
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    AiCacheConfig cacheConfig;
+
+    @Inject
+    AiUsageTrackingService usageTrackingService;
 
     /**
      * Suggests categories for a website based on URL, title, and description.

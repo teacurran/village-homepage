@@ -14,13 +14,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.langchain4j.model.chat.ChatModel;
 
+import io.smallrye.faulttolerance.api.CircuitBreakerName;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
+import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
+import org.eclipse.microprofile.faulttolerance.Fallback;
+import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.jboss.logging.Logger;
 
 import villagecompute.homepage.api.types.AiTagsType;
 import villagecompute.homepage.api.types.FeedItemTaggingResultType;
+import villagecompute.homepage.config.AiCacheConfig;
 import villagecompute.homepage.data.models.AiUsageTracking;
 import villagecompute.homepage.data.models.FeedItem;
 
@@ -62,10 +69,17 @@ public class AiTaggingService {
     private static final int MAX_CONTENT_LENGTH = 3000;
 
     @Inject
-    ChatModel chatModel;
+    @Named("haiku")
+    ChatModel chatModel; // Use Haiku model for bulk tagging (10x cheaper)
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    AiCacheConfig cacheConfig;
+
+    @Inject
+    AiUsageTrackingService usageTrackingService;
 
     /**
      * Tags a feed item with AI-generated metadata.
@@ -250,23 +264,56 @@ public class AiTaggingService {
      * This method is the primary interface for tagging operations, returning {@link FeedItemTaggingResultType} which
      * includes summary instead of sentiment. Use this for single-item tagging when batch processing is not required.
      *
+     * <p>
+     * <b>Caching:</b> Results are cached by content hash (SHA-256) for 30 days to reduce AI API costs. Cache hit rate
+     * target: &gt;50% (Feature I4.T6).
+     *
+     * <p>
+     * <b>Circuit Breaker:</b> Opens after 5 consecutive failures, half-open after 30s, returns null on fallback.
+     *
      * @param item
      *            the feed item to tag
      * @return tagging result with topics, summary, categories, and confidence, or null if tagging failed
      */
+    @CircuitBreaker(
+            requestVolumeThreshold = 5,
+            failureRatio = 1.0,
+            delay = 30000,
+            successThreshold = 2)
+    @CircuitBreakerName("ai-api-circuit-breaker")
+    @Fallback(
+            fallbackMethod = "tagFeedItemFallback")
+    @Timeout(60000)
     public FeedItemTaggingResultType tagFeedItem(FeedItem item) {
         if (item == null) {
             LOG.warn("Cannot tag null feed item");
             return null;
         }
 
+        // Generate content hash for cache key
+        String content = (item.title != null ? item.title : "") + (item.description != null ? item.description : "")
+                + (item.content != null ? item.content : "");
+        String contentHash = cacheConfig.generateContentHash(content);
+
+        // Check cache first
+        FeedItemTaggingResultType cached = cacheConfig.getTaggingResult(contentHash);
+        if (cached != null) {
+            LOG.debugf("Cache HIT for feed item: id=%s, title=\"%s\", hash=%s", item.id, item.title, contentHash);
+            usageTrackingService.recordCacheHit();
+            return cached;
+        }
+
+        // Cache MISS - call AI API
+        usageTrackingService.recordCacheMiss();
+        LOG.debugf("Cache MISS for feed item: id=%s, title=\"%s\", hash=%s", item.id, item.title, contentHash);
+
         try {
             // Build prompt for new schema (with summary instead of sentiment)
             String prompt = buildBatchPrompt(item.title, item.description, item.content);
 
-            LOG.debugf("Sending tagging request to Claude: title=\"%s\"", item.title);
+            LOG.debugf("Sending tagging request to Claude Haiku: title=\"%s\"", item.title);
 
-            // Call Claude via LangChain4j
+            // Call Claude via LangChain4j (using Haiku model for cost efficiency)
             String response = chatModel.chat(prompt);
 
             // Parse response for new schema
@@ -275,24 +322,39 @@ public class AiTaggingService {
             // Estimate token usage (rough approximation: 4 chars = 1 token)
             long estimatedInputTokens = prompt.length() / 4;
             long estimatedOutputTokens = response.length() / 4;
-            int costCents = AiUsageTracking.calculateCostCents(estimatedInputTokens, estimatedOutputTokens);
 
-            // Record usage
-            AiUsageTracking.recordUsage(YearMonth.now(), PROVIDER, 1, estimatedInputTokens, estimatedOutputTokens,
-                    costCents);
+            // Record usage with Haiku model
+            usageTrackingService.logUsage("tagging", "claude-3-haiku-20240307", (int) estimatedInputTokens,
+                    (int) estimatedOutputTokens);
 
             LOG.debugf(
                     "Tagged feed item: title=\"%s\", topics=%s, categories=%s, confidence=%.2f, "
-                            + "inputTokens=%d, outputTokens=%d, costCents=%d",
+                            + "inputTokens=%d, outputTokens=%d",
                     item.title, result.topics(), result.categories(), result.confidenceScore(), estimatedInputTokens,
-                    estimatedOutputTokens, costCents);
+                    estimatedOutputTokens);
+
+            // Store in cache
+            cacheConfig.putTaggingResult(contentHash, result);
 
             return result;
 
         } catch (Exception e) {
             LOG.errorf(e, "Failed to tag feed item: id=%s, title=\"%s\"", item.id, item.title);
-            return null;
+            throw new RuntimeException("AI tagging failed", e); // Trigger circuit breaker
         }
+    }
+
+    /**
+     * Fallback method when circuit breaker is OPEN or AI API fails.
+     *
+     * @param item
+     *            the feed item to tag
+     * @return null (tagging unavailable)
+     */
+    public FeedItemTaggingResultType tagFeedItemFallback(FeedItem item) {
+        LOG.warnf("Circuit breaker OPEN or AI API unavailable - skipping tagging for item: id=%s, title=\"%s\"",
+                item.id, item.title);
+        return null;
     }
 
     /**

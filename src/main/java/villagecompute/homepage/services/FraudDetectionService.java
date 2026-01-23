@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.FraudAnalysisResultType;
 import villagecompute.homepage.data.models.AiUsageTracking;
@@ -61,7 +62,11 @@ public class FraudDetectionService {
     ObjectMapper objectMapper;
 
     @Inject
-    dev.langchain4j.model.chat.ChatModel chatModel;
+    @Named("sonnet")
+    dev.langchain4j.model.chat.ChatModel chatModel; // Use Sonnet model for fraud detection (high accuracy required)
+
+    @Inject
+    AiUsageTrackingService usageTrackingService;
 
     /**
      * Analyzes a marketplace listing for fraud indicators.

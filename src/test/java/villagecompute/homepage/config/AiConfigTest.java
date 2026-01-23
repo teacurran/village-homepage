@@ -36,7 +36,8 @@ class AiConfigTest {
     void testValidationSucceedsWithValidApiKey() {
         AiConfig config = new AiConfig();
         config.apiKey = "sk-ant-test-12345678";
-        config.modelName = "claude-3-5-sonnet-20241022";
+        config.sonnetModelName = "claude-3-5-sonnet-20241022";
+        config.haikuModelName = "claude-3-haiku-20240307";
 
         assertDoesNotThrow(() -> {
             config.validateConfiguration();
@@ -50,7 +51,8 @@ class AiConfigTest {
     void testValidationFailsWithNullApiKey() {
         AiConfig config = new AiConfig();
         config.apiKey = null;
-        config.modelName = "claude-3-5-sonnet-20241022";
+        config.sonnetModelName = "claude-3-5-sonnet-20241022";
+        config.haikuModelName = "claude-3-haiku-20240307";
 
         assertThrows(AiConfigurationException.class, () -> {
             config.validateConfiguration();
@@ -64,7 +66,8 @@ class AiConfigTest {
     void testValidationFailsWithEmptyApiKey() {
         AiConfig config = new AiConfig();
         config.apiKey = "";
-        config.modelName = "claude-3-5-sonnet-20241022";
+        config.sonnetModelName = "claude-3-5-sonnet-20241022";
+        config.haikuModelName = "claude-3-haiku-20240307";
 
         assertThrows(AiConfigurationException.class, () -> {
             config.validateConfiguration();
@@ -78,7 +81,8 @@ class AiConfigTest {
     void testValidationFailsWithWhitespaceApiKey() {
         AiConfig config = new AiConfig();
         config.apiKey = "   ";
-        config.modelName = "claude-3-5-sonnet-20241022";
+        config.sonnetModelName = "claude-3-5-sonnet-20241022";
+        config.haikuModelName = "claude-3-haiku-20240307";
 
         assertThrows(AiConfigurationException.class, () -> {
             config.validateConfiguration();

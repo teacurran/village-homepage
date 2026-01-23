@@ -13,13 +13,16 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
+import org.eclipse.microprofile.faulttolerance.Fallback;
+import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.jboss.logging.Logger;
+import villagecompute.homepage.config.AiCacheConfig;
 import villagecompute.homepage.data.models.AiUsageTracking;
 import villagecompute.homepage.data.models.DirectorySite;
 import villagecompute.homepage.data.models.FeedItem;
 import villagecompute.homepage.data.models.MarketplaceListing;
 
-import java.time.YearMonth;
 import java.util.List;
 
 /**
@@ -85,12 +88,22 @@ public class SemanticSearchService {
     @Inject
     EntityManager entityManager;
 
+    @Inject
+    AiCacheConfig cacheConfig;
+
+    @Inject
+    AiUsageTrackingService usageTrackingService;
+
     /**
      * Generates an embedding vector for the given text using OpenAI's text-embedding-3-small model.
      *
      * <p>
      * Converts text into a 1536-dimensional float vector representing semantic meaning. Used for both indexing content
      * and generating query vectors for similarity search.
+     *
+     * <p>
+     * <b>Caching:</b> Results are cached by text hash (SHA-256) for 90 days to reduce AI API costs. Cache hit rate
+     * target: &gt;50% (Feature I4.T6).
      *
      * <p>
      * <b>Cost Tracking:</b> Records API usage in {@link AiUsageTracking} for budget monitoring per Policy P2/P10.
@@ -100,16 +113,39 @@ public class SemanticSearchService {
      *            the text to embed (article content, listing description, search query, etc.)
      * @return embedding vector (float array of length 1536), or null if generation fails
      */
+    @CircuitBreaker(
+            requestVolumeThreshold = 5,
+            failureRatio = 1.0,
+            delay = 30000,
+            successThreshold = 2)
+    @Fallback(
+            fallbackMethod = "generateEmbeddingFallback")
+    @Timeout(30000)
     public float[] generateEmbedding(String text) {
         if (text == null || text.isBlank()) {
             LOG.warn("Cannot generate embedding for null or empty text");
             return null;
         }
 
+        // Generate text hash for cache key
+        String textHash = cacheConfig.generateContentHash(text);
+
+        // Check cache first
+        float[] cached = cacheConfig.getEmbedding(textHash);
+        if (cached != null) {
+            LOG.debugf("Cache HIT for embedding: hash=%s", textHash);
+            usageTrackingService.recordCacheHit();
+            return cached;
+        }
+
+        // Cache MISS - call AI API
+        usageTrackingService.recordCacheMiss();
+        LOG.debugf("Cache MISS for embedding: hash=%s", textHash);
+
         try {
             LOG.debugf("Generating embedding for text: %s", text.substring(0, Math.min(100, text.length())));
 
-            // Call Anthropic embedding API via LangChain4j
+            // Call OpenAI embedding API via LangChain4j
             Response<Embedding> response = embeddingModel.embed(text);
             Embedding embedding = response.content();
 
@@ -126,21 +162,35 @@ public class SemanticSearchService {
             long estimatedInputTokens = text.length() / CHARS_PER_TOKEN;
             // Embedding API doesn't return output tokens (just the vector), so estimate as 0
             long estimatedOutputTokens = 0;
-            int costCents = AiUsageTracking.calculateEmbeddingCostCents(estimatedInputTokens);
 
-            // Record usage
-            AiUsageTracking.recordUsage(YearMonth.now(), PROVIDER, 1, estimatedInputTokens, estimatedOutputTokens,
-                    costCents);
+            // Record usage with embedding model
+            usageTrackingService.logUsage("embedding", "text-embedding-3-small", (int) estimatedInputTokens,
+                    (int) estimatedOutputTokens);
 
-            LOG.debugf("Generated embedding: dimensions=%d, inputTokens=%d, costCents=%d", vector.length,
-                    estimatedInputTokens, costCents);
+            LOG.debugf("Generated embedding: dimensions=%d, inputTokens=%d", vector.length, estimatedInputTokens);
+
+            // Store in cache
+            cacheConfig.putEmbedding(textHash, vector);
 
             return vector;
 
         } catch (Exception e) {
             LOG.errorf(e, "Failed to generate embedding for text: %s", text.substring(0, Math.min(100, text.length())));
-            return null;
+            throw new RuntimeException("Embedding generation failed", e); // Trigger circuit breaker
         }
+    }
+
+    /**
+     * Fallback method when circuit breaker is OPEN or embedding API fails.
+     *
+     * @param text
+     *            the text to embed
+     * @return null (embedding unavailable)
+     */
+    public float[] generateEmbeddingFallback(String text) {
+        LOG.warnf("Circuit breaker OPEN or embedding API unavailable - skipping embedding generation for text: %s",
+                text.substring(0, Math.min(100, text.length())));
+        return null;
     }
 
     /**
