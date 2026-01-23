@@ -159,8 +159,7 @@ public class ListingPromotion extends PanacheEntityBase {
         if (listingId == null) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_LISTING_ID, 
-                io.quarkus.panache.common.Parameters.with("listingId", listingId)).list();
+        return find(JPQL_FIND_BY_LISTING_ID, io.quarkus.panache.common.Parameters.with("listingId", listingId)).list();
     }
 
     /**
@@ -178,7 +177,7 @@ public class ListingPromotion extends PanacheEntityBase {
             return List.of();
         }
         Instant now = Instant.now();
-        return find(JPQL_FIND_ACTIVE_FEATURED, 
+        return find(JPQL_FIND_ACTIVE_FEATURED,
                 io.quarkus.panache.common.Parameters.with("listingId", listingId).and("now", now)).list();
     }
 
@@ -193,8 +192,7 @@ public class ListingPromotion extends PanacheEntityBase {
      */
     public static List<ListingPromotion> findExpiredFeatured() {
         Instant now = Instant.now();
-        return find(JPQL_FIND_EXPIRED_FEATURED, 
-                io.quarkus.panache.common.Parameters.with("now", now)).list();
+        return find(JPQL_FIND_EXPIRED_FEATURED, io.quarkus.panache.common.Parameters.with("now", now)).list();
     }
 
     /**
@@ -211,7 +209,7 @@ public class ListingPromotion extends PanacheEntityBase {
         if (paymentIntentId == null || paymentIntentId.isBlank()) {
             return Optional.empty();
         }
-        return find(JPQL_FIND_BY_PAYMENT_INTENT, 
+        return find(JPQL_FIND_BY_PAYMENT_INTENT,
                 io.quarkus.panache.common.Parameters.with("paymentIntentId", paymentIntentId)).firstResultOptional();
     }
 
@@ -230,7 +228,7 @@ public class ListingPromotion extends PanacheEntityBase {
             return false;
         }
         Instant cutoff = Instant.now().minus(BUMP_COOLDOWN);
-        return count(JPQL_CHECK_RECENT_BUMP, 
+        return count(JPQL_CHECK_RECENT_BUMP,
                 io.quarkus.panache.common.Parameters.with("listingId", listingId).and("cutoff", cutoff)) > 0;
     }
 

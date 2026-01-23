@@ -197,8 +197,8 @@ public class User extends PanacheEntityBase {
         if (email == null || email.isBlank()) {
             return Optional.empty();
         }
-        return find("#" + QUERY_FIND_BY_EMAIL,
-                io.quarkus.panache.common.Parameters.with("email", email)).firstResultOptional();
+        return find("#" + QUERY_FIND_BY_EMAIL, io.quarkus.panache.common.Parameters.with("email", email))
+                .firstResultOptional();
     }
 
     /**
@@ -215,8 +215,8 @@ public class User extends PanacheEntityBase {
             return Optional.empty();
         }
         return find("#" + QUERY_FIND_BY_OAUTH,
-                io.quarkus.panache.common.Parameters.with("provider", provider)
-                        .and("providerId", providerId)).firstResultOptional();
+                io.quarkus.panache.common.Parameters.with("provider", provider).and("providerId", providerId))
+                .firstResultOptional();
     }
 
     /**

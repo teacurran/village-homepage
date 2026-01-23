@@ -268,14 +268,13 @@ public class DelayedJobService {
             backoffSeconds = Math.min(backoffSeconds, 3600);
 
             job.scheduleRetry(backoffSeconds);
-            LOG.infof("Job %d retry scheduled in %d seconds (attempt %d/%d)",
-                    jobId, backoffSeconds, attempt, job.maxAttempts);
+            LOG.infof("Job %d retry scheduled in %d seconds (attempt %d/%d)", jobId, backoffSeconds, attempt,
+                    job.maxAttempts);
         } else {
             // Exhausted retries - mark as permanently failed
             job.markFailed(errorMessage);
             alertAdminForFailedJob(job);
-            LOG.errorf("Job %d exhausted %d retry attempts, marked FAILED: %s",
-                    jobId, job.maxAttempts, errorMessage);
+            LOG.errorf("Job %d exhausted %d retry attempts, marked FAILED: %s", jobId, job.maxAttempts, errorMessage);
         }
     }
 
@@ -289,8 +288,8 @@ public class DelayedJobService {
         // For critical job types (AI tagging budget exhaustion, payment processing failures),
         // this would trigger email/Slack alerts to admins
         // Implementation deferred per Phase 2 priority (non-blocking for v1)
-        LOG.warnf("ALERT: Job %d (type: %s) permanently failed. Admin notification would be sent here.",
-                job.id, job.jobType);
+        LOG.warnf("ALERT: Job %d (type: %s) permanently failed. Admin notification would be sent here.", job.id,
+                job.jobType);
     }
 
     /**

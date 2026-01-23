@@ -111,8 +111,8 @@ public class ReservedUsername extends PanacheEntityBase {
             return Optional.empty();
         }
         String normalized = username.trim().toLowerCase();
-        return find(JPQL_FIND_BY_USERNAME, 
-                io.quarkus.panache.common.Parameters.with("username", normalized)).firstResultOptional();
+        return find(JPQL_FIND_BY_USERNAME, io.quarkus.panache.common.Parameters.with("username", normalized))
+                .firstResultOptional();
     }
 
     /**
@@ -126,8 +126,8 @@ public class ReservedUsername extends PanacheEntityBase {
         if (reasonPattern == null || reasonPattern.isBlank()) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_REASON, 
-                io.quarkus.panache.common.Parameters.with("reasonPattern", reasonPattern)).list();
+        return find(JPQL_FIND_BY_REASON, io.quarkus.panache.common.Parameters.with("reasonPattern", reasonPattern))
+                .list();
     }
 
     /**

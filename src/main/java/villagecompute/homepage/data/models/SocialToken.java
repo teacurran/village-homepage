@@ -153,7 +153,7 @@ public class SocialToken extends PanacheEntityBase {
         if (userId == null || platform == null) {
             return Optional.empty();
         }
-        return find(JPQL_FIND_ACTIVE_BY_USER_AND_PLATFORM, 
+        return find(JPQL_FIND_ACTIVE_BY_USER_AND_PLATFORM,
                 io.quarkus.panache.common.Parameters.with("userId", userId).and("platform", platform))
                 .firstResultOptional();
     }
@@ -194,8 +194,7 @@ public class SocialToken extends PanacheEntityBase {
      */
     public static List<SocialToken> findExpiringSoon(int daysAhead) {
         Instant threshold = Instant.now().plus(daysAhead, ChronoUnit.DAYS);
-        return find(JPQL_FIND_EXPIRING_SOON, 
-                io.quarkus.panache.common.Parameters.with("threshold", threshold)).list();
+        return find(JPQL_FIND_EXPIRING_SOON, io.quarkus.panache.common.Parameters.with("threshold", threshold)).list();
     }
 
     /**

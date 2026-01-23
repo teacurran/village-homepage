@@ -119,8 +119,7 @@ public class ListingFlag extends PanacheEntityBase {
         if (listingId == null) {
             return List.of();
         }
-        return list(JPQL_FIND_BY_LISTING, 
-                io.quarkus.panache.common.Parameters.with("listingId", listingId));
+        return list(JPQL_FIND_BY_LISTING, io.quarkus.panache.common.Parameters.with("listingId", listingId));
     }
 
     /**
@@ -147,8 +146,8 @@ public class ListingFlag extends PanacheEntityBase {
         if (status == null) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_STATUS, 
-                io.quarkus.panache.common.Parameters.with("status", status)).page(offset / limit, limit).list();
+        return find(JPQL_FIND_BY_STATUS, io.quarkus.panache.common.Parameters.with("status", status))
+                .page(offset / limit, limit).list();
     }
 
     /**

@@ -146,7 +146,7 @@ public class AccountMergeAudit extends PanacheEntityBase {
         if (authenticatedUserId == null) {
             return List.of();
         }
-        return find(JPQL_FIND_BY_AUTHENTICATED_USER, 
+        return find(JPQL_FIND_BY_AUTHENTICATED_USER,
                 io.quarkus.panache.common.Parameters.with("authenticatedUserId", authenticatedUserId)).list();
     }
 

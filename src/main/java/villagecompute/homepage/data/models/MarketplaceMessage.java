@@ -91,9 +91,15 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "marketplace_messages")
-@NamedQuery(name = MarketplaceMessage.QUERY_FIND_BY_LISTING_ID, query = MarketplaceMessage.JPQL_FIND_BY_LISTING_ID)
-@NamedQuery(name = MarketplaceMessage.QUERY_FIND_BY_THREAD_ID, query = MarketplaceMessage.JPQL_FIND_BY_THREAD_ID)
-@NamedQuery(name = MarketplaceMessage.QUERY_FIND_BY_MESSAGE_ID, query = MarketplaceMessage.JPQL_FIND_BY_MESSAGE_ID)
+@NamedQuery(
+        name = MarketplaceMessage.QUERY_FIND_BY_LISTING_ID,
+        query = MarketplaceMessage.JPQL_FIND_BY_LISTING_ID)
+@NamedQuery(
+        name = MarketplaceMessage.QUERY_FIND_BY_THREAD_ID,
+        query = MarketplaceMessage.JPQL_FIND_BY_THREAD_ID)
+@NamedQuery(
+        name = MarketplaceMessage.QUERY_FIND_BY_MESSAGE_ID,
+        query = MarketplaceMessage.JPQL_FIND_BY_MESSAGE_ID)
 public class MarketplaceMessage extends PanacheEntityBase {
 
     private static final Logger LOG = Logger.getLogger(MarketplaceMessage.class);

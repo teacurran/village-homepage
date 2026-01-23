@@ -200,12 +200,8 @@ public class DelayedJob extends PanacheEntityBase {
             return List.of();
         }
         Instant staleThreshold = Instant.now().minusSeconds(5 * 60);
-        return find("#" + QUERY_FIND_READY_JOBS,
-                io.quarkus.panache.common.Parameters.with("queue", queue)
-                        .and("status", JobStatus.PENDING)
-                        .and("staleThreshold", staleThreshold))
-                .page(0, limit)
-                .list();
+        return find("#" + QUERY_FIND_READY_JOBS, io.quarkus.panache.common.Parameters.with("queue", queue)
+                .and("status", JobStatus.PENDING).and("staleThreshold", staleThreshold)).page(0, limit).list();
     }
 
     /**
@@ -219,8 +215,7 @@ public class DelayedJob extends PanacheEntityBase {
         if (status == null) {
             return List.of();
         }
-        return find("#" + QUERY_FIND_BY_STATUS,
-                io.quarkus.panache.common.Parameters.with("status", status)).list();
+        return find("#" + QUERY_FIND_BY_STATUS, io.quarkus.panache.common.Parameters.with("status", status)).list();
     }
 
     /**

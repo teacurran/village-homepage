@@ -169,9 +169,6 @@ public class MarketplaceListing extends PanacheEntityBase {
     /** Default expiration period: 30 days from activation. */
     public static final Duration DEFAULT_EXPIRATION_PERIOD = Duration.ofDays(30);
 
-
-    
-
     @Id
     @GeneratedValue
     @DocumentId
@@ -348,8 +345,7 @@ public class MarketplaceListing extends PanacheEntityBase {
     public static List<MarketplaceListing> findExpiringWithinDays(int days) {
         Instant now = Instant.now();
         Instant futureThreshold = now.plus(Duration.ofDays(days));
-        return find(JPQL_FIND_EXPIRING_WITHIN_DAYS, now,
-                futureThreshold).list();
+        return find(JPQL_FIND_EXPIRING_WITHIN_DAYS, now, futureThreshold).list();
     }
 
     /**
