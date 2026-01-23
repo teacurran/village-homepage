@@ -18,7 +18,10 @@ import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import org.jboss.logging.Logger;
+import villagecompute.homepage.api.types.OAuthUrlResponseType;
 import villagecompute.homepage.services.AuthIdentityService;
+import villagecompute.homepage.services.OAuthService;
+import villagecompute.homepage.data.models.User;
 
 import java.net.URI;
 import java.util.Objects;
@@ -44,6 +47,9 @@ public class AuthResource {
 
     @Inject
     AuthIdentityService authService;
+
+    @Inject
+    OAuthService oauthService;
 
     @POST
     @Path("/anonymous")
@@ -188,5 +194,134 @@ public class AuthResource {
 
     public record BootstrapRequest(@NotBlank String token, @NotBlank String email, @NotBlank String provider,
             @NotBlank String providerUserId) {
+    }
+
+    /**
+     * Initiate Google OAuth login flow.
+     *
+     * <p>
+     * Generates authorization URL with CSRF state token. The state token is stored in the database with a 5-minute
+     * expiration and validated during the callback.
+     *
+     * @param uriInfo
+     *            URI context for building redirect URI
+     * @param headers
+     *            HTTP headers for extracting session cookie
+     * @return OAuth URL response with authorization URL and state token
+     */
+    @GET
+    @Path("/google/login")
+    public Response googleLogin(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
+        // Extract or generate session ID (anonymous cookie or new UUID)
+        String sessionId = extractSessionId(headers);
+
+        // Build redirect URI for OAuth callback
+        String redirectUri = uriInfo.getBaseUriBuilder().path("api/auth/google/callback").build().toString();
+
+        OAuthUrlResponseType response = oauthService.initiateGoogleLogin(sessionId, redirectUri);
+        LOG.infof("Initiated Google OAuth login: sessionId=%s, state=%s", sessionId, response.state());
+
+        return Response.ok(response).build();
+    }
+
+    /**
+     * Handle Google OAuth callback.
+     *
+     * <p>
+     * Validates state token, exchanges authorization code for access token, retrieves user profile, and creates or
+     * links user account. On success, issues JWT session token and redirects to homepage.
+     *
+     * @param code
+     *            authorization code from Google
+     * @param state
+     *            CSRF state token
+     * @param error
+     *            error code (if user cancelled or error occurred)
+     * @param errorDescription
+     *            human-readable error description
+     * @param uriInfo
+     *            URI context for building redirect URI
+     * @return redirect to homepage with JWT token on success, error response on failure
+     */
+    @GET
+    @Path("/google/callback")
+    public Response googleCallback(@QueryParam("code") String code, @QueryParam("state") String state,
+            @QueryParam("error") String error, @QueryParam("error_description") String errorDescription,
+            @Context UriInfo uriInfo) {
+
+        // Handle OAuth errors (user cancellation, permission denial, etc.)
+        if (error != null) {
+            LOG.warnf("Google OAuth error: error=%s, description=%s", error, errorDescription);
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Authentication cancelled or failed: " + error)).build();
+        }
+
+        // Validate required parameters
+        if (code == null || code.isBlank()) {
+            LOG.warn("Google OAuth callback missing code parameter");
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Missing authorization code"))
+                    .build();
+        }
+
+        if (state == null || state.isBlank()) {
+            LOG.warn("Google OAuth callback missing state parameter");
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Missing state parameter"))
+                    .build();
+        }
+
+        // Build redirect URI (must match initiation request)
+        String redirectUri = uriInfo.getBaseUriBuilder().path("api/auth/google/callback").build().toString();
+
+        try {
+            // Complete OAuth flow
+            User user = oauthService.handleGoogleCallback(code, state, redirectUri);
+
+            // Create JWT session (reuse bootstrap logic)
+            AuthIdentityService.BootstrapSession session = authService.createSessionForUser(user);
+
+            // Redirect to homepage with JWT token in query parameter
+            // TODO (I3.T6): Use secure HttpOnly cookie instead of query parameter
+            URI homepageUri = uriInfo.getBaseUriBuilder().path("/").queryParam("token", session.jwt()).build();
+
+            LOG.infof("Google OAuth success: userId=%s, email=%s, redirecting to homepage", user.id, user.email);
+            return Response.seeOther(homepageUri).build();
+
+        } catch (SecurityException e) {
+            // Invalid or expired state token
+            LOG.errorf(e, "Google OAuth callback security exception: %s", e.getMessage());
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity(new ErrorResponse("Invalid or expired state token")).build();
+
+        } catch (IllegalStateException e) {
+            // Email already exists with different provider
+            LOG.errorf(e, "Google OAuth callback state exception: %s", e.getMessage());
+            return Response.status(Response.Status.CONFLICT).entity(new ErrorResponse(e.getMessage())).build();
+
+        } catch (Exception e) {
+            // Unexpected error (network, API, etc.)
+            LOG.errorf(e, "Google OAuth callback failed: %s", e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Authentication failed. Please try again.")).build();
+        }
+    }
+
+    /**
+     * Extract session ID from anonymous cookie or generate new UUID.
+     *
+     * @param headers
+     *            HTTP headers containing cookies
+     * @return session ID (anonymous cookie value or new UUID)
+     */
+    private String extractSessionId(HttpHeaders headers) {
+        // Look for vu_anon_id cookie
+        if (headers != null && headers.getCookies() != null) {
+            var anonCookie = headers.getCookies().get("vu_anon_id");
+            if (anonCookie != null && anonCookie.getValue() != null && !anonCookie.getValue().isBlank()) {
+                return anonCookie.getValue();
+            }
+        }
+
+        // Generate new session ID if no cookie found
+        return java.util.UUID.randomUUID().toString();
     }
 }

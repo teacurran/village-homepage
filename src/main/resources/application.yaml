@@ -11,6 +11,16 @@ quarkus:
     property-not-found-strategy: default
     type-check-excludes: "ProfileResource/**"
 
+  # REST Client Configuration
+  rest-client:
+    # Google OAuth REST client (Policy P1, Feature F1)
+    google-oauth:
+      url: https://oauth2.googleapis.com
+      scope: jakarta.inject.Singleton
+      # Connection timeout for OAuth API calls
+      connect-timeout: 10000
+      read-timeout: 10000
+
   # S3 Configuration - Disable DevServices (use MinIO from docker-compose)
   s3:
     devservices:

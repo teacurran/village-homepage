@@ -231,6 +231,30 @@ public class AuthIdentityService {
     }
 
     /**
+     * Creates a JWT session for an existing authenticated user.
+     *
+     * @param user
+     *            the authenticated user
+     * @return bootstrap session with JWT token and expiration
+     */
+    public BootstrapSession createSessionForUser(User user) {
+        Objects.requireNonNull(user, "user is required");
+
+        if (user.isAnonymous) {
+            throw new IllegalArgumentException("Cannot create session for anonymous user");
+        }
+
+        String subject = user.id.toString();
+        Instant issuedAt = Instant.now();
+        Instant expiresAt = issuedAt.plus(jwtExpirationMinutes, ChronoUnit.MINUTES);
+        String jwt = generateJwt(subject, user.email, user.oauthProvider, issuedAt, expiresAt);
+
+        LOG.infof("Created JWT session for user: email=%s, provider=%s, userId=%s", user.email, user.oauthProvider,
+                user.id);
+        return new BootstrapSession(jwt, expiresAt, user.email, user.oauthProvider);
+    }
+
+    /**
      * Finalizes bootstrap flow by creating the first super admin user, minting a JWT session token, and marking the
      * superuser as provisioned.
      */
