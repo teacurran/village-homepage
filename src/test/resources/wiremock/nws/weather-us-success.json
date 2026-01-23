@@ -1,0 +1,81 @@
+{
+  "@context": [
+    "https://geojson.org/geojson-ld/geojson-context.jsonld",
+    {
+      "@version": "1.1",
+      "wx": "https://api.weather.gov/ontology#"
+    }
+  ],
+  "type": "Feature",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [-122.4194, 37.7749],
+        [-122.4194, 37.7849],
+        [-122.4094, 37.7849],
+        [-122.4094, 37.7749],
+        [-122.4194, 37.7749]
+      ]
+    ]
+  },
+  "properties": {
+    "updated": "2024-01-15T10:30:00+00:00",
+    "units": "us",
+    "forecastGenerator": "BaselineForecastGenerator",
+    "generatedAt": "2024-01-15T10:30:15+00:00",
+    "updateTime": "2024-01-15T10:30:00+00:00",
+    "validTimes": "2024-01-15T04:00:00+00:00/P7D",
+    "elevation": {
+      "unitCode": "wmoUnit:m",
+      "value": 52
+    },
+    "periods": [
+      {
+        "number": 1,
+        "name": "Today",
+        "startTime": "2024-01-15T10:00:00-08:00",
+        "endTime": "2024-01-15T18:00:00-08:00",
+        "isDaytime": true,
+        "temperature": 62,
+        "temperatureUnit": "F",
+        "temperatureTrend": null,
+        "windSpeed": "5 to 10 mph",
+        "windDirection": "W",
+        "icon": "https://api.weather.gov/icons/land/day/sct?size=medium",
+        "shortForecast": "Partly Cloudy",
+        "detailedForecast": "Partly cloudy, with a high near 62. West wind 5 to 10 mph."
+      },
+      {
+        "number": 2,
+        "name": "Tonight",
+        "startTime": "2024-01-15T18:00:00-08:00",
+        "endTime": "2024-01-16T06:00:00-08:00",
+        "isDaytime": false,
+        "temperature": 52,
+        "temperatureUnit": "F",
+        "temperatureTrend": null,
+        "windSpeed": "5 mph",
+        "windDirection": "W",
+        "icon": "https://api.weather.gov/icons/land/night/sct?size=medium",
+        "shortForecast": "Partly Cloudy",
+        "detailedForecast": "Partly cloudy, with a low around 52. West wind around 5 mph."
+      },
+      {
+        "number": 3,
+        "name": "Tuesday",
+        "startTime": "2024-01-16T06:00:00-08:00",
+        "endTime": "2024-01-16T18:00:00-08:00",
+        "isDaytime": true,
+        "temperature": 64,
+        "temperatureUnit": "F",
+        "temperatureTrend": null,
+        "windSpeed": "5 mph",
+        "windDirection": "W",
+        "icon": "https://api.weather.gov/icons/land/day/few?size=medium",
+        "shortForecast": "Mostly Sunny",
+        "detailedForecast": "Mostly sunny, with a high near 64. West wind around 5 mph."
+      }
+    ]
+  }
+}

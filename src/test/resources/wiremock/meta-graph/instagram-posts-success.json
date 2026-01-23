@@ -1,0 +1,61 @@
+{
+  "data": [
+    {
+      "id": "17895695668004550",
+      "caption": "Beautiful sunset at the beach 🌅 #sunset #beach #travel",
+      "media_type": "IMAGE",
+      "media_url": "https://scontent.cdninstagram.com/v/t51.29350-15/12345678_example.jpg?_nc_cat=1&ccb=1-7",
+      "permalink": "https://www.instagram.com/p/ABC123xyz/",
+      "thumbnail_url": "https://scontent.cdninstagram.com/v/t51.29350-15/12345678_thumb.jpg",
+      "timestamp": "2024-01-15T10:30:00+0000",
+      "username": "test_user",
+      "like_count": 245,
+      "comments_count": 18
+    },
+    {
+      "id": "17895695668004551",
+      "caption": "Amazing hike in the mountains today! 🏔️",
+      "media_type": "CAROUSEL_ALBUM",
+      "media_url": "https://scontent.cdninstagram.com/v/t51.29350-15/87654321_example.jpg",
+      "permalink": "https://www.instagram.com/p/DEF456uvw/",
+      "thumbnail_url": "https://scontent.cdninstagram.com/v/t51.29350-15/87654321_thumb.jpg",
+      "timestamp": "2024-01-14T15:20:00+0000",
+      "username": "test_user",
+      "like_count": 182,
+      "comments_count": 12,
+      "children": {
+        "data": [
+          {
+            "id": "17895695668004552",
+            "media_type": "IMAGE",
+            "media_url": "https://scontent.cdninstagram.com/v/t51.29350-15/12345679_example1.jpg"
+          },
+          {
+            "id": "17895695668004553",
+            "media_type": "IMAGE",
+            "media_url": "https://scontent.cdninstagram.com/v/t51.29350-15/12345680_example2.jpg"
+          }
+        ]
+      }
+    },
+    {
+      "id": "17895695668004554",
+      "caption": "Coffee and code ☕💻",
+      "media_type": "IMAGE",
+      "media_url": "https://scontent.cdninstagram.com/v/t51.29350-15/99887766_example.jpg",
+      "permalink": "https://www.instagram.com/p/GHI789rst/",
+      "thumbnail_url": "https://scontent.cdninstagram.com/v/t51.29350-15/99887766_thumb.jpg",
+      "timestamp": "2024-01-13T08:45:00+0000",
+      "username": "test_user",
+      "like_count": 312,
+      "comments_count": 24
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "QVFIUjNhYTBFAeWdWZAVVGNmZA1",
+      "after": "QVFIUmZAOc0F3WW5zZAzVsb2l"
+    },
+    "next": "https://graph.facebook.com/v18.0/17841405793187218/media?access_token=EXAMPLE_TOKEN&after=QVFIUmZAOc0F3WW5zZAzVsb2l"
+  }
+}
