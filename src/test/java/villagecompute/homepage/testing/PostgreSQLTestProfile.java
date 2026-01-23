@@ -54,8 +54,14 @@ public class PostgreSQLTestProfile implements QuarkusTestProfile {
                 Map.entry("quarkus.hibernate-orm.sql-load-script", "no-file"),
                 // CRITICAL: Enable Jackson JSON-B handling for JSONB columns (fixes Map serialization)
                 Map.entry("quarkus.hibernate-orm.mapping.jackson.convert-to-json-mode", "enabled"),
-                // LangChain4j test configuration (Task I4.T1)
-                Map.entry("quarkus.langchain4j.anthropic.api-key", "sk-ant-test-fake-key-for-testing-12345678")));
+                // LangChain4j test configuration (Task I4.T1, I4.T5)
+                // Use Anthropic for chat, OpenAI for embeddings (Anthropic doesn't provide embedding models)
+                Map.entry("quarkus.langchain4j.chat-model.provider", "anthropic"),
+                Map.entry("quarkus.langchain4j.embedding-model.provider", "openai"),
+                Map.entry("quarkus.langchain4j.anthropic.api-key", "sk-ant-test-fake-key-for-testing-12345678"),
+                Map.entry("quarkus.langchain4j.anthropic.chat-model.model-name", "claude-3-5-sonnet-20241022"),
+                Map.entry("quarkus.langchain4j.openai.api-key", "sk-proj-test-fake-key-00000000000000000000"),
+                Map.entry("quarkus.langchain4j.openai.embedding-model.model-name", "text-embedding-3-small")));
     }
 
     @Override

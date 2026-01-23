@@ -73,6 +73,10 @@ public class AiUsageTracking extends PanacheEntityBase {
     public static final double INPUT_TOKEN_COST_CENTS = 0.0003; // $3 per 1M tokens = $0.000003 per token
     public static final double OUTPUT_TOKEN_COST_CENTS = 0.0015; // $15 per 1M tokens = $0.000015 per token
 
+    // Anthropic Embedding pricing (as of 2025-01-23)
+    // Note: Using same rate as input tokens since embeddings are input-only operations
+    public static final double EMBEDDING_TOKEN_COST_CENTS = 0.0003; // $3 per 1M tokens = $0.000003 per token
+
     @Id
     @GeneratedValue
     public UUID id;
@@ -200,6 +204,22 @@ public class AiUsageTracking extends PanacheEntityBase {
      */
     public static int calculateCostCents(long inputTokens, long outputTokens) {
         double cost = (inputTokens * INPUT_TOKEN_COST_CENTS) + (outputTokens * OUTPUT_TOKEN_COST_CENTS);
+        return (int) Math.ceil(cost);
+    }
+
+    /**
+     * Calculates estimated cost in cents for embedding API calls.
+     *
+     * <p>
+     * Embedding API calls only consume input tokens (no output tokens generated). Used by
+     * {@link villagecompute.homepage.services.SemanticSearchService} to track embedding generation costs.
+     *
+     * @param inputTokens
+     *            number of input tokens
+     * @return estimated cost in cents (rounded up)
+     */
+    public static int calculateEmbeddingCostCents(long inputTokens) {
+        double cost = inputTokens * EMBEDDING_TOKEN_COST_CENTS;
         return (int) Math.ceil(cost);
     }
 

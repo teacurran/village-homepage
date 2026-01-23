@@ -106,6 +106,12 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jdbc-postgresql</artifactId>
         </dependency>
+        <!-- pgvector PostgreSQL Extension for Semantic Search (Feature I4.T5) -->
+        <dependency>
+            <groupId>com.pgvector</groupId>
+            <artifactId>pgvector</artifactId>
+            <version>0.1.6</version>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-orm-rest-data-panache</artifactId>
@@ -174,6 +180,11 @@
         <dependency>
             <groupId>io.quarkiverse.langchain4j</groupId>
             <artifactId>quarkus-langchain4j-anthropic</artifactId>
+        </dependency>
+        <!-- LangChain4j OpenAI for embeddings (Anthropic doesn't provide embedding models) -->
+        <dependency>
+            <groupId>io.quarkiverse.langchain4j</groupId>
+            <artifactId>quarkus-langchain4j-openai</artifactId>
         </dependency>
 
         <!-- JSON Processing -->
