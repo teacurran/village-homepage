@@ -21,16 +21,16 @@ import java.util.UUID;
  * Workflow:
  * <ol>
  * <li>Download original image from R2 storage</li>
- * <li>Generate 3 variants: thumbnail (150x150), list (300x225), full (1200x900)</li>
- * <li>Upload each variant to R2 via StorageGateway</li>
+ * <li>Generate 3 WebP variants: thumbnail (200x200), list (800x600), full (1600x1200)</li>
+ * <li>Upload each variant to R2 via StorageGateway (automatic WebP conversion + resize)</li>
  * <li>Create database records for each variant</li>
  * <li>Mark original image as 'processed'</li>
  * </ol>
  *
  * <p>
- * <b>NOTE:</b> WebP conversion and actual resizing are currently stubbed in StorageGateway.convertToWebP(). This
- * handler uploads original bytes unchanged for all variants. Future work will implement actual image resize and WebP
- * conversion.
+ * <b>WebP Conversion:</b> Images are automatically converted to WebP format with 85% quality and resized to target
+ * dimensions while preserving aspect ratio (letterboxing/pillarboxing applied as needed). Conversion happens in
+ * StorageGateway.convertToWebP() using javax.imageio with webp-imageio plugin.
  *
  * <p>
  * <b>Retry Strategy:</b> Failed jobs retry up to 3 times with exponential backoff. After max retries, image status is
@@ -82,32 +82,23 @@ public class ListingImageProcessingJobHandler implements JobHandler {
 
             LOG.infof("Downloaded original image: %d bytes", originalBytes.length);
 
-            // 2. Generate thumbnail variant (150x150)
-            // TODO: Implement actual resize when WebP conversion is ready (currently stubbed in
-            // StorageGateway.convertToWebP())
-            // For now, upload original bytes unchanged - infrastructure testing only
-            byte[] thumbnailBytes = originalBytes;
+            // 2. Generate thumbnail variant (200x200)
+            // StorageGateway.upload() now calls convertToWebP() internally with variant-based sizing
             StorageUploadResultType thumbnailResult = storageGateway.upload(StorageGateway.BucketType.LISTINGS,
-                    listingId.toString(), "thumbnail", thumbnailBytes, "image/jpeg" // Will become image/webp when
-                                                                                    // conversion implemented
-            );
+                    listingId.toString(), "thumbnail", originalBytes, "image/jpeg");
 
             LOG.debugf("Uploaded thumbnail variant: %s (%d bytes)", thumbnailResult.objectKey(),
                     thumbnailResult.sizeBytes());
 
-            // 3. Generate list variant (300x225)
-            // TODO: Implement actual resize (currently using original bytes)
-            byte[] listBytes = originalBytes;
+            // 3. Generate list variant (800x600)
             StorageUploadResultType listResult = storageGateway.upload(StorageGateway.BucketType.LISTINGS,
-                    listingId.toString(), "list", listBytes, "image/jpeg");
+                    listingId.toString(), "list", originalBytes, "image/jpeg");
 
             LOG.debugf("Uploaded list variant: %s (%d bytes)", listResult.objectKey(), listResult.sizeBytes());
 
-            // 4. Generate full variant (1200x900)
-            // TODO: Implement actual resize (currently using original bytes)
-            byte[] fullBytes = originalBytes;
+            // 4. Generate full variant (1600x1200)
             StorageUploadResultType fullResult = storageGateway.upload(StorageGateway.BucketType.LISTINGS,
-                    listingId.toString(), "full", fullBytes, "image/jpeg");
+                    listingId.toString(), "full", originalBytes, "image/jpeg");
 
             LOG.debugf("Uploaded full variant: %s (%d bytes)", fullResult.objectKey(), fullResult.sizeBytes());
 

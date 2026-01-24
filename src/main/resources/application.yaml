@@ -320,10 +320,12 @@ villagecompute:
     # WebP conversion settings (Policy P4: thumbnail/full variants)
     webp:
       quality: ${WEBP_QUALITY:85}
-      thumbnail-width: 320
+      thumbnail-width: 200
       thumbnail-height: 200
-      full-width: 1280
-      full-height: 800
+      list-width: 800
+      list-height: 600
+      full-width: 1600
+      full-height: 1200
 
 # Quarkus Mailer SMTP Configuration (Feature F14.3: Email delivery)
 quarkus:

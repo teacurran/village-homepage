@@ -1,11 +1,25 @@
 package villagecompute.homepage.services;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
@@ -116,6 +130,14 @@ public class StorageGateway {
     @ConfigProperty(
             name = "villagecompute.storage.webp.full-height")
     Integer fullHeight;
+
+    @ConfigProperty(
+            name = "villagecompute.storage.webp.list-width")
+    Integer listWidth;
+
+    @ConfigProperty(
+            name = "villagecompute.storage.webp.list-height")
+    Integer listHeight;
 
     /**
      * Bucket types per asset domain (Policy P4).
@@ -433,31 +455,199 @@ public class StorageGateway {
      * Converts uploaded image to WebP format with appropriate dimensions.
      *
      * <p>
-     * <b>TODO:</b> Implement actual WebP conversion using image processing library. For now, this is a pass-through
-     * that preserves the original image format.
-     *
-     * <p>
-     * Future implementation should use a library like Thumbnailator or ImageMagick wrapper to:
+     * Implementation uses javax.imageio with webp-imageio plugin to:
      * <ul>
-     * <li>Resize to target dimensions (320x200 for thumbnails, 1280x800 for full)</li>
-     * <li>Convert to WebP format with configured quality (default 85)</li>
-     * <li>Preserve aspect ratio with letterboxing if needed</li>
+     * <li>Resize to target dimensions based on variant (thumbnail: 200x200, list: 800x600, full: 1600x1200)</li>
+     * <li>Convert to WebP format with configured quality (default 85%)</li>
+     * <li>Preserve aspect ratio with letterboxing/pillarboxing if needed</li>
      * <li>Strip EXIF metadata for privacy (Policy P4)</li>
      * </ul>
      *
      * @param originalBytes
      *            raw image bytes from upload
      * @param variant
-     *            target variant ("thumbnail", "full", "original")
-     * @return converted image bytes (currently returns original, unmodified)
+     *            target variant ("thumbnail", "list", "full", "original")
+     * @return converted WebP image bytes
+     * @throws RuntimeException
+     *             if image processing fails (invalid format, corrupted file, OOM)
      */
     private byte[] convertToWebP(byte[] originalBytes, String variant) {
-        LOG.warnf("WebP conversion not yet implemented - returning original image (Policy P4 stub)");
-        // TODO: Use image processing library (e.g., Thumbnailator, ImageMagick wrapper)
-        // int targetWidth = variant.equals("thumbnail") ? thumbnailWidth : fullWidth;
-        // int targetHeight = variant.equals("thumbnail") ? thumbnailHeight : fullHeight;
-        // return ImageProcessor.convertToWebP(originalBytes, targetWidth, targetHeight, webpQuality);
-        return originalBytes;
+        // Skip conversion for "original" variant - preserve as-is
+        if ("original".equals(variant)) {
+            LOG.debugf("Skipping WebP conversion for 'original' variant");
+            return originalBytes;
+        }
+
+        long startTime = System.currentTimeMillis();
+        int originalSize = originalBytes.length;
+
+        try {
+            // 1. Determine target dimensions based on variant
+            int targetWidth;
+            int targetHeight;
+
+            switch (variant) {
+                case "thumbnail" :
+                    targetWidth = thumbnailWidth;
+                    targetHeight = thumbnailHeight;
+                    break;
+                case "list" :
+                    targetWidth = listWidth;
+                    targetHeight = listHeight;
+                    break;
+                case "full" :
+                    targetWidth = fullWidth;
+                    targetHeight = fullHeight;
+                    break;
+                default :
+                    LOG.warnf("Unknown variant '%s', using full size", variant);
+                    targetWidth = fullWidth;
+                    targetHeight = fullHeight;
+            }
+
+            // 2. Load original image
+            BufferedImage original = ImageIO.read(new ByteArrayInputStream(originalBytes));
+            if (original == null) {
+                throw new IllegalArgumentException("Invalid or corrupted image file - ImageIO returned null");
+            }
+
+            LOG.debugf("Loaded original image: %dx%d (%d bytes)", original.getWidth(), original.getHeight(),
+                    originalSize);
+
+            // 3. Resize image with aspect ratio preservation
+            BufferedImage resized = resizeImage(original, targetWidth, targetHeight);
+
+            // 4. Convert to WebP
+            byte[] webpBytes = encodeToWebP(resized, webpQuality);
+
+            long latencyMs = System.currentTimeMillis() - startTime;
+            int webpSize = webpBytes.length;
+            double reductionPercent = 100.0 * (1.0 - ((double) webpSize / originalSize));
+
+            LOG.infof("WebP conversion complete: %s variant (%dx%d) - %d bytes → %d bytes (%.1f%% reduction, %dms)",
+                    variant, targetWidth, targetHeight, originalSize, webpSize, reductionPercent, latencyMs);
+
+            // Record conversion metrics
+            meterRegistry.counter("storage.webp.conversions.total", "variant", variant, "status", "success")
+                    .increment();
+            meterRegistry.counter("storage.webp.bytes.saved", "variant", variant).increment(originalSize - webpSize);
+            meterRegistry.timer("storage.webp.conversion.duration", "variant", variant)
+                    .record(Duration.ofMillis(latencyMs));
+
+            return webpBytes;
+
+        } catch (IOException e) {
+            LOG.errorf(e, "Failed to read/process image for variant '%s': %s", variant, e.getMessage());
+            meterRegistry.counter("storage.webp.conversions.total", "variant", variant, "status", "error").increment();
+            throw new RuntimeException("Image processing failed: " + e.getMessage(), e);
+
+        } catch (OutOfMemoryError e) {
+            LOG.errorf(e, "Image too large to process (OOM): %d bytes", originalSize);
+            meterRegistry.counter("storage.webp.conversions.total", "variant", variant, "status", "oom").increment();
+            throw new RuntimeException("Image too large to process", e);
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Unexpected error during WebP conversion: %s", e.getMessage());
+            meterRegistry.counter("storage.webp.conversions.total", "variant", variant, "status", "error").increment();
+            throw new RuntimeException("WebP conversion failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Resizes image to fit within target dimensions while preserving aspect ratio.
+     *
+     * <p>
+     * Uses letterboxing (black bars top/bottom) or pillarboxing (black bars left/right) if aspect ratios don't match.
+     * Applies bicubic interpolation for high-quality output.
+     *
+     * @param original
+     *            source image
+     * @param maxWidth
+     *            target width
+     * @param maxHeight
+     *            target height
+     * @return resized image with letterboxing/pillarboxing if needed
+     */
+    private BufferedImage resizeImage(BufferedImage original, int maxWidth, int maxHeight) {
+        int originalWidth = original.getWidth();
+        int originalHeight = original.getHeight();
+
+        // Calculate scaling factor to fit within bounds while preserving aspect ratio
+        double widthRatio = (double) maxWidth / originalWidth;
+        double heightRatio = (double) maxHeight / originalHeight;
+        double scaleFactor = Math.min(widthRatio, heightRatio);
+
+        int scaledWidth = (int) (originalWidth * scaleFactor);
+        int scaledHeight = (int) (originalHeight * scaleFactor);
+
+        // Create canvas with target dimensions (for letterboxing/pillarboxing)
+        BufferedImage canvas = new BufferedImage(maxWidth, maxHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = canvas.createGraphics();
+
+        // Fill canvas with black (letterbox/pillarbox color)
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, maxWidth, maxHeight);
+
+        // Center the scaled image on canvas
+        int x = (maxWidth - scaledWidth) / 2;
+        int y = (maxHeight - scaledHeight) / 2;
+
+        // Apply high-quality rendering hints
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Draw scaled image centered on canvas
+        g.drawImage(original, x, y, scaledWidth, scaledHeight, null);
+        g.dispose();
+
+        return canvas;
+    }
+
+    /**
+     * Encodes BufferedImage to WebP format with specified quality.
+     *
+     * @param image
+     *            image to encode
+     * @param quality
+     *            WebP quality (0-100, default 85)
+     * @return WebP encoded bytes
+     * @throws IOException
+     *             if encoding fails
+     */
+    private byte[] encodeToWebP(BufferedImage image, int quality) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ImageOutputStream ios = ImageIO.createImageOutputStream(outputStream);
+
+        // Get WebP writer
+        Iterator<ImageWriter> writers = ImageIO.getImageWritersByMIMEType("image/webp");
+        if (!writers.hasNext()) {
+            throw new IllegalStateException("No WebP ImageWriter found - webp-imageio plugin not loaded");
+        }
+
+        ImageWriter writer = writers.next();
+        writer.setOutput(ios);
+
+        // Configure compression quality
+        ImageWriteParam writeParam = writer.getDefaultWriteParam();
+        writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+
+        // Set compression type before quality (required by webp-imageio)
+        String[] compressionTypes = writeParam.getCompressionTypes();
+        if (compressionTypes != null && compressionTypes.length > 0) {
+            writeParam.setCompressionType(compressionTypes[0]); // Use first available type (typically "Lossy")
+        }
+
+        writeParam.setCompressionQuality(quality / 100.0f); // Convert 0-100 to 0.0-1.0
+
+        // Write image
+        writer.write(null, new IIOImage(image, null, null), writeParam);
+
+        // Cleanup
+        writer.dispose();
+        ios.close();
+
+        return outputStream.toByteArray();
     }
 
     /**

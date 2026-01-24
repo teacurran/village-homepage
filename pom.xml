@@ -264,6 +264,14 @@
             <version>5.9</version>
         </dependency>
 
+        <!-- WebP ImageIO for WebP Encoding (Policy P4, Feature I6.T1) -->
+        <!-- Using usefulness fork which includes ARM64 (Apple Silicon) native library support -->
+        <dependency>
+            <groupId>com.github.usefulness</groupId>
+            <artifactId>webp-imageio</artifactId>
+            <version>0.10.2</version>
+        </dependency>
+
         <!-- JWT Library for Apple Sign-In client secret generation (Feature I3.T3) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
