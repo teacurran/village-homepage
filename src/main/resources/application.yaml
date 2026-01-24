@@ -371,6 +371,14 @@ email:
   unsubscribe:
     secret: ${EMAIL_UNSUBSCRIBE_SECRET:default-dev-secret-change-in-prod}
 
+  # Homepage Configuration (Feature I6.T5: Sitemap generation)
+  homepage:
+    base-url: ${HOMEPAGE_BASE_URL:http://localhost:8080}
+
+  # CDN Configuration (Feature I6.T5: Sitemap CDN delivery)
+  cdn:
+    base-url: ${CDN_BASE_URL:http://localhost:9000}
+
 # GDPR Configuration (Policy P1: GDPR/CCPA data governance)
 gdpr:
   # Data export settings
@@ -455,3 +463,9 @@ gdpr:
       tls: true
       start-tls: REQUIRED
       auth-methods: DIGEST-MD5 CRAM-SHA256 CRAM-SHA1 CRAM-MD5 PLAIN LOGIN
+  # Production URLs (Feature I6.T5: Sitemap generation)
+  villagecompute:
+    homepage:
+      base-url: https://homepage.villagecompute.com
+    cdn:
+      base-url: https://cdn.villagecompute.com
