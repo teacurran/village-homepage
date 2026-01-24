@@ -1,12 +1,14 @@
 package villagecompute.homepage.integration;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.TestFixtures;
 import villagecompute.homepage.WireMockTestBase;
+import villagecompute.homepage.testing.PostgreSQLTestProfile;
 import villagecompute.homepage.data.models.DirectoryCategory;
 import villagecompute.homepage.data.models.DirectorySite;
 import villagecompute.homepage.data.models.DirectorySiteCategory;
@@ -51,6 +53,7 @@ import static villagecompute.homepage.TestConstants.*;
  * <b>Ref:</b> Task I6.T7 (Directory Workflow Tests)
  */
 @QuarkusTest
+@TestProfile(PostgreSQLTestProfile.class)
 public class DirectoryWorkflowTest extends WireMockTestBase {
 
     @Inject

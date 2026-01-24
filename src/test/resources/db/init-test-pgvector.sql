@@ -7,5 +7,5 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Enable PostGIS extension (for geographic queries - Feature I6.T2)
 -- NOTE: postgis/postgis images have PostGIS pre-installed
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS postgis_topology;
+-- CREATE EXTENSION IF NOT EXISTS postgis;
+-- CREATE EXTENSION IF NOT EXISTS postgis_topology;

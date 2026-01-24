@@ -1,12 +1,14 @@
 package villagecompute.homepage.integration;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.TestFixtures;
 import villagecompute.homepage.WireMockTestBase;
+import villagecompute.homepage.testing.PostgreSQLTestProfile;
 import villagecompute.homepage.data.models.*;
 import villagecompute.homepage.jobs.FraudDetectionJobHandler;
 import villagecompute.homepage.jobs.ListingImageProcessingJobHandler;
@@ -42,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <b>Ref:</b> Task I6.T7 (Marketplace Workflow Tests)
  */
 @QuarkusTest
+@TestProfile(PostgreSQLTestProfile.class)
 public class MarketplaceWorkflowTest extends WireMockTestBase {
 
     @Inject

@@ -272,17 +272,21 @@ public class RssSource extends PanacheEntityBase {
      */
     public static void recordError(RssSource source, String errorMessage) {
         QuarkusTransaction.requiringNew().run(() -> {
-            source.errorCount++;
-            source.lastErrorMessage = errorMessage;
-            source.updatedAt = Instant.now();
+            // Re-fetch the entity in the new transaction to avoid detached entity error
+            RssSource managedSource = RssSource.findById(source.id);
+            if (managedSource != null) {
+                managedSource.errorCount++;
+                managedSource.lastErrorMessage = errorMessage;
+                managedSource.updatedAt = Instant.now();
 
-            if (source.errorCount >= 5 && source.isActive) {
-                source.isActive = false;
-                LOG.warnf("Auto-disabled RSS source after 5 errors: id=%s, name=%s, url=%s", source.id, source.name,
-                        source.url);
+                if (managedSource.errorCount >= 5 && managedSource.isActive) {
+                    managedSource.isActive = false;
+                    LOG.warnf("Auto-disabled RSS source after 5 errors: id=%s, name=%s, url=%s", managedSource.id,
+                            managedSource.name, managedSource.url);
+                }
+
+                managedSource.persist();
             }
-
-            source.persist();
         });
     }
 
@@ -294,11 +298,15 @@ public class RssSource extends PanacheEntityBase {
      */
     public static void recordSuccess(RssSource source) {
         QuarkusTransaction.requiringNew().run(() -> {
-            source.lastFetchedAt = Instant.now();
-            source.errorCount = 0;
-            source.lastErrorMessage = null;
-            source.updatedAt = Instant.now();
-            source.persist();
+            // Re-fetch the entity in the new transaction to avoid detached entity error
+            RssSource managedSource = RssSource.findById(source.id);
+            if (managedSource != null) {
+                managedSource.lastFetchedAt = Instant.now();
+                managedSource.errorCount = 0;
+                managedSource.lastErrorMessage = null;
+                managedSource.updatedAt = Instant.now();
+                managedSource.persist();
+            }
         });
     }
 }

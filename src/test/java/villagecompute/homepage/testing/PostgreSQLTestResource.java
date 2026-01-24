@@ -35,17 +35,17 @@ public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManag
 
     @Override
     public Map<String, String> start() {
-        // Start PostgreSQL 17 + PostGIS container
-        // NOTE: Using postgis/postgis image which includes PostGIS for geographic queries (I6.T2)
-        // pgvector is NOT available in PostGIS images but is not required for GeoCity tests
-        // Use asCompatibleSubstituteFor to allow postgis image (based on postgres)
-        DockerImageName postgisImage = DockerImageName.parse("postgis/postgis:17-3.5-alpine")
+        // Start PostgreSQL 17 + pgvector container
+        // NOTE: Using ankane/pgvector image which includes both PostgreSQL 17 and pgvector
+        // PostGIS will be installed via init script
+        // Use asCompatibleSubstituteFor to allow pgvector image (based on postgres)
+        DockerImageName pgvectorImage = DockerImageName.parse("pgvector/pgvector:pg17")
                 .asCompatibleSubstituteFor("postgres");
 
-        postgresContainer = new PostgreSQLContainer<>(postgisImage).withDatabaseName("homepage_test")
+        postgresContainer = new PostgreSQLContainer<>(pgvectorImage).withDatabaseName("homepage_test")
                 .withUsername("test").withPassword("test").withReuse(true)
-                // Enable PostGIS extension for geographic queries (I6.T2)
-                .withInitScript("db/init-test-postgis.sql");
+                // Enable PostGIS and pgvector extensions
+                .withInitScript("db/init-test-pgvector.sql");
 
         postgresContainer.start();
 
@@ -59,10 +59,12 @@ public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManag
         config.put("quarkus.datasource.devservices.enabled", "false"); // Disable Dev Services (we're managing
                                                                        // container)
         config.put("quarkus.hibernate-orm.database.generation", "drop-and-create");
-        config.put("quarkus.hibernate-orm.log.sql", "false");
+        config.put("quarkus.hibernate-orm.log.sql", "true");
         config.put("quarkus.hibernate-orm.sql-load-script", "no-file");
         // Enable Jackson for JSONB type handling
         config.put("quarkus.hibernate-orm.mapping.jackson.convert-to-json-mode", "enabled");
+        // Use PostGIS dialect for spatial type support
+        config.put("quarkus.hibernate-orm.dialect", "org.hibernate.spatial.dialect.postgis.PostgisPG10Dialect");
 
         return config;
     }
