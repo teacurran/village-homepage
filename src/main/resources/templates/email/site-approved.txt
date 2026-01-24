@@ -1,0 +1,26 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+Your Site Has Been Approved!
+════════════════════════════════════════════════════════════════
+
+Hi {userName},
+
+Great news! Your directory submission has been approved and is now
+live:
+
+SITE: {siteName}
+Category: {categoryName}
+URL: {siteUrl}
+
+What's next?
+
+  • Your site is now discoverable in our directory
+  • Users can vote on your submission to increase its ranking
+  • Share your listing to get more visibility
+
+View Your Listing: {siteUrl}
+
+Thanks for contributing to our curated web directory!
+    {/content}
+{/include}

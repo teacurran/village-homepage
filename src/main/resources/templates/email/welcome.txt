@@ -1,0 +1,23 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+Welcome to Village Homepage!
+════════════════════════════════════════════════════════════════
+
+Hi {userName},
+
+Thanks for joining Village Homepage! We're excited to have you as part
+of our community.
+
+What You Can Do:
+
+  • Customize your homepage with drag-and-drop widgets
+  • Browse and post in the Marketplace classifieds
+  • Discover quality sites in our curated web directory
+  • Stay updated with news, weather, and stocks
+
+Get Started: {loginUrl}
+
+If you have any questions, feel free to reach out to our support team.
+    {/content}
+{/include}

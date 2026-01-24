@@ -1,0 +1,40 @@
+{#include email/layout/base.html}
+    {#content}
+        <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <h2 style="margin-top: 0; color: #155724;">Your Site Has Been Approved!</h2>
+        </div>
+
+        <p style="margin: 0 0 15px; font-size: 16px;">Hi {userName},</p>
+
+        <p style="margin: 0 0 15px;">
+            Great news! Your directory submission has been approved and is now live:
+        </p>
+
+        <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 4px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #495057; font-size: 18px;">{siteName}</h3>
+            <p style="margin: 10px 0 0; color: #6c757d;">
+                <strong>Category:</strong> {categoryName}<br>
+                <strong>URL:</strong> <a href="{siteUrl}" style="color: #007bff; text-decoration: none;">{siteUrl}</a>
+            </p>
+        </div>
+
+        <div style="background: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0 0 10px; font-weight: bold;">What's next?</p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li style="margin: 5px 0;">Your site is now discoverable in our directory</li>
+                <li style="margin: 5px 0;">Users can vote on your submission to increase its ranking</li>
+                <li style="margin: 5px 0;">Share your listing to get more visibility</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{siteUrl}" style="display: inline-block; background: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                View Your Listing
+            </a>
+        </div>
+
+        <p style="margin: 20px 0 0; color: #6c757d; font-size: 14px;">
+            Thanks for contributing to our curated web directory!
+        </p>
+    {/content}
+{/include}

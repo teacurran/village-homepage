@@ -1,0 +1,8 @@
+{#insert content/}
+
+────────────────────────────────────────────────────────────────
+
+Unsubscribe: {unsubscribeUrl}
+Help Center: {baseUrl}/help
+
+Village Homepage

@@ -1,0 +1,28 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+Your Daily Digest - {date}
+════════════════════════════════════════════════════════════════
+
+Hi {userName},
+
+You have {unreadCount} unread notification{#if unreadCount != 1}s{/if}
+waiting for you:
+
+{#for notification in notifications}
+────────────────────────────────────────────────────────────────
+{notification.title}
+
+{notification.message}
+
+{notification.timeAgo}
+{/for}
+────────────────────────────────────────────────────────────────
+
+View All Notifications: {baseUrl}/notifications
+
+You're receiving this digest because you have unread notifications.
+You can adjust your notification preferences in your account
+settings.
+    {/content}
+{/include}

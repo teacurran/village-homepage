@@ -1,0 +1,28 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+Your Listing Has Been Flagged
+════════════════════════════════════════════════════════════════
+
+Hi {userName},
+
+Your listing has been flagged for review by our moderation team:
+
+LISTING: {listingTitle}
+
+────────────────────────────────────────────────────────────────
+Reason for Flag: {flagReason}
+────────────────────────────────────────────────────────────────
+
+What happens next?
+
+  • Our team will review your listing within 24-48 hours
+  • If approved, your listing will be restored
+  • If issues are found, we'll contact you with details
+
+Review Your Listing: {reviewUrl}
+
+If you believe this was a mistake, you can appeal through the
+review page.
+    {/content}
+{/include}

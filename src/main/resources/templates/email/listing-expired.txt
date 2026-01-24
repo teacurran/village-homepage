@@ -1,0 +1,25 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+Your Listing Has Expired
+════════════════════════════════════════════════════════════════
+
+Hi {userName},
+
+Your marketplace listing has expired and is no longer visible to
+users:
+
+LISTING: {listingTitle}
+
+Want to renew your listing?
+
+  • Update your listing details if needed
+  • Renew for another 30 days of visibility
+  • Continue receiving inquiries from interested buyers
+
+Renew Listing: {renewUrl}
+
+If your item has sold or you no longer need this listing, you can
+safely ignore this message.
+    {/content}
+{/include}

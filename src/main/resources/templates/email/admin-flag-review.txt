@@ -1,0 +1,30 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+Content Flagged for Review
+════════════════════════════════════════════════════════════════
+
+Hi Admin,
+
+New content has been flagged by a user and requires moderation:
+
+Content Type: {contentType}
+Title: {contentTitle}
+
+────────────────────────────────────────────────────────────────
+Flag Reason: {flagReason}
+────────────────────────────────────────────────────────────────
+
+Moderation Actions Available:
+
+  • Approve content (dismiss flag)
+  • Remove content and notify user
+  • Request changes from submitter
+  • Ban user if repeat violation
+
+Review Content Now: {reviewUrl}
+
+Please review this content within 24-48 hours to maintain community
+standards.
+    {/content}
+{/include}

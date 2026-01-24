@@ -1,0 +1,42 @@
+{#include email/layout/base.html}
+    {#content}
+        <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <h2 style="margin-top: 0; color: #721c24;">Your Submission Needs Changes</h2>
+        </div>
+
+        <p style="margin: 0 0 15px; font-size: 16px;">Hi {userName},</p>
+
+        <p style="margin: 0 0 15px;">
+            Thank you for submitting a site to our directory. Unfortunately, we can't approve it in its current form:
+        </p>
+
+        <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 4px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #495057; font-size: 18px;">{siteName}</h3>
+
+            <div style="margin: 15px 0; padding: 15px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                <p style="margin: 0 0 5px; font-weight: bold; color: #856404;">Reason for Rejection:</p>
+                <p style="margin: 0; color: #856404;">{rejectionReason}</p>
+            </div>
+        </div>
+
+        <div style="background: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0 0 10px; font-weight: bold;">How to improve your submission:</p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li style="margin: 5px 0;">Review our directory guidelines</li>
+                <li style="margin: 5px 0;">Address the issues mentioned above</li>
+                <li style="margin: 5px 0;">Ensure your site provides unique value to users</li>
+                <li style="margin: 5px 0;">Resubmit with updated information</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{resubmitUrl}" style="display: inline-block; background: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                Resubmit Site
+            </a>
+        </div>
+
+        <p style="margin: 20px 0 0; color: #6c757d; font-size: 14px;">
+            We appreciate quality submissions and look forward to reviewing your updated entry.
+        </p>
+    {/content}
+{/include}

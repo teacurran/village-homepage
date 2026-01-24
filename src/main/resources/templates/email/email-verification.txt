@@ -1,0 +1,25 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+Verify Your Email Address
+════════════════════════════════════════════════════════════════
+
+Hi {userName},
+
+Thanks for signing up! Please verify your email address to activate
+your account and access all features.
+
+Verify Email Address: {verificationUrl}
+
+Why verify your email?
+
+  • Post listings in the Marketplace
+  • Submit sites to our directory
+  • Vote on directory submissions
+  • Receive important account notifications
+
+This verification link expires in {expiresIn}
+
+If you didn't create an account, you can safely ignore this email.
+    {/content}
+{/include}

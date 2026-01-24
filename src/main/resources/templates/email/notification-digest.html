@@ -1,0 +1,40 @@
+{#include email/layout/base.html}
+    {#content}
+        <div style="background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <h2 style="margin-top: 0; color: #0c5460;">Your Daily Digest</h2>
+            <p style="margin: 0; color: #0c5460; font-size: 14px;">{date}</p>
+        </div>
+
+        <p style="margin: 0 0 15px; font-size: 16px;">Hi {userName},</p>
+
+        <p style="margin: 0 0 15px;">
+            You have {unreadCount} unread notification{#if unreadCount != 1}s{/if} waiting for you:
+        </p>
+
+        <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 4px; padding: 20px; margin: 20px 0;">
+            {#for notification in notifications}
+                <div style="padding: 15px; margin-bottom: 15px; background: #f8f9fa; border-left: 3px solid #007bff; border-radius: 4px;">
+                    <p style="margin: 0 0 5px; font-weight: bold; color: #495057;">
+                        {notification.title}
+                    </p>
+                    <p style="margin: 0 0 5px; color: #6c757d; font-size: 14px;">
+                        {notification.message}
+                    </p>
+                    <p style="margin: 5px 0 0; font-size: 12px; color: #6c757d;">
+                        {notification.timeAgo}
+                    </p>
+                </div>
+            {/for}
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{baseUrl}/notifications" style="display: inline-block; background: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                View All Notifications
+            </a>
+        </div>
+
+        <p style="margin: 20px 0 0; color: #6c757d; font-size: 14px;">
+            You're receiving this digest because you have unread notifications. You can adjust your notification preferences in your account settings.
+        </p>
+    {/content}
+{/include}

@@ -1,0 +1,30 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+Your Submission Needs Changes
+════════════════════════════════════════════════════════════════
+
+Hi {userName},
+
+Thank you for submitting a site to our directory. Unfortunately, we
+can't approve it in its current form:
+
+SITE: {siteName}
+
+────────────────────────────────────────────────────────────────
+Reason for Rejection: {rejectionReason}
+────────────────────────────────────────────────────────────────
+
+How to improve your submission:
+
+  • Review our directory guidelines
+  • Address the issues mentioned above
+  • Ensure your site provides unique value to users
+  • Resubmit with updated information
+
+Resubmit Site: {resubmitUrl}
+
+We appreciate quality submissions and look forward to reviewing
+your updated entry.
+    {/content}
+{/include}

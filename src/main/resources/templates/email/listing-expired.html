@@ -1,0 +1,36 @@
+{#include email/layout/base.html}
+    {#content}
+        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <h2 style="margin-top: 0; color: #856404;">Your Listing Has Expired</h2>
+        </div>
+
+        <p style="margin: 0 0 15px; font-size: 16px;">Hi {userName},</p>
+
+        <p style="margin: 0 0 15px;">
+            Your marketplace listing has expired and is no longer visible to users:
+        </p>
+
+        <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 4px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #495057; font-size: 18px;">{listingTitle}</h3>
+        </div>
+
+        <div style="background: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0 0 10px; font-weight: bold;">Want to renew your listing?</p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li style="margin: 5px 0;">Update your listing details if needed</li>
+                <li style="margin: 5px 0;">Renew for another 30 days of visibility</li>
+                <li style="margin: 5px 0;">Continue receiving inquiries from interested buyers</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{renewUrl}" style="display: inline-block; background: #ffc107; color: #212529; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                Renew Listing
+            </a>
+        </div>
+
+        <p style="margin: 20px 0 0; color: #6c757d; font-size: 14px;">
+            If your item has sold or you no longer need this listing, you can safely ignore this message.
+        </p>
+    {/content}
+{/include}

@@ -1,0 +1,24 @@
+{#include email/layout/base.txt}
+    {#content}
+════════════════════════════════════════════════════════════════
+New Message About Your Listing
+════════════════════════════════════════════════════════════════
+
+Hi {userName},
+
+You've received a new message about your listing:
+
+LISTING: {listingTitle}
+
+────────────────────────────────────────────────────────────────
+From: {senderName}
+
+"{messagePreview}"
+────────────────────────────────────────────────────────────────
+
+Reply to Message: {replyUrl}
+
+Tip: Reply promptly to increase your chances of a successful
+transaction.
+    {/content}
+{/include}
