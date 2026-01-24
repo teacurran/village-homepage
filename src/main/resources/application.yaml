@@ -365,6 +365,10 @@ email:
     base-url: ${EMAIL_BASE_URL:https://homepage.villagecompute.com}
     ops-alert-email: ${EMAIL_OPS_ALERT:ops@villagecompute.com}
 
+  # Unsubscribe token settings (Feature I5.T3: Secure unsubscribe links)
+  unsubscribe:
+    secret: ${EMAIL_UNSUBSCRIBE_SECRET:default-dev-secret-change-in-prod}
+
 # GDPR Configuration (Policy P1: GDPR/CCPA data governance)
 gdpr:
   # Data export settings
