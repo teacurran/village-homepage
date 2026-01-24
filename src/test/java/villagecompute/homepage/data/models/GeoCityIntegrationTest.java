@@ -8,9 +8,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import villagecompute.homepage.BaseIntegrationTest;
 import villagecompute.homepage.testing.PostgreSQLTestProfile;
@@ -77,8 +75,9 @@ public class GeoCityIntegrationTest extends BaseIntegrationTest {
 
         // Create spatial index if it doesn't exist (drop-and-create removes it)
         try {
-            entityManager.createNativeQuery(
-                    "CREATE INDEX IF NOT EXISTS idx_geo_cities_location ON geo_cities USING GIST(location)")
+            entityManager
+                    .createNativeQuery(
+                            "CREATE INDEX IF NOT EXISTS idx_geo_cities_location ON geo_cities USING GIST(location)")
                     .executeUpdate();
         } catch (Exception e) {
             // Index creation might fail if table doesn't exist yet - that's ok

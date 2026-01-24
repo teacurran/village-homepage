@@ -1,8 +1,10 @@
 package villagecompute.homepage.data.models;
 
+import io.quarkus.arc.Arc;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
+import villagecompute.homepage.services.RankCalculationService;
 
 import java.time.Instant;
 import java.util.List;
@@ -79,6 +81,11 @@ public class DirectorySiteCategory extends PanacheEntityBase {
     public Integer rankInCategory;
 
     @Column(
+            name = "wilson_score",
+            nullable = false)
+    public Double wilsonScore;
+
+    @Column(
             name = "submitted_by_user_id",
             nullable = false)
     public UUID submittedByUserId;
@@ -102,7 +109,7 @@ public class DirectorySiteCategory extends PanacheEntityBase {
     public Instant updatedAt;
 
     // JPQL query constants for named queries
-    public static final String JPQL_FIND_TOP_RANKED = "FROM DirectorySiteCategory WHERE categoryId = :categoryId AND status = 'approved' ORDER BY score DESC, upvotes DESC";
+    public static final String JPQL_FIND_TOP_RANKED = "FROM DirectorySiteCategory WHERE categoryId = :categoryId AND status = 'approved' ORDER BY wilsonScore DESC, createdAt DESC";
     public static final String QUERY_FIND_TOP_RANKED = "DirectorySiteCategory.findTopRanked";
 
     /**
@@ -141,14 +148,15 @@ public class DirectorySiteCategory extends PanacheEntityBase {
     }
 
     /**
-     * Find approved sites in a category, ordered by score.
+     * Find approved sites in a category, ordered by Wilson score.
      *
      * @param categoryId
      *            Category ID to search for
-     * @return List of approved sites in category, sorted by score descending
+     * @return List of approved sites in category, sorted by Wilson score descending (confidence-based ranking)
      */
     public static List<DirectorySiteCategory> findApprovedInCategory(UUID categoryId) {
-        return find("categoryId = ?1 AND status = 'approved' ORDER BY score DESC, createdAt DESC", categoryId).list();
+        return find("categoryId = ?1 AND status = 'approved' ORDER BY wilsonScore DESC, createdAt DESC", categoryId)
+                .list();
     }
 
     /**
@@ -237,10 +245,10 @@ public class DirectorySiteCategory extends PanacheEntityBase {
     }
 
     /**
-     * Updates vote aggregates (score, upvotes, downvotes) from votes table.
+     * Updates vote aggregates (score, upvotes, downvotes, wilsonScore) from votes table.
      *
      * <p>
-     * Recalculates cached values by counting DirectoryVote records.
+     * Recalculates cached values by counting DirectoryVote records and computing Wilson score.
      * </p>
      */
     public void updateAggregates() {
@@ -250,6 +258,11 @@ public class DirectorySiteCategory extends PanacheEntityBase {
         this.upvotes = (int) upvoteCount;
         this.downvotes = (int) downvoteCount;
         this.score = (int) (upvoteCount - downvoteCount);
+
+        // Get RankCalculationService from CDI container
+        RankCalculationService rankCalcService = Arc.container().instance(RankCalculationService.class).get();
+        this.wilsonScore = rankCalcService.calculateWilsonScore(this.upvotes, this.downvotes);
+
         this.updatedAt = Instant.now();
         this.persist();
     }
@@ -261,18 +274,18 @@ public class DirectorySiteCategory extends PanacheEntityBase {
      * Bubbling criteria (Feature F13.8):
      * <ul>
      * <li>Site must be in a child category of the specified parent</li>
-     * <li>Site must have score ≥ 10</li>
+     * <li>Site must have Wilson score ≥ 0.5 (statistically significant positive rating)</li>
      * <li>Site must have rank ≤ 3 in its category</li>
      * <li>Site must have status = 'approved'</li>
      * </ul>
      *
      * <p>
      * <b>UI Display:</b> Bubbled sites show with yellow background (#fff9e6) and green badge indicating source
-     * category. They are sorted AFTER direct sites but still ordered by score DESC within the bubbled group.
+     * category. They are sorted AFTER direct sites but still ordered by Wilson score DESC within the bubbled group.
      *
      * @param parentCategoryId
      *            Parent category UUID
-     * @return List of bubbled sites sorted by score DESC
+     * @return List of bubbled sites sorted by Wilson score DESC
      */
     public static List<DirectorySiteCategory> findBubbledSites(UUID parentCategoryId) {
         if (parentCategoryId == null) {
@@ -287,7 +300,7 @@ public class DirectorySiteCategory extends PanacheEntityBase {
         }
 
         // Build query to find bubbled sites across all children
-        // Sites must meet: score >= 10 AND rank <= 3 AND status = 'approved'
+        // Sites must meet: wilsonScore >= 0.5 AND rank <= 3 AND status = 'approved'
         StringBuilder query = new StringBuilder();
         query.append("categoryId IN (");
 
@@ -299,9 +312,9 @@ public class DirectorySiteCategory extends PanacheEntityBase {
         }
 
         query.append(") AND status = 'approved' ");
-        query.append("AND score >= 10 ");
+        query.append("AND wilsonScore >= 0.5 ");
         query.append("AND rankInCategory <= 3 ");
-        query.append("ORDER BY score DESC, createdAt DESC");
+        query.append("ORDER BY wilsonScore DESC, createdAt DESC");
 
         // Extract child IDs as parameters
         Object[] params = children.stream().map(c -> c.id).toArray();

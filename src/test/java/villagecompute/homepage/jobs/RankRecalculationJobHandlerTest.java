@@ -397,4 +397,153 @@ class RankRecalculationJobHandlerTest {
         long rankedSites = DirectorySiteCategory.count("status = 'approved' AND rankInCategory IS NOT NULL");
         assertTrue(rankedSites >= 4); // 4 sites from setUp
     }
+
+    /**
+     * Integration test: Verify Wilson score calculation and ranking.
+     *
+     * <p>
+     * Tests that sites with more votes are ranked higher when upvote ratios are similar, and that Wilson score
+     * correctly handles edge cases.
+     */
+    @Test
+    @Transactional
+    void testRankRecalculation_usesWilsonScore() throws Exception {
+        // Given: Create 3 sites with different vote patterns in a test category
+        DirectoryCategory testCategory = new DirectoryCategory();
+        testCategory.slug = "wilson-test-category";
+        testCategory.name = "Wilson Test Category";
+        testCategory.description = "Category for testing Wilson score ranking";
+        testCategory.parentId = null;
+        testCategory.iconUrl = null;
+        testCategory.sortOrder = 1;
+        testCategory.linkCount = 0;
+        testCategory.isActive = true;
+        testCategory.createdAt = Instant.now();
+        testCategory.updatedAt = Instant.now();
+        testCategory.persist();
+
+        // Site A: 1 upvote, 0 downvotes (100% ratio but low confidence)
+        // Expected Wilson score ≈ 0.206
+        DirectorySite siteA = createSite("https://site-a.com", "Site A");
+        DirectorySiteCategory scA = createSiteCategory(siteA.id, testCategory.id, 1, 1, 0, "approved");
+
+        // Site B: 10 upvotes, 0 downvotes (100% ratio, medium confidence)
+        // Expected Wilson score ≈ 0.722
+        DirectorySite siteB = createSite("https://site-b.com", "Site B");
+        DirectorySiteCategory scB = createSiteCategory(siteB.id, testCategory.id, 10, 10, 0, "approved");
+
+        // Site C: 100 upvotes, 0 downvotes (100% ratio, high confidence)
+        // Expected Wilson score ≈ 0.965
+        DirectorySite siteC = createSite("https://site-c.com", "Site C");
+        DirectorySiteCategory scC = createSiteCategory(siteC.id, testCategory.id, 100, 100, 0, "approved");
+
+        // Site D: 5 upvotes, 5 downvotes (50% ratio, controversial)
+        // Expected Wilson score ≈ 0.280
+        DirectorySite siteD = createSite("https://site-d.com", "Site D");
+        DirectorySiteCategory scD = createSiteCategory(siteD.id, testCategory.id, 0, 5, 5, "approved");
+
+        // When: Execute rank recalculation job
+        Map<String, Object> payload = Map.of();
+        handler.execute(1L, payload);
+
+        // Then: Verify ranks are ordered by Wilson score DESC
+        DirectorySiteCategory updatedA = DirectorySiteCategory.findById(scA.id);
+        DirectorySiteCategory updatedB = DirectorySiteCategory.findById(scB.id);
+        DirectorySiteCategory updatedC = DirectorySiteCategory.findById(scC.id);
+        DirectorySiteCategory updatedD = DirectorySiteCategory.findById(scD.id);
+
+        // Verify Wilson scores are calculated
+        assertNotNull(updatedA.wilsonScore, "Site A should have Wilson score calculated");
+        assertNotNull(updatedB.wilsonScore, "Site B should have Wilson score calculated");
+        assertNotNull(updatedC.wilsonScore, "Site C should have Wilson score calculated");
+        assertNotNull(updatedD.wilsonScore, "Site D should have Wilson score calculated");
+
+        // Verify Wilson score values are approximately correct
+        assertEquals(0.206, updatedA.wilsonScore, 0.01, "Site A (1 upvote) should have ~0.206 Wilson score");
+        assertEquals(0.817, updatedB.wilsonScore, 0.01, "Site B (10 upvotes) should have ~0.817 Wilson score");
+        assertEquals(0.980, updatedC.wilsonScore, 0.01, "Site C (100 upvotes) should have ~0.980 Wilson score");
+        assertEquals(0.237, updatedD.wilsonScore, 0.01, "Site D (50/50 split) should have ~0.237 Wilson score");
+
+        // Verify ranks are ordered by Wilson score DESC
+        // Site C (100 votes, Wilson ≈ 0.980) should rank 1st
+        assertEquals(1, updatedC.rankInCategory, "Site with 100 votes should rank 1st");
+
+        // Site B (10 votes, Wilson ≈ 0.817) should rank 2nd
+        assertEquals(2, updatedB.rankInCategory, "Site with 10 votes should rank 2nd");
+
+        // Site D (50/50 split, Wilson ≈ 0.237) should rank 3rd
+        assertEquals(3, updatedD.rankInCategory, "Controversial site should rank 3rd");
+
+        // Site A (1 vote, Wilson ≈ 0.206) should rank 4th
+        assertEquals(4, updatedA.rankInCategory, "Site with 1 vote should rank 4th (lowest confidence)");
+
+        // Key insight: More votes wins at same ratio
+        assertTrue(updatedC.wilsonScore > updatedB.wilsonScore,
+                "100 votes should have higher Wilson score than 10 votes at same ratio");
+        assertTrue(updatedB.wilsonScore > updatedA.wilsonScore,
+                "10 votes should have higher Wilson score than 1 vote at same ratio");
+    }
+
+    /**
+     * Integration test: Verify bubbling threshold uses Wilson score.
+     *
+     * <p>
+     * Tests that bubbling uses Wilson score ≥ 0.5 threshold instead of simple score threshold.
+     */
+    @Test
+    @Transactional
+    void testBubbling_usesWilsonScoreThreshold() throws Exception {
+        // Given: Create parent and child categories
+        DirectoryCategory bubbleParent = new DirectoryCategory();
+        bubbleParent.slug = "bubble-parent";
+        bubbleParent.name = "Bubble Parent";
+        bubbleParent.description = "Parent for Wilson score bubbling test";
+        bubbleParent.parentId = null;
+        bubbleParent.iconUrl = null;
+        bubbleParent.sortOrder = 1;
+        bubbleParent.linkCount = 0;
+        bubbleParent.isActive = true;
+        bubbleParent.createdAt = Instant.now();
+        bubbleParent.updatedAt = Instant.now();
+        bubbleParent.persist();
+
+        DirectoryCategory bubbleChild = new DirectoryCategory();
+        bubbleChild.slug = "bubble-child";
+        bubbleChild.name = "Bubble Child";
+        bubbleChild.description = "Child for Wilson score bubbling test";
+        bubbleChild.parentId = bubbleParent.id;
+        bubbleChild.iconUrl = null;
+        bubbleChild.sortOrder = 1;
+        bubbleChild.linkCount = 0;
+        bubbleChild.isActive = true;
+        bubbleChild.createdAt = Instant.now();
+        bubbleChild.updatedAt = Instant.now();
+        bubbleChild.persist();
+
+        // Site X: 10 upvotes, 0 downvotes (Wilson ≈ 0.722, above 0.5 threshold)
+        DirectorySite siteX = createSite("https://site-x.com", "Site X");
+        createSiteCategory(siteX.id, bubbleChild.id, 10, 10, 0, "approved");
+
+        // Site Y: 3 upvotes, 3 downvotes (Wilson ≈ 0.206, below 0.5 threshold)
+        DirectorySite siteY = createSite("https://site-y.com", "Site Y");
+        createSiteCategory(siteY.id, bubbleChild.id, 0, 3, 3, "approved");
+
+        // When: Execute rank recalculation
+        Map<String, Object> payload = Map.of();
+        handler.execute(1L, payload);
+
+        // Query bubbled sites for parent
+        List<DirectorySiteCategory> bubbledSites = RankRecalculationJobHandler.findBubbledSites(bubbleParent.id);
+
+        // Then: Only Site X should bubble (Wilson score ≥ 0.5)
+        assertEquals(1, bubbledSites.size(), "Only sites with Wilson score ≥ 0.5 should bubble");
+        assertEquals(siteX.id, bubbledSites.get(0).siteId, "Site X (Wilson ≈ 0.722) should bubble");
+
+        // Verify Wilson scores
+        DirectorySiteCategory updatedX = DirectorySiteCategory.findBySiteAndCategory(siteX.id, bubbleChild.id).get();
+        DirectorySiteCategory updatedY = DirectorySiteCategory.findBySiteAndCategory(siteY.id, bubbleChild.id).get();
+
+        assertTrue(updatedX.wilsonScore >= 0.5, "Site X should have Wilson score ≥ 0.5");
+        assertTrue(updatedY.wilsonScore < 0.5, "Site Y should have Wilson score < 0.5");
+    }
 }

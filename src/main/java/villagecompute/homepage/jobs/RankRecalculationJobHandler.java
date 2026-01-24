@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.data.models.DirectoryCategory;
 import villagecompute.homepage.data.models.DirectorySiteCategory;
+import villagecompute.homepage.services.RankCalculationService;
 
 import java.time.Instant;
 import java.util.List;
@@ -20,29 +21,31 @@ import java.util.Map;
  * <b>Execution Strategy:</b>
  * <ul>
  * <li>Processes all active categories sequentially</li>
- * <li>Within each category, orders approved sites by score DESC, then createdAt DESC</li>
- * <li>Assigns 1-indexed rank to each site (rank 1 = highest score)</li>
- * <li>Updates rankInCategory field in directory_site_categories table</li>
- * <li>Enables bubbling logic (sites with score ≥ 10 AND rank ≤ 3 bubble to parent)</li>
+ * <li>Calculates Wilson score for each site-category membership</li>
+ * <li>Within each category, orders approved sites by wilsonScore DESC, then createdAt DESC</li>
+ * <li>Assigns 1-indexed rank to each site (rank 1 = highest Wilson score)</li>
+ * <li>Updates rankInCategory and wilsonScore fields in directory_site_categories table</li>
+ * <li>Enables bubbling logic (sites with wilsonScore ≥ 0.5 AND rank ≤ 3 bubble to parent)</li>
  * </ul>
  *
  * <p>
  * <b>Ranking Algorithm:</b>
  * <ul>
- * <li>Primary sort: score DESC (upvotes - downvotes)</li>
+ * <li>Primary sort: wilsonScore DESC (confidence-based ranking using Wilson score confidence interval)</li>
  * <li>Tiebreaker: createdAt DESC (earlier submission wins)</li>
  * <li>Rank assignment: position + 1 (first site gets rank 1)</li>
  * <li>Only approved sites receive ranks</li>
  * <li>Pending/rejected sites have null rank</li>
+ * <li>Wilson score calculated before ranking using RankCalculationService</li>
  * </ul>
  *
  * <p>
  * <b>Bubbling Threshold (Feature F13.8):</b>
  * <ul>
- * <li>Sites with score ≥ 10 AND rank ≤ 3 are eligible for bubbling</li>
+ * <li>Sites with wilsonScore ≥ 0.5 AND rank ≤ 3 are eligible for bubbling</li>
  * <li>Bubbled sites appear in parent category with indicator badge</li>
  * <li>Bubbling query: {@link #findBubbledSites(java.util.UUID)}</li>
- * <li>UI sorting: direct sites first, then bubbled sites (both by score DESC)</li>
+ * <li>UI sorting: direct sites first, then bubbled sites (both by wilsonScore DESC)</li>
  * </ul>
  *
  * <p>
@@ -81,11 +84,27 @@ public class RankRecalculationJobHandler implements JobHandler {
 
     private static final Logger LOG = Logger.getLogger(RankRecalculationJobHandler.class);
 
-    private static final int BUBBLING_SCORE_THRESHOLD = 10;
+    /**
+     * Wilson score threshold for bubbling sites to parent category. Value 0.5 represents statistically significant
+     * positive rating (95% confidence).
+     */
+    private static final double BUBBLING_WILSON_SCORE_THRESHOLD = 0.5;
+
+    /**
+     * Rank threshold for bubbling (top 3 sites per category).
+     */
     private static final int BUBBLING_RANK_THRESHOLD = 3;
+
+    /**
+     * Epsilon for comparing Wilson scores (8 decimal places precision).
+     */
+    private static final double WILSON_SCORE_EPSILON = 0.00000001;
 
     @Inject
     MeterRegistry meterRegistry;
+
+    @Inject
+    RankCalculationService rankCalculationService;
 
     @Override
     public JobType handlesType() {
@@ -131,33 +150,42 @@ public class RankRecalculationJobHandler implements JobHandler {
     }
 
     /**
-     * Recalculates ranks for all approved sites in a single category.
+     * Recalculates Wilson scores and ranks for all approved sites in a single category.
      *
      * <p>
-     * Sites are ordered by score DESC, then createdAt DESC. Rank is assigned as position + 1 (1-indexed). Only updates
-     * ranks if they have changed to minimize database writes.
+     * Sites are ordered by wilsonScore DESC, then createdAt DESC. Rank is assigned as position + 1 (1-indexed). Only
+     * updates ranks/Wilson scores if they have changed to minimize database writes.
      *
      * @param categoryId
      *            Category UUID to process
      * @return Number of sites ranked in this category
      */
     private int recalculateRanksForCategory(java.util.UUID categoryId) {
-        // Query approved sites ordered by score DESC, createdAt DESC
+        // Query approved sites ordered by wilsonScore DESC, createdAt DESC
         List<DirectorySiteCategory> sites = DirectorySiteCategory.findApprovedInCategory(categoryId);
 
         if (sites.isEmpty()) {
             return 0;
         }
 
-        // Assign ranks (1-indexed)
+        // Recalculate Wilson scores and assign ranks (1-indexed)
         int ranksUpdated = 0;
         for (int i = 0; i < sites.size(); i++) {
             DirectorySiteCategory siteCategory = sites.get(i);
             int newRank = i + 1;
 
-            // Only update if rank changed
-            if (siteCategory.rankInCategory == null || siteCategory.rankInCategory != newRank) {
+            // Recalculate Wilson score
+            double newWilsonScore = rankCalculationService.recalculateWilsonScoreForSiteCategory(siteCategory);
+
+            // Check if rank or Wilson score changed (epsilon comparison for doubles)
+            boolean rankChanged = siteCategory.rankInCategory == null || siteCategory.rankInCategory != newRank;
+            boolean wilsonScoreChanged = siteCategory.wilsonScore == null
+                    || Math.abs(siteCategory.wilsonScore - newWilsonScore) > WILSON_SCORE_EPSILON;
+
+            // Only update if rank OR Wilson score changed
+            if (rankChanged || wilsonScoreChanged) {
                 siteCategory.rankInCategory = newRank;
+                siteCategory.wilsonScore = newWilsonScore;
                 siteCategory.updatedAt = Instant.now();
                 siteCategory.persist();
                 ranksUpdated++;
@@ -178,29 +206,29 @@ public class RankRecalculationJobHandler implements JobHandler {
      * Bubbling criteria (Feature F13.8):
      * <ul>
      * <li>Site must be in a child category of the specified parent</li>
-     * <li>Site must have score ≥ 10</li>
+     * <li>Site must have wilsonScore ≥ 0.5 (statistically significant positive rating)</li>
      * <li>Site must have rank ≤ 3 in its category</li>
      * <li>Site must have status = 'approved'</li>
      * </ul>
      *
      * <p>
      * <b>UI Display:</b> Bubbled sites show with yellow background and badge indicating source category. They are
-     * sorted AFTER direct sites but still ordered by score DESC within the bubbled group.
+     * sorted AFTER direct sites but still ordered by wilsonScore DESC within the bubbled group.
      *
      * <p>
      * <b>Example Query Result:</b>
      *
      * <pre>
      * Parent: "Computers"
-     * Child: "Programming" (contains site "GitHub" with score=15, rank=1)
-     * Child: "Linux" (contains site "Ubuntu" with score=12, rank=2)
+     * Child: "Programming" (contains site "GitHub" with wilsonScore=0.85, rank=1)
+     * Child: "Linux" (contains site "Ubuntu" with wilsonScore=0.72, rank=2)
      *
      * Result: [GitHub (from Programming), Ubuntu (from Linux)]
      * </pre>
      *
      * @param parentCategoryId
      *            Parent category UUID
-     * @return List of bubbled sites sorted by score DESC
+     * @return List of bubbled sites sorted by Wilson score DESC
      */
     public static List<DirectorySiteCategory> findBubbledSites(java.util.UUID parentCategoryId) {
         if (parentCategoryId == null) {
@@ -215,7 +243,7 @@ public class RankRecalculationJobHandler implements JobHandler {
         }
 
         // Build query to find bubbled sites across all children
-        // Sites must meet: score >= 10 AND rank <= 3 AND status = 'approved'
+        // Sites must meet: wilsonScore >= 0.5 AND rank <= 3 AND status = 'approved'
         StringBuilder query = new StringBuilder();
         query.append("categoryId IN (");
 
@@ -227,9 +255,9 @@ public class RankRecalculationJobHandler implements JobHandler {
         }
 
         query.append(") AND status = 'approved' ");
-        query.append("AND score >= ").append(BUBBLING_SCORE_THRESHOLD).append(" ");
+        query.append("AND wilsonScore >= ").append(BUBBLING_WILSON_SCORE_THRESHOLD).append(" ");
         query.append("AND rankInCategory <= ").append(BUBBLING_RANK_THRESHOLD).append(" ");
-        query.append("ORDER BY score DESC, createdAt DESC");
+        query.append("ORDER BY wilsonScore DESC, createdAt DESC");
 
         // Extract child IDs as parameters
         Object[] params = children.stream().map(c -> c.id).toArray();

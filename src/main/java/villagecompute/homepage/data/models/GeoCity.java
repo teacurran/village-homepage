@@ -141,9 +141,9 @@ public class GeoCity extends PanacheEntityBase {
      * PostGIS spatial column for radius queries.
      *
      * <p>
-     * Maps to {@code geometry(Point, 4326)} in PostgreSQL. Uses geometry type instead of geography because
-     * Hibernate Spatial 7.x has better support for geometry columns. For distance calculations, we use
-     * ST_DWithin with geography casting in native queries.
+     * Maps to {@code geometry(Point, 4326)} in PostgreSQL. Uses geometry type instead of geography because Hibernate
+     * Spatial 7.x has better support for geometry columns. For distance calculations, we use ST_DWithin with geography
+     * casting in native queries.
      *
      * <p>
      * Populated via:
@@ -288,11 +288,9 @@ public class GeoCity extends PanacheEntityBase {
 
         // ST_MakePoint takes (longitude, latitude) - note the order!
         // Cast both sides to geography for accurate distance calculations
-        return getEntityManager()
-                .createNativeQuery(
-                        "SELECT * FROM geo_cities WHERE ST_DWithin(location::geography, ST_MakePoint(?1, ?2)::geography, ?3)",
-                        GeoCity.class)
-                .setParameter(1, longitude) // X coordinate = longitude
+        return getEntityManager().createNativeQuery(
+                "SELECT * FROM geo_cities WHERE ST_DWithin(location::geography, ST_MakePoint(?1, ?2)::geography, ?3)",
+                GeoCity.class).setParameter(1, longitude) // X coordinate = longitude
                 .setParameter(2, latitude) // Y coordinate = latitude
                 .setParameter(3, radiusMeters).getResultList();
     }
@@ -333,13 +331,12 @@ public class GeoCity extends PanacheEntityBase {
         // Native query that returns Object[] with [column1, column2, ..., distance_miles]
         // We cannot use GeoCity.class result type when adding extra columns
         // Cast geometry to geography for accurate distance calculations
-        List<Object[]> results = getEntityManager()
-                .createNativeQuery(
-                        "SELECT c.id, c.state_id, c.country_id, c.name, c.latitude, c.longitude, c.timezone, c.location, c.created_at, "
-                                + "ST_Distance(c.location::geography, ST_MakePoint(?1, ?2)::geography) / ?4 as distance_miles "
-                                + "FROM geo_cities c "
-                                + "WHERE ST_DWithin(c.location::geography, ST_MakePoint(?1, ?2)::geography, ?3) "
-                                + "ORDER BY distance_miles")
+        List<Object[]> results = getEntityManager().createNativeQuery(
+                "SELECT c.id, c.state_id, c.country_id, c.name, c.latitude, c.longitude, c.timezone, c.location, c.created_at, "
+                        + "ST_Distance(c.location::geography, ST_MakePoint(?1, ?2)::geography) / ?4 as distance_miles "
+                        + "FROM geo_cities c "
+                        + "WHERE ST_DWithin(c.location::geography, ST_MakePoint(?1, ?2)::geography, ?3) "
+                        + "ORDER BY distance_miles")
                 .setParameter(1, longitude) // X coordinate = longitude
                 .setParameter(2, latitude) // Y coordinate = latitude
                 .setParameter(3, radiusMeters).setParameter(4, METERS_PER_MILE).getResultList();
