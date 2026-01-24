@@ -11,12 +11,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.Test;
 
+import villagecompute.homepage.BaseIntegrationTest;
 import villagecompute.homepage.api.types.FeedItemTaggingResultType;
+import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
 import java.util.List;
 
@@ -27,7 +31,8 @@ import java.util.List;
  * Tests SHA-256 content hashing, cache put/get operations, and cache expiration behavior.
  */
 @QuarkusTest
-class AiCacheConfigTest {
+@TestProfile(PostgreSQLTestProfile.class)
+class AiCacheConfigTest extends BaseIntegrationTest {
 
     @Inject
     AiCacheConfig cacheConfig;
@@ -60,6 +65,7 @@ class AiCacheConfigTest {
     }
 
     @Test
+    @Transactional
     void testTaggingCache_putAndGet() {
         String contentHash = cacheConfig.generateContentHash("test article content");
         FeedItemTaggingResultType result = new FeedItemTaggingResultType(List.of("technology", "ai", "testing"),
@@ -88,6 +94,7 @@ class AiCacheConfigTest {
     }
 
     @Test
+    @Transactional
     void testEmbeddingCache_putAndGet() {
         String textHash = cacheConfig.generateContentHash("test text for embedding");
         float[] embedding = new float[]{0.1f, 0.2f, 0.3f, 0.4f, 0.5f};

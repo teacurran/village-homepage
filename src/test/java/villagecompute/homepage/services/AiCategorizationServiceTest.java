@@ -9,12 +9,14 @@ import java.util.UUID;
 import dev.langchain4j.model.chat.ChatModel;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.api.types.AiCategorySuggestionType;
 import villagecompute.homepage.api.types.ContactInfoType;
 import villagecompute.homepage.api.types.ListingCategorizationResultType;
 import villagecompute.homepage.data.models.MarketplaceListing;
+import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -31,6 +33,7 @@ import static org.mockito.Mockito.when;
  * </ul>
  */
 @QuarkusTest
+@TestProfile(PostgreSQLTestProfile.class)
 public class AiCategorizationServiceTest {
 
     @Inject

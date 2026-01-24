@@ -19,6 +19,7 @@ import dev.langchain4j.model.chat.ChatModel;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -26,6 +27,7 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
 import villagecompute.homepage.api.types.FraudAnalysisResultType;
+import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
 /**
  * Tests for AI-powered fraud detection service.
@@ -35,6 +37,7 @@ import villagecompute.homepage.api.types.FraudAnalysisResultType;
  * marketplace listing fraud detection.
  */
 @QuarkusTest
+@TestProfile(PostgreSQLTestProfile.class)
 class FraudDetectionServiceTest {
 
     @Inject

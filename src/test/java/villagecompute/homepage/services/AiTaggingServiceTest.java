@@ -22,6 +22,7 @@ import dev.langchain4j.model.chat.ChatModel;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 
 import jakarta.inject.Inject;
 
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import villagecompute.homepage.api.types.FeedItemTaggingResultType;
 import villagecompute.homepage.data.models.FeedItem;
+import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
 /**
  * Tests for AI-powered content tagging service with batch processing.
@@ -38,6 +40,7 @@ import villagecompute.homepage.data.models.FeedItem;
  * tagging operations.
  */
 @QuarkusTest
+@TestProfile(PostgreSQLTestProfile.class)
 class AiTaggingServiceTest {
 
     @Inject
