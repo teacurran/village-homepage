@@ -6,12 +6,14 @@ import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -92,26 +94,39 @@ public class MarketplaceListingResource {
     SecurityIdentity securityIdentity;
 
     /**
-     * Lists current user's own marketplace listings (all statuses).
+     * Lists current user's own marketplace listings (all statuses) with pagination.
      *
      * <p>
      * Returns listings in all statuses (draft, active, expired, removed) ordered by creation date descending. Used for
      * "My Listings" dashboard showing user's own listings.
      *
-     * @return list of user's listings
+     * <p>
+     * Supports pagination via page/size query parameters. Returns pagination metadata in response headers.
+     *
+     * @param page
+     *            Page number (0-based), default: 0
+     * @param size
+     *            Page size (1-100), default: 20
+     * @return list of user's listings with pagination headers
      */
     @GET
     @Operation(
             summary = "List current user's marketplace listings",
-            description = "Returns all listings created by the authenticated user across all statuses (draft, active, expired, removed)")
+            description = "Returns all listings created by the authenticated user across all statuses (draft, active, expired, removed) with pagination support")
     @SecurityRequirement(
             name = "bearerAuth")
     @APIResponses({@APIResponse(
             responseCode = "200",
-            description = "List of user's listings retrieved successfully",
+            description = "List of user's listings retrieved successfully with pagination headers (X-Total-Count, X-Page-Count, X-Current-Page)",
             content = @Content(
                     schema = @Schema(
                             implementation = ListingType.class))),
+            @APIResponse(
+                    responseCode = "400",
+                    description = "Invalid pagination parameters (size > 100)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
             @APIResponse(
                     responseCode = "401",
                     description = "User not authenticated",
@@ -136,14 +151,46 @@ public class MarketplaceListingResource {
                     content = @Content(
                             schema = @Schema(
                                     implementation = ErrorResponse.class)))})
-    public Response listUserListings() {
+    public Response listUserListings(@Parameter(
+            description = "Page number (0-based)",
+            example = "0") @QueryParam("page") @DefaultValue("0") int page,
+            @Parameter(
+                    description = "Page size (1-100)",
+                    example = "20") @QueryParam("size") @DefaultValue("20") int size) {
+
+        // Validate page size (prevent abuse)
+        if (size > 100) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Page size must not exceed 100")).build();
+        }
+        if (size < 1) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Page size must be at least 1")).build();
+        }
+        if (page < 0) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Page number must be >= 0"))
+                    .build();
+        }
+
         UUID userId = getCurrentUserId();
 
-        List<MarketplaceListing> listings = MarketplaceListing.findByUserId(userId);
+        // Get total count for pagination metadata
+        long totalCount = MarketplaceListing.count("userId = ?1", userId);
+
+        // Apply pagination
+        List<MarketplaceListing> listings = MarketplaceListing.find("userId = ?1 ORDER BY createdAt DESC", userId)
+                .page(io.quarkus.panache.common.Page.of(page, size)).list();
+
         List<ListingType> response = ListingType.fromEntities(listings);
 
-        LOG.infof("Returned %d listings for user %s", response.size(), userId);
-        return Response.ok(response).build();
+        // Calculate pagination metadata
+        int pageCount = (int) Math.ceil((double) totalCount / size);
+
+        LOG.infof("Returned %d listings (page %d of %d, total %d) for user %s", response.size(), page + 1, pageCount,
+                totalCount, userId);
+
+        return Response.ok(response).header("X-Total-Count", totalCount).header("X-Page-Count", pageCount)
+                .header("X-Current-Page", page).build();
     }
 
     /**

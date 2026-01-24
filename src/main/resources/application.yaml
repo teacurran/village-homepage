@@ -73,7 +73,6 @@ quarkus:
     level: INFO
     console:
       # Enable structured JSON logging for production observability
-      json: true
       json:
         # Standard fields automatically included: timestamp, sequence, loggerClassName, loggerName, level, message, threadName, threadId
         # Custom fields added via MDC enrichment (see LoggingEnricher)
@@ -128,6 +127,53 @@ quarkus:
       format:
         # Ignore format mapper warnings - we use standard ObjectMapper for database JSON
         global: ignore
+
+    # Second-level cache configuration (Task I6.T6: Performance optimization)
+    # Enable Caffeine-based second-level entity cache and query cache for static/read-heavy data
+    second-level-caching-enabled: true
+
+    # Per-entity cache configuration
+    cache:
+      # Geographic data (static reference data, 24-hour TTL)
+      "villagecompute.homepage.data.models.GeoCountry":
+        expiration:
+          max-idle: 86400  # 24 hours - countries never change
+
+      "villagecompute.homepage.data.models.GeoState":
+        expiration:
+          max-idle: 86400  # 24 hours - states/provinces rarely change
+
+      "villagecompute.homepage.data.models.GeoCity":
+        expiration:
+          max-idle: 3600  # 1 hour - popular city lookups (153K rows, cache hot cities only)
+
+      # Directory category tree (mostly static, 1-hour TTL)
+      "villagecompute.homepage.data.models.DirectoryCategory":
+        expiration:
+          max-idle: 3600  # 1 hour - category structure updated infrequently
+
+      # Marketplace category taxonomy (static, 24-hour TTL)
+      "villagecompute.homepage.data.models.MarketplaceCategory":
+        expiration:
+          max-idle: 86400  # 24 hours - category taxonomy is fixed
+
+      # Feature flags (configuration data, 5-minute TTL for fast flag updates)
+      "villagecompute.homepage.data.models.FeatureFlag":
+        expiration:
+          max-idle: 300  # 5 minutes - balance between performance and flag update latency
+
+      # RSS sources (read-heavy during feed aggregation, 1-hour TTL)
+      "villagecompute.homepage.data.models.RssSource":
+        expiration:
+          max-idle: 3600  # 1 hour - source metadata changes infrequently
+
+    # Query cache configuration (1-hour default TTL)
+    # Caches query result sets (list of entity IDs) for frequently repeated queries
+    query:
+      cache:
+        enabled: true
+        # Default TTL for cached query results
+        default-ttl: 3600  # 1 hour
 
   # Hibernate Search + Elasticsearch Configuration (Policy P11, Feature F12.2)
   hibernate-search-orm:
@@ -346,8 +392,7 @@ villagecompute:
       full-width: 1600
       full-height: 1200
 
-# Quarkus Mailer SMTP Configuration (Feature F14.3: Email delivery)
-quarkus:
+  # Quarkus Mailer SMTP Configuration (Feature F14.3: Email delivery)
   mailer:
     # Sender email address (overridable per-email via Mail.setFrom)
     from: ${EMAIL_FROM:noreply@villagecompute.com}

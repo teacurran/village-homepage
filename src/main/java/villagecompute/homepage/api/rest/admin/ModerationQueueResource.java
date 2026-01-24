@@ -80,11 +80,14 @@ public class ModerationQueueResource {
     ModerationService moderationService;
 
     /**
-     * Lists all pending flags in moderation queue.
+     * Lists all pending flags in moderation queue with pagination.
      *
      * <p>
      * Returns flags with status=pending, enriched with listing title, status, and user email for context. Ordered by
      * creation date (newest first).
+     *
+     * <p>
+     * Supports pagination via page/size query parameters. Returns pagination metadata in response headers.
      *
      * <p>
      * <b>Example Response:</b>
@@ -108,21 +111,28 @@ public class ModerationQueueResource {
      * ]
      * </pre>
      *
-     * @return List of pending flags with enriched data
+     * @param page
+     *            Page number (0-based), default: 0
+     * @param size
+     *            Page size (1-100), default: 20
+     * @return List of pending flags with enriched data and pagination headers
      */
     @GET
     @Path("/queue")
     @Operation(
             summary = "List pending flags in moderation queue",
-            description = "Returns all pending flags with enriched listing and user details. Requires super_admin role.")
+            description = "Returns all pending flags with enriched listing and user details. Supports pagination. Requires super_admin role.")
     @APIResponses(
             value = {@APIResponse(
                     responseCode = "200",
-                    description = "Success",
+                    description = "Success with pagination headers (X-Total-Count, X-Page-Count, X-Current-Page)",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON,
                             schema = @Schema(
                                     implementation = FlagType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid pagination parameters (size > 100)"),
                     @APIResponse(
                             responseCode = "401",
                             description = "Unauthorized - missing or invalid authentication"),
@@ -132,16 +142,42 @@ public class ModerationQueueResource {
                     @APIResponse(
                             responseCode = "500",
                             description = "Internal server error")})
-    public Response listPendingFlags() {
-        LOG.info("Listing moderation queue (pending flags)");
+    public Response listPendingFlags(@Parameter(
+            description = "Page number (0-based)",
+            example = "0") @QueryParam("page") @DefaultValue("0") int page,
+            @Parameter(
+                    description = "Page size (1-100)",
+                    example = "20") @QueryParam("size") @DefaultValue("20") int size) {
 
-        List<ListingFlag> flags = ListingFlag.findPending();
+        // Validate page size
+        if (size > 100 || size < 1) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"Page size must be 1-100\"}")
+                    .build();
+        }
+        if (page < 0) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"Page must be >= 0\"}").build();
+        }
+
+        LOG.infof("Listing moderation queue (pending flags) - page %d, size %d", page, size);
+
+        // Get total count for pagination
+        long totalCount = ListingFlag.count("status = ?1", "pending");
+
+        // Apply pagination
+        List<ListingFlag> flags = ListingFlag.find("status = ?1 ORDER BY createdAt DESC", "pending")
+                .page(io.quarkus.panache.common.Page.of(page, size)).list();
 
         // Enrich with listing and user details
         List<FlagType> enrichedFlags = flags.stream().map(this::enrichFlag).collect(Collectors.toList());
 
-        LOG.infof("Returning %d pending flags", enrichedFlags.size());
-        return Response.ok(enrichedFlags).build();
+        // Calculate pagination metadata
+        int pageCount = (int) Math.ceil((double) totalCount / size);
+
+        LOG.infof("Returning %d pending flags (page %d of %d, total %d)", enrichedFlags.size(), page + 1, pageCount,
+                totalCount);
+
+        return Response.ok(enrichedFlags).header("X-Total-Count", totalCount).header("X-Page-Count", pageCount)
+                .header("X-Current-Page", page).build();
     }
 
     /**
