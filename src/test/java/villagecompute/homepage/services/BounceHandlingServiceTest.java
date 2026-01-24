@@ -86,21 +86,22 @@ class BounceHandlingServiceTest {
 
         // Assert
         assertTrue(bounceInfo.isPresent(), "Bounce info should be extracted from valid DSN");
-        assertEquals("user@example.com", bounceInfo.get().emailAddress(), "Email address should match");
-        assertEquals("5.1.1", bounceInfo.get().diagnosticCode(), "Diagnostic code should match");
-        assertEquals(BounceType.HARD, bounceInfo.get().bounceType(), "5.1.1 should classify as HARD bounce");
+        if (bounceInfo.isPresent()) {
+            assertEquals("user@example.com", bounceInfo.get().emailAddress(), "Email address should match");
+            assertEquals("5.1.1", bounceInfo.get().diagnosticCode(), "Diagnostic code should match");
+            assertEquals(BounceType.HARD, bounceInfo.get().bounceType(), "5.1.1 should classify as HARD bounce");
+        }
     }
 
     /**
      * Test: Hard bounce (5.x.x) immediately disables email delivery.
      */
     @Test
-    @Transactional
     void testRecordBounce_HardBounce_DisablesEmailImmediately() {
-        // Record hard bounce
+        // Record hard bounce (runs in its own transaction via QuarkusTransaction.requiringNew)
         bounceHandlingService.recordBounce(testUser.email, "5.1.1", "User unknown");
 
-        // Reload user from database
+        // Reload user from database in new transaction to see the change
         User reloadedUser = User.findById(testUser.id);
 
         // Assert email disabled
@@ -140,21 +141,20 @@ class BounceHandlingServiceTest {
      * Test: 5 consecutive soft bounces within 30 days disables email delivery.
      */
     @Test
-    @Transactional
     void testRecordBounce_FiveConsecutiveSoftBounces_DisablesEmail() {
         // Record 4 soft bounces (email should remain enabled)
         for (int i = 0; i < 4; i++) {
             bounceHandlingService.recordBounce(testUser.email, "4.2.2", "Mailbox full - attempt " + (i + 1));
         }
 
-        // Reload and verify still enabled
+        // Reload and verify still enabled (in new transaction)
         User reloadedUser = User.findById(testUser.id);
         assertFalse(reloadedUser.emailDisabled, "Email should NOT be disabled after 4 soft bounces");
 
         // Record 5th soft bounce (should trigger disable)
         bounceHandlingService.recordBounce(testUser.email, "4.2.2", "Mailbox full - final attempt");
 
-        // Reload and verify disabled
+        // Reload and verify disabled (in new transaction)
         reloadedUser = User.findById(testUser.id);
         assertTrue(reloadedUser.emailDisabled, "Email SHOULD be disabled after 5 consecutive soft bounces");
 
@@ -353,10 +353,10 @@ class BounceHandlingServiceTest {
 
         // Part 2: Machine-readable DSN
         MimeBodyPart dsnPart = new MimeBodyPart();
-        dsnPart.setContent(
-                "Reporting-MTA: dns; example.com\n" + "Final-Recipient: rfc822; " + recipient + "\n"
-                        + "Action: failed\n" + "Status: " + statusCode + "\n" + "Diagnostic-Code: smtp; " + reason,
-                "message/delivery-status");
+        String dsnContent = "Reporting-MTA: dns; example.com\n" + "Final-Recipient: rfc822; " + recipient + "\n"
+                + "Action: failed\n" + "Status: " + statusCode + "\n" + "Diagnostic-Code: smtp; " + reason;
+        dsnPart.setText(dsnContent);
+        dsnPart.setHeader("Content-Type", "message/delivery-status");
         multipart.addBodyPart(dsnPart);
 
         message.setContent(multipart);
