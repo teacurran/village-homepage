@@ -187,8 +187,7 @@ class FraudDetectionServiceTest extends BaseIntegrationTest {
         // Create test listing with scam indicators
         User owner = TestFixtures.createTestUser();
         MarketplaceListing listing = TestFixtures.createTestListing(owner, "iPhone 15 Pro Max - $50 - ACT NOW!!!",
-                "URGENT!! Must sell today! Wire transfer only. No questions asked.",
-                new BigDecimal("50.00"));
+                "URGENT!! Must sell today! Wire transfer only. No questions asked.", new BigDecimal("50.00"));
         listing.status = "pending";
         listing.persist();
 

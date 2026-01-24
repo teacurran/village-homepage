@@ -26,8 +26,8 @@ import java.util.Map;
  * </pre>
  *
  * <p>
- * <b>Rationale:</b> Dev Services cannot activate when .env file sets QUARKUS_DATASOURCE_JDBC_URL. This resource provides
- * explicit JDBC URL configuration that overrides .env values.
+ * <b>Rationale:</b> Dev Services cannot activate when .env file sets QUARKUS_DATASOURCE_JDBC_URL. This resource
+ * provides explicit JDBC URL configuration that overrides .env values.
  */
 public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManager {
 
@@ -55,7 +55,8 @@ public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManag
         config.put("quarkus.datasource.password", postgresContainer.getPassword());
         config.put("quarkus.datasource.jdbc.url", postgresContainer.getJdbcUrl());
         config.put("quarkus.datasource.jdbc.driver", "org.postgresql.Driver");
-        config.put("quarkus.datasource.devservices.enabled", "false"); // Disable Dev Services (we're managing container)
+        config.put("quarkus.datasource.devservices.enabled", "false"); // Disable Dev Services (we're managing
+                                                                       // container)
         config.put("quarkus.hibernate-orm.database.generation", "drop-and-create");
         config.put("quarkus.hibernate-orm.log.sql", "false");
         config.put("quarkus.hibernate-orm.sql-load-script", "no-file");

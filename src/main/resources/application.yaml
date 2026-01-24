@@ -325,6 +325,25 @@ villagecompute:
       full-width: 1280
       full-height: 800
 
+# Quarkus Mailer SMTP Configuration (Feature F14.3: Email delivery)
+quarkus:
+  mailer:
+    # Sender email address (overridable per-email via Mail.setFrom)
+    from: ${EMAIL_FROM:noreply@villagecompute.com}
+    # SMTP host (dev: Mailpit localhost, prod: external SMTP relay)
+    host: ${SMTP_HOST:localhost}
+    # SMTP port (dev: 1025 for Mailpit, prod: 587 for TLS)
+    port: ${SMTP_PORT:1025}
+    # SMTP authentication
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    # TLS settings (disabled in dev, required in prod)
+    tls: ${SMTP_TLS:false}
+    start-tls: ${SMTP_START_TLS:DISABLED}
+    auth-methods: ${SMTP_AUTH_METHODS:}
+    # Mock mode (disable to send real emails even in dev)
+    mock: false
+
 # Email Configuration (Features F12.6, F14.3: Marketplace email relay)
 email:
   imap:
@@ -367,6 +386,15 @@ gdpr:
         otlp:
           # Local Jaeger from docker-compose
           endpoint: http://localhost:4318
+    # Dev mode SMTP configuration (Mailpit)
+    mailer:
+      host: localhost
+      port: 1025
+      username: ""
+      password: ""
+      tls: false
+      start-tls: DISABLED
+      mock: false
   # Development cookie settings (HTTP-compatible)
   villagecompute:
     auth:
@@ -412,3 +440,12 @@ gdpr:
           # Set via environment variable: OTEL_EXPORTER_OTLP_ENDPOINT
           endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
           headers: ${OTEL_EXPORTER_OTLP_HEADERS:}
+    # Production SMTP configuration (external SMTP relay with TLS)
+    mailer:
+      host: ${SMTP_HOST}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME}
+      password: ${SMTP_PASSWORD}
+      tls: true
+      start-tls: REQUIRED
+      auth-methods: DIGEST-MD5 CRAM-SHA256 CRAM-SHA1 CRAM-MD5 PLAIN LOGIN
