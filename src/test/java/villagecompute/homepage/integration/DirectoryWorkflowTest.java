@@ -21,9 +21,7 @@ import villagecompute.homepage.services.DirectoryService;
 import villagecompute.homepage.services.DirectoryVotingService;
 import villagecompute.homepage.services.KarmaService;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static villagecompute.homepage.TestConstants.*;
@@ -150,9 +148,9 @@ public class DirectoryWorkflowTest extends WireMockTestBase {
         // For this integration test, we verify the workflow can be initiated
         // In production, the job would be triggered with:
         // Map<String, Object> screenshotPayload = Map.of(
-        //     "siteId", site.id.toString(),
-        //     "url", site.url,
-        //     "isRecapture", false
+        // "siteId", site.id.toString(),
+        // "url", site.url,
+        // "isRecapture", false
         // );
         // screenshotJobHandler.execute(1L, screenshotPayload);
 
@@ -165,8 +163,7 @@ public class DirectoryWorkflowTest extends WireMockTestBase {
         // Verify: Screenshot URL stored
         updatedSite = DirectorySite.findById(site.id);
         assertNotNull(updatedSite.screenshotUrl, "Screenshot URL should be set");
-        assertTrue(updatedSite.screenshotUrl.contains(".webp"),
-                "Screenshot should be WebP format");
+        assertTrue(updatedSite.screenshotUrl.contains(".webp"), "Screenshot should be WebP format");
 
         // 7. Moderator reviews and approves site
         updatedSite.status = DIRECTORY_STATUS_APPROVED;
@@ -252,7 +249,8 @@ public class DirectoryWorkflowTest extends WireMockTestBase {
         assertEquals(1, vote.vote, "Vote value should be 1 (upvote)");
 
         // 4. Verify: Vote exists
-        java.util.Optional<DirectoryVote> existingVote = DirectoryVote.findByUserAndSiteCategory(siteCategory.id, voter.id);
+        java.util.Optional<DirectoryVote> existingVote = DirectoryVote.findByUserAndSiteCategory(siteCategory.id,
+                voter.id);
         assertTrue(existingVote.isPresent(), "User should have voted on site-category");
 
         // 5. Manually trigger rank recalculation job
@@ -333,10 +331,9 @@ public class DirectoryWorkflowTest extends WireMockTestBase {
         site.persist();
 
         // 3. Stub HTTP response (404 Not Found - site is dead)
-        wireMockServer.stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(
-                com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo("/dead-site"))
-                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
-                        .withStatus(404)
+        wireMockServer.stubFor(com.github.tomakehurst.wiremock.client.WireMock
+                .get(com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo("/dead-site"))
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse().withStatus(404)
                         .withBody("Not Found")));
 
         // 4. Manually trigger link health check job (checks ALL approved sites)

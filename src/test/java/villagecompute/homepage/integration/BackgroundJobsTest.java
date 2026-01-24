@@ -44,8 +44,8 @@ import static villagecompute.homepage.TestConstants.*;
  * </ul>
  *
  * <p>
- * <b>Note:</b> These tests manually trigger job execution without relying on the Quartz scheduler.
- * This allows deterministic testing without waiting for scheduler intervals.
+ * <b>Note:</b> These tests manually trigger job execution without relying on the Quartz scheduler. This allows
+ * deterministic testing without waiting for scheduler intervals.
  *
  * <p>
  * <b>Ref:</b> Task I6.T7 (Background Jobs Tests)
@@ -103,8 +103,10 @@ public class BackgroundJobsTest extends WireMockTestBase {
         // 1. Setup: Create RSS source with unique URL to avoid conflicts
         // Note: Do NOT use @Transactional - job handlers manage their own transactions
         UUID sourceId = io.quarkus.narayana.jta.QuarkusTransaction.requiringNew().call(() -> {
-            String uniqueUrl = "https://example-" + java.util.UUID.randomUUID().toString().substring(0, 8) + ".com/feed.xml";
-            RssSource source = TestFixtures.createTestRssSource(uniqueUrl, "Test Feed " + java.util.UUID.randomUUID().toString().substring(0, 8));
+            String uniqueUrl = "https://example-" + java.util.UUID.randomUUID().toString().substring(0, 8)
+                    + ".com/feed.xml";
+            RssSource source = TestFixtures.createTestRssSource(uniqueUrl,
+                    "Test Feed " + java.util.UUID.randomUUID().toString().substring(0, 8));
             source.lastFetchedAt = Instant.now().minusSeconds(3600); // Last fetched 1 hour ago
             source.persist();
             assertNotNull(source.id, "RSS source should be created with ID");
@@ -148,12 +150,10 @@ public class BackgroundJobsTest extends WireMockTestBase {
                 </rss>
                 """.formatted(guid1, guid2);
 
-        wireMockServer.stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(
-                com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo("/rss.xml"))
-                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/rss+xml")
-                        .withBody(rssFeedXml)));
+        wireMockServer.stubFor(com.github.tomakehurst.wiremock.client.WireMock
+                .get(com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo("/rss.xml"))
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse().withStatus(200)
+                        .withHeader("Content-Type", "application/rss+xml").withBody(rssFeedXml)));
 
         // Update source URL to point to WireMock and set lastFetchedAt to null to trigger refresh
         io.quarkus.narayana.jta.QuarkusTransaction.requiringNew().run(() -> {
@@ -191,10 +191,7 @@ public class BackgroundJobsTest extends WireMockTestBase {
         // 5. Verify: Feed items have correct data
         FeedItem item1 = io.quarkus.narayana.jta.QuarkusTransaction.requiringNew().call(() -> {
             List<FeedItem> allItems = FeedItem.find("sourceId", sourceId).list();
-            return allItems.stream()
-                    .filter(i -> i.itemGuid.equals(guid1))
-                    .findFirst()
-                    .orElse(null);
+            return allItems.stream().filter(i -> i.itemGuid.equals(guid1)).findFirst().orElse(null);
         });
         assertNotNull(item1, "First feed item should exist");
         assertEquals("Breaking News: AI Breakthrough", item1.title, "Item title should match RSS");
@@ -248,8 +245,8 @@ public class BackgroundJobsTest extends WireMockTestBase {
      * </ul>
      *
      * <p>
-     * <b>Note:</b> This test simulates email digest logic without actually sending emails.
-     * In a full integration test, GreenMail would verify email delivery.
+     * <b>Note:</b> This test simulates email digest logic without actually sending emails. In a full integration test,
+     * GreenMail would verify email delivery.
      */
     @Test
     public void testEmailDigest() {
@@ -290,10 +287,8 @@ public class BackgroundJobsTest extends WireMockTestBase {
 
         // 2. Verify: User has 3 unread notifications
         QuarkusTransaction.requiringNew().run(() -> {
-            List<UserNotification> unreadNotifications = UserNotification.find(
-                    "userId = ?1 AND readAt IS NULL ORDER BY createdAt DESC",
-                    userId
-            ).list();
+            List<UserNotification> unreadNotifications = UserNotification
+                    .find("userId = ?1 AND readAt IS NULL ORDER BY createdAt DESC", userId).list();
             assertEquals(3, unreadNotifications.size(), "User should have 3 unread notifications");
 
             // 3. Simulate email digest job execution

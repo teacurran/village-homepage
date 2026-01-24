@@ -15,7 +15,6 @@ import villagecompute.homepage.services.EmailNotificationService;
 import villagecompute.homepage.services.OAuthService;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static villagecompute.homepage.TestConstants.*;
@@ -89,8 +88,8 @@ public class UserJourneyTest extends WireMockTestBase {
      * </ul>
      *
      * <p>
-     * <b>Note:</b> This test focuses on database state and entity relationships.
-     * OAuth integration and account merging are tested separately in unit tests.
+     * <b>Note:</b> This test focuses on database state and entity relationships. OAuth integration and account merging
+     * are tested separately in unit tests.
      */
     @Test
     @Transactional
@@ -144,8 +143,8 @@ public class UserJourneyTest extends WireMockTestBase {
      * </ul>
      *
      * <p>
-     * <b>Note:</b> This test verifies notification creation.
-     * In a full integration test, GreenMail would verify email delivery.
+     * <b>Note:</b> This test verifies notification creation. In a full integration test, GreenMail would verify email
+     * delivery.
      */
     @Test
     @Transactional
@@ -172,8 +171,7 @@ public class UserJourneyTest extends WireMockTestBase {
         // 4. Verify: Notification can be queried
         UserNotification retrievedNotification = UserNotification.findById(notification.id);
         assertNotNull(retrievedNotification, "Notification should be retrievable");
-        assertEquals("Welcome to Village Homepage", retrievedNotification.title,
-                "Notification title should match");
+        assertEquals("Welcome to Village Homepage", retrievedNotification.title, "Notification title should match");
 
         // Note: Email delivery would happen via EmailNotificationService in production
         // For this end-to-end test, we verify notification creation and retrieval
@@ -213,18 +211,13 @@ public class UserJourneyTest extends WireMockTestBase {
         // 3. Verify: Preferences updated successfully
         User updatedUser = User.findById(user.id);
         assertNotNull(updatedUser.preferences, "Preferences should not be null");
-        assertEquals("dark", updatedUser.preferences.get("theme"),
-                "Theme preference should be 'dark'");
-        assertEquals(true, updatedUser.preferences.get("notifications_enabled"),
-                "Notifications should be enabled");
-        assertEquals("en", updatedUser.preferences.get("language"),
-                "Language should be 'en'");
+        assertEquals("dark", updatedUser.preferences.get("theme"), "Theme preference should be 'dark'");
+        assertEquals(true, updatedUser.preferences.get("notifications_enabled"), "Notifications should be enabled");
+        assertEquals("en", updatedUser.preferences.get("language"), "Language should be 'en'");
 
         // 4. Verify: Preferences persisted to JSONB column
         // JSONB allows efficient querying and indexing of JSON data
-        assertTrue(updatedUser.preferences.containsKey("theme"),
-                "Preferences should contain theme key");
-        assertEquals(3, updatedUser.preferences.size(),
-                "Preferences should have 3 entries");
+        assertTrue(updatedUser.preferences.containsKey("theme"), "Preferences should contain theme key");
+        assertEquals(3, updatedUser.preferences.size(), "Preferences should have 3 entries");
     }
 }

@@ -1,0 +1,291 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags: v1.0.0, v1.2.3, etc.
+  workflow_dispatch:  # Allow manual triggering with tag selection
+    inputs:
+      tag:
+        description: 'Tag to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  JAVA_VERSION: '21'
+  NODE_VERSION: '20.10.0'
+  MAVEN_CLI_OPTS: '-B --no-transfer-progress'
+
+jobs:
+  deploy:
+    name: Build and Deploy to Production K3s
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # ================================
+      # 1. Checkout and Version Extraction
+      # ================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Deploying version: ${VERSION}"
+
+      # ================================
+      # 2. Setup Build Environment
+      # ================================
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # ================================
+      # 3. Cache Dependencies
+      # ================================
+      - name: Cache Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Cache Node installation
+        uses: actions/cache@v4
+        with:
+          path: target/node
+          key: ${{ runner.os }}-node-${{ hashFiles('pom.xml') }}-${{ env.NODE_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # ================================
+      # 4. Build Frontend Assets
+      # ================================
+      - name: Install dependencies
+        run: node tools/install.cjs
+
+      - name: Build frontend assets
+        run: npm run build
+
+      # ================================
+      # 5. Run Tests with Coverage
+      # ================================
+      - name: Run tests with coverage
+        run: ./mvnw verify -DskipITs=false ${{ env.MAVEN_CLI_OPTS }}
+        env:
+          QUARKUS_TEST_NATIVE_IMAGE_PROFILE: test
+          QUARKUS_LANGCHAIN4J_ANTHROPIC_ENABLED: false
+
+      - name: Verify coverage thresholds
+        run: ./mvnw jacoco:report ${{ env.MAVEN_CLI_OPTS }}
+
+      # ================================
+      # 6. Build and Push Container Image
+      # ================================
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push container image with Jib
+        run: |
+          ./mvnw package jib:build ${{ env.MAVEN_CLI_OPTS }} \
+            -DskipTests \
+            -Djib.to.image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }} \
+            -Djib.to.tags=latest,prod-${{ steps.version.outputs.VERSION }}
+        env:
+          # Jib uses GITHUB_TOKEN for authentication via docker/login-action
+
+      # ================================
+      # 7. Deploy to K3s (Manual Step - Requires VPN)
+      # ================================
+      # NOTE: This step requires a self-hosted runner with WireGuard VPN access to the K3s cluster.
+      # For security, we do NOT expose K3s API publicly or use long-lived kubeconfig credentials in GitHub.
+      #
+      # Alternative deployment approaches:
+      # 1. Self-hosted runner with VPN access (recommended for production)
+      # 2. SSH tunneling via bastion host
+      # 3. GitHub Actions runner deployed in VillageCompute network
+      #
+      # For now, this is a manual deployment step after the container image is pushed.
+
+      - name: Deployment Instructions
+        run: |
+          echo "==================================================================="
+          echo "Container image pushed successfully:"
+          echo "  Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}"
+          echo "  Tags: latest, prod-${{ steps.version.outputs.VERSION }}"
+          echo ""
+          echo "To deploy to production K3s cluster:"
+          echo "  1. Connect to VillageCompute network via WireGuard VPN"
+          echo "  2. Run the following commands:"
+          echo ""
+          echo "     # Update deployment image"
+          echo "     kubectl set image deployment/village-homepage \\"
+          echo "       village-homepage=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }} \\"
+          echo "       -n homepage-prod"
+          echo ""
+          echo "     # Monitor rollout"
+          echo "     kubectl rollout status deployment/village-homepage -n homepage-prod"
+          echo ""
+          echo "     # Verify deployment"
+          echo "     kubectl get pods -n homepage-prod"
+          echo ""
+          echo "  3. Run smoke tests (see step below)"
+          echo "==================================================================="
+
+      # ================================
+      # 8. Run Smoke Tests
+      # ================================
+      # These smoke tests verify the deployed application is healthy.
+      # Uncomment when self-hosted runner with VPN access is configured.
+
+      # - name: Wait for deployment
+      #   run: sleep 30
+
+      # - name: Health check - Readiness
+      #   run: |
+      #     curl -f https://homepage.villagecompute.com/q/health/ready || exit 1
+      #     echo "✅ Readiness check passed"
+
+      # - name: Health check - Liveness
+      #   run: |
+      #     curl -f https://homepage.villagecompute.com/q/health/live || exit 1
+      #     echo "✅ Liveness check passed"
+
+      # - name: Metrics endpoint check
+      #   run: |
+      #     curl -f https://homepage.villagecompute.com/q/metrics | grep "jvm_memory" || exit 1
+      #     echo "✅ Metrics endpoint accessible"
+
+      # - name: Homepage load test
+      #   run: |
+      #     curl -f https://homepage.villagecompute.com/ || exit 1
+      #     echo "✅ Homepage loads successfully"
+
+      # ================================
+      # 9. Notification (Optional - Slack)
+      # ================================
+      # Uncomment when Slack webhook is configured
+
+      # - name: Notify Slack on Success
+      #   if: success()
+      #   uses: slackapi/slack-github-action@v1
+      #   with:
+      #     payload: |
+      #       {
+      #         "text": "✅ Production deployment successful: ${{ steps.version.outputs.VERSION }}",
+      #         "blocks": [
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*Production Deployment: SUCCESS* ✅\n*Version:* ${{ steps.version.outputs.VERSION }}\n*Deployed by:* ${{ github.actor }}\n*Image:* `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}`"
+      #             }
+      #           },
+      #           {
+      #             "type": "actions",
+      #             "elements": [
+      #               {
+      #                 "type": "button",
+      #                 "text": {
+      #                   "type": "plain_text",
+      #                   "text": "View Logs"
+      #                 },
+      #                 "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      #               },
+      #               {
+      #                 "type": "button",
+      #                 "text": {
+      #                   "type": "plain_text",
+      #                   "text": "View Application"
+      #                 },
+      #                 "url": "https://homepage.villagecompute.com"
+      #               }
+      #             ]
+      #           }
+      #         ]
+      #       }
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # - name: Notify Slack on Failure
+      #   if: failure()
+      #   uses: slackapi/slack-github-action@v1
+      #   with:
+      #     payload: |
+      #       {
+      #         "text": "❌ Production deployment failed: ${{ steps.version.outputs.VERSION }}",
+      #         "blocks": [
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*Production Deployment: FAILED* ❌\n*Version:* ${{ steps.version.outputs.VERSION }}\n*Triggered by:* ${{ github.actor }}\n*Error:* Check workflow logs for details"
+      #             }
+      #           },
+      #           {
+      #             "type": "actions",
+      #             "elements": [
+      #               {
+      #                 "type": "button",
+      #                 "text": {
+      #                   "type": "plain_text",
+      #                   "text": "View Logs"
+      #                 },
+      #                 "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+      #                 "style": "danger"
+      #               }
+      #             ]
+      #           }
+      #         ]
+      #       }
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # ================================
+      # 10. Upload Build Artifacts
+      # ================================
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ steps.version.outputs.VERSION }}
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+            target/site/jacoco/
+
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ steps.version.outputs.VERSION }}
+          path: |
+            target/*.jar
+            target/site/jacoco/jacoco.xml

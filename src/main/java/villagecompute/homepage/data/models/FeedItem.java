@@ -56,9 +56,10 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "feed_items",
-        indexes = {
-                @Index(name = "idx_feed_items_guid", columnList = "item_guid", unique = true)
-        })
+        indexes = {@Index(
+                name = "idx_feed_items_guid",
+                columnList = "item_guid",
+                unique = true)})
 @NamedQuery(
         name = FeedItem.QUERY_FIND_BY_GUID,
         query = FeedItem.JPQL_FIND_BY_GUID)

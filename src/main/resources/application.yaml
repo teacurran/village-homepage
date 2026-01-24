@@ -506,6 +506,30 @@ gdpr:
 
 "%prod":
   quarkus:
+    # Database connection pool tuning (Task I6.T8: max 50 connections)
+    datasource:
+      jdbc:
+        max-size: 50
+        min-size: 10
+        initial-size: 10
+        acquisition-timeout: 10s
+        leak-detection-interval: 2m
+
+    # Cache configuration tuning for production load
+    cache:
+      caffeine:
+        "ai-tagging-cache":
+          maximum-size: 50000  # Increased from 10000 for production
+        "ai-embedding-cache":
+          maximum-size: 25000  # Increased from 5000 for production
+
+    # HTTP server tuning for production workload
+    http:
+      limits:
+        max-body-size: 50M
+      io-threads: 8
+      worker-threads: 100
+
     log:
       console:
         json: true

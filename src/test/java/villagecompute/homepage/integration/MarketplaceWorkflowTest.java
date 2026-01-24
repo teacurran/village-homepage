@@ -145,11 +145,11 @@ public class MarketplaceWorkflowTest extends WireMockTestBase {
 
         // In production, the job would be triggered with:
         // Map<String, Object> imagePayload = Map.of(
-        //     "imageId", mockImage.id.toString(),
-        //     "listingId", listing.id.toString(),
-        //     "originalKey", mockImage.storageKey,
-        //     "originalFilename", mockImage.originalFilename,
-        //     "displayOrder", mockImage.displayOrder
+        // "imageId", mockImage.id.toString(),
+        // "listingId", listing.id.toString(),
+        // "originalKey", mockImage.storageKey,
+        // "originalFilename", mockImage.originalFilename,
+        // "displayOrder", mockImage.displayOrder
         // );
         // imageProcessingJobHandler.execute(2L, imagePayload);
 
@@ -254,8 +254,8 @@ public class MarketplaceWorkflowTest extends WireMockTestBase {
         assertEquals(buyer.email, reply.toEmail, "Reply should be to buyer");
 
         // 8. Verify: Message thread exists
-        List<MarketplaceMessage> thread = MarketplaceMessage.find("listingId = ?1 ORDER BY createdAt ASC",
-                listing.id).list();
+        List<MarketplaceMessage> thread = MarketplaceMessage.find("listingId = ?1 ORDER BY createdAt ASC", listing.id)
+                .list();
         assertEquals(2, thread.size(), "Thread should contain 2 messages");
         assertEquals(message.id, thread.get(0).id, "First message should be buyer's question");
         assertEquals(reply.id, thread.get(1).id, "Second message should be seller's reply");
@@ -349,7 +349,6 @@ public class MarketplaceWorkflowTest extends WireMockTestBase {
 
         // 11. Verify: Listing no longer active
         List<MarketplaceListing> activeListings = MarketplaceListing.find("status = ?1", "active").list();
-        assertFalse(activeListings.contains(removedListing),
-                "Removed listing should not appear in active listings");
+        assertFalse(activeListings.contains(removedListing), "Removed listing should not appear in active listings");
     }
 }
