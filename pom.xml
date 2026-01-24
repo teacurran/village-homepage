@@ -299,18 +299,23 @@
             <artifactId>quarkus-test-security-oidc</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- NOTE: H2 required for legacy tests using @QuarkusTestResource(H2TestResource.class) -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-test-h2</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- NOTE: H2 required for legacy tests using H2TestResource -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jdbc-h2</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- New tests using PostgreSQLTestProfile override H2 with PostgreSQL Testcontainers -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- New tests using BaseIntegrationTest use PostgreSQL Testcontainers via Dev Services -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5-mockito</artifactId>
