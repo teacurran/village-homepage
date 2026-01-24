@@ -7,6 +7,13 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.KarmaSummaryType;
 import villagecompute.homepage.data.models.User;
@@ -26,6 +33,9 @@ import java.util.UUID;
  */
 @Path("/api/karma")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Profile",
+        description = "User profile and karma operations")
 public class KarmaResource {
 
     private static final Logger LOG = Logger.getLogger(KarmaResource.class);
@@ -44,6 +54,34 @@ public class KarmaResource {
      */
     @GET
     @Path("/me")
+    @Operation(
+            summary = "Get current user's karma",
+            description = "Retrieve current user's karma summary with trust level and privileges")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Karma summary returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = KarmaSummaryType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response getMyKarma() {
         // Extract user ID from security context
         String userIdStr = securityContext.getUserPrincipal().getName();

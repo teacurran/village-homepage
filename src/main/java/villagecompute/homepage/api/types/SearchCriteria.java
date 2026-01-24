@@ -1,5 +1,7 @@
 package villagecompute.homepage.api.types;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -70,9 +72,70 @@ import java.util.UUID;
  * @see villagecompute.homepage.services.MarketplaceSearchService
  * @see SearchResultsType
  */
-public record SearchCriteria(String query, UUID categoryId, BigDecimal minPrice, BigDecimal maxPrice, Long geoCityId,
-        Integer radiusMiles, Boolean hasImages, Instant minDate, Instant maxDate, String sortBy, int offset,
-        int limit) {
+@Schema(
+        description = "Search criteria for marketplace listing queries with text search and geographic filtering")
+public record SearchCriteria(@Schema(
+        description = "Full-text search query (searches title and description)",
+        example = "bicycle",
+        nullable = true) String query,
+
+        @Schema(
+                description = "Filter by marketplace category UUID",
+                example = "770e8400-e29b-41d4-a716-446655440002",
+                nullable = true) UUID categoryId,
+
+        @Schema(
+                description = "Minimum price in USD (inclusive)",
+                example = "100.00",
+                nullable = true) BigDecimal minPrice,
+
+        @Schema(
+                description = "Maximum price in USD (inclusive)",
+                example = "500.00",
+                nullable = true) BigDecimal maxPrice,
+
+        @Schema(
+                description = "Center location for radius search (geo_cities.id)",
+                example = "5128581",
+                nullable = true) Long geoCityId,
+
+        @Schema(
+                description = "Radius in miles",
+                example = "25",
+                enumeration = {
+                        "5", "10", "25", "50", "100", "250"},
+                nullable = true) Integer radiusMiles,
+
+        @Schema(
+                description = "Filter to listings with at least one image",
+                example = "true",
+                nullable = true) Boolean hasImages,
+
+        @Schema(
+                description = "Filter to listings created on or after this date",
+                example = "2026-01-01T00:00:00Z",
+                nullable = true) Instant minDate,
+
+        @Schema(
+                description = "Filter to listings created on or before this date",
+                example = "2026-01-31T23:59:59Z",
+                nullable = true) Instant maxDate,
+
+        @Schema(
+                description = "Sorting option",
+                example = "newest",
+                enumeration = {"newest", "price_asc", "price_desc", "distance"},
+                nullable = true) String sortBy,
+
+        @Schema(
+                description = "Pagination offset (0-based)",
+                example = "0",
+                required = true) int offset,
+
+        @Schema(
+                description = "Results per page (1-100)",
+                example = "25",
+                required = true) int limit){
 
     /** Valid radius values in miles. */
     private static final List<Integer> VALID_RADIUS_VALUES = List.of(5, 10, 25, 50, 100, 250);

@@ -27,6 +27,14 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 
 import villagecompute.homepage.api.types.AiUsageType;
@@ -65,6 +73,11 @@ import villagecompute.homepage.services.BudgetAction;
  * @see AiTaggingBudgetService
  */
 @Path("/admin/api/ai-usage")
+@Tag(
+        name = "Admin - Analytics",
+        description = "Admin endpoints for AI usage monitoring and budget management (requires super_admin or ops role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed({"super_admin", "ops"})
@@ -107,7 +120,28 @@ public class AiUsageResource {
      * @return current month usage with budget state
      */
     @GET
-    public Response getCurrentMonthUsage(@QueryParam("provider") String provider) {
+    @Operation(
+            summary = "Get current month AI usage",
+            description = "Returns current month AI usage summary with budget action. Requires super_admin or ops role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = AiUsageType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin or ops role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getCurrentMonthUsage(@Parameter(
+            description = "AI provider (default: anthropic)") @QueryParam("provider") String provider) {
         String targetProvider = provider != null ? provider : AiUsageTracking.DEFAULT_PROVIDER;
 
         LOG.debugf("Fetching current month AI usage: provider=%s", targetProvider);
@@ -142,8 +176,30 @@ public class AiUsageResource {
      */
     @GET
     @Path("/history")
-    public Response getUsageHistory(@QueryParam("provider") String provider,
-            @QueryParam("months") @Min(1) @Max(24) Integer months) {
+    @Operation(
+            summary = "Get historical AI usage",
+            description = "Returns historical AI usage for last N months. Requires super_admin or ops role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = AiUsageType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin or ops role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getUsageHistory(@Parameter(
+            description = "AI provider (default: anthropic)") @QueryParam("provider") String provider,
+            @Parameter(
+                    description = "Number of months (1-24, default 12)") @QueryParam("months") @Min(1) @Max(24) Integer months) {
 
         String targetProvider = provider != null ? provider : AiUsageTracking.DEFAULT_PROVIDER;
         int monthsToFetch = months != null ? months : 12;
@@ -207,7 +263,32 @@ public class AiUsageResource {
     @PATCH
     @Path("/{month}/budget")
     @Transactional
-    public Response updateBudgetLimit(@PathParam("month") String monthStr, Map<String, Object> request) {
+    @Operation(
+            summary = "Update AI budget limit",
+            description = "Updates budget limit for a specific month. All mutations are logged for audit trail. Requires super_admin or ops role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - budget limit updated",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = AiUsageType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid month format or budget value"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin or ops role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response updateBudgetLimit(@Parameter(
+            description = "Month (YYYY-MM format)",
+            required = true) @PathParam("month") String monthStr, Map<String, Object> request) {
 
         // Parse month
         YearMonth month;

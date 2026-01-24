@@ -12,6 +12,14 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.CreateDirectoryCategoryRequestType;
 import villagecompute.homepage.api.types.DirectoryCategoryType;
@@ -49,6 +57,11 @@ import java.util.UUID;
  * team to quickly adjust taxonomy. See ops documentation for import file format.
  */
 @Path("/admin/api/directory/categories")
+@Tag(
+        name = "Admin - Categories",
+        description = "Admin endpoints for directory category management (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @RolesAllowed("super_admin")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -66,6 +79,26 @@ public class DirectoryCategoryResource {
      * @return list of all categories
      */
     @GET
+    @Operation(
+            summary = "List all directory categories",
+            description = "Returns all directory categories in flat list, ordered hierarchically. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = DirectoryCategoryType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response listCategories() {
         List<DirectoryCategory> categories = DirectoryCategory.findAllOrdered();
         List<DirectoryCategoryType> response = DirectoryCategoryType.fromEntities(categories);
@@ -83,6 +116,22 @@ public class DirectoryCategoryResource {
      */
     @GET
     @Path("/tree")
+    @Operation(
+            summary = "Get category tree",
+            description = "Returns hierarchical directory category tree with nested children. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response getCategoryTree() {
         List<DirectoryCategory.CategoryNode> tree = DirectoryCategory.buildCategoryTree();
         return Response.ok(tree).build();
@@ -97,7 +146,32 @@ public class DirectoryCategoryResource {
      */
     @GET
     @Path("/{id}")
-    public Response getCategory(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Get directory category by ID",
+            description = "Returns a single directory category by ID. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = DirectoryCategoryType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Category not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getCategory(@Parameter(
+            description = "Category UUID",
+            required = true) @PathParam("id") UUID id) {
         DirectoryCategory category = DirectoryCategory.findById(id);
         if (category == null) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ErrorResponse("Category not found: " + id))
@@ -118,6 +192,32 @@ public class DirectoryCategoryResource {
      * @return created category configuration with 201 Created status
      */
     @POST
+    @Operation(
+            summary = "Create directory category",
+            description = "Creates a new directory category. Validates slug uniqueness and parent existence. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "201",
+                    description = "Created",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = DirectoryCategoryType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid request body"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "409",
+                            description = "Conflict - slug already exists or parent not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response createCategory(@Valid CreateDirectoryCategoryRequestType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
@@ -179,7 +279,38 @@ public class DirectoryCategoryResource {
      */
     @PATCH
     @Path("/{id}")
-    public Response updateCategory(@PathParam("id") UUID id, @Valid UpdateDirectoryCategoryRequestType request) {
+    @Operation(
+            summary = "Update directory category",
+            description = "Updates a directory category with partial update support. Validates slug uniqueness if changed. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - category updated",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = DirectoryCategoryType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid request body"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Category not found"),
+                    @APIResponse(
+                            responseCode = "409",
+                            description = "Conflict - slug already exists"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response updateCategory(@Parameter(
+            description = "Category UUID",
+            required = true) @PathParam("id") UUID id, @Valid UpdateDirectoryCategoryRequestType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
                     .build();
@@ -246,7 +377,31 @@ public class DirectoryCategoryResource {
      */
     @DELETE
     @Path("/{id}")
-    public Response deleteCategory(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Delete directory category",
+            description = "Deletes a directory category if it has no children or associated sites. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "204",
+                    description = "Success - category deleted"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Category not found"),
+                    @APIResponse(
+                            responseCode = "409",
+                            description = "Conflict - category has children or associated sites"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response deleteCategory(@Parameter(
+            description = "Category UUID",
+            required = true) @PathParam("id") UUID id) {
         try {
             DirectoryCategory.deleteIfSafe(id);
             LOG.infof("Deleted directory category: id=%s", id);

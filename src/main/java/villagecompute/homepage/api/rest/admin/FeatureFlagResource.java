@@ -11,6 +11,14 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.FeatureFlagType;
 import villagecompute.homepage.api.types.UpdateFeatureFlagRequestType;
@@ -40,6 +48,11 @@ import java.util.Optional;
  * P14 traceability requirements.
  */
 @Path("/admin/api/feature-flags")
+@Tag(
+        name = "Admin - Feature Flags",
+        description = "Admin endpoints for feature flag management (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @RolesAllowed("super_admin")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -56,6 +69,26 @@ public class FeatureFlagResource {
      * @return list of all flags with full configuration
      */
     @GET
+    @Operation(
+            summary = "List all feature flags",
+            description = "Returns list of all feature flags with full configuration. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = FeatureFlagType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response listFlags() {
         List<FeatureFlag> flags = featureFlagService.getAllFlags();
         List<FeatureFlagType> response = flags.stream().map(this::toType).toList();
@@ -71,7 +104,32 @@ public class FeatureFlagResource {
      */
     @GET
     @Path("/{key}")
-    public Response getFlag(@PathParam("key") String key) {
+    @Operation(
+            summary = "Get feature flag by key",
+            description = "Returns a single feature flag configuration by key. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = FeatureFlagType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Feature flag not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getFlag(@Parameter(
+            description = "Feature flag key",
+            required = true) @PathParam("key") String key) {
         Optional<FeatureFlag> flag = featureFlagService.getFlag(key);
         if (flag.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
@@ -94,7 +152,35 @@ public class FeatureFlagResource {
      */
     @PATCH
     @Path("/{key}")
-    public Response updateFlag(@PathParam("key") String key, @Valid UpdateFeatureFlagRequestType request) {
+    @Operation(
+            summary = "Update feature flag",
+            description = "Updates a feature flag configuration with partial update support. All mutations are logged to audit trail. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - flag updated",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = FeatureFlagType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid request body"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Feature flag not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response updateFlag(@Parameter(
+            description = "Feature flag key",
+            required = true) @PathParam("key") String key, @Valid UpdateFeatureFlagRequestType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
                     .build();

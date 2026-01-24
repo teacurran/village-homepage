@@ -8,6 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
@@ -77,6 +84,9 @@ import villagecompute.homepage.services.WeatherService;
  */
 @Path("/api/widgets/weather")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Widgets",
+        description = "Homepage widget data operations")
 public class WeatherWidgetResource {
 
     private static final Logger LOG = Logger.getLogger(WeatherWidgetResource.class);
@@ -102,6 +112,39 @@ public class WeatherWidgetResource {
      * @return 200 OK with weather data array, 401 if not authenticated, 429 if rate limited
      */
     @GET
+    @Operation(
+            summary = "Get weather widget data",
+            description = "Retrieve weather data for all user-configured locations with 1-hour caching")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Weather data returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = WeatherWidgetType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to retrieve weather data",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response getWeather(@Context SecurityContext securityContext) {
         // Extract user ID from security context
         UUID userId = extractUserId(securityContext);

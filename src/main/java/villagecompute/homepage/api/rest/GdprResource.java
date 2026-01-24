@@ -13,6 +13,12 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.data.models.GdprRequest;
 import villagecompute.homepage.data.models.User;
@@ -52,6 +58,9 @@ import java.util.UUID;
 @Path("/api/gdpr")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "GDPR",
+        description = "GDPR data access and erasure operations")
 public class GdprResource {
 
     private static final Logger LOG = Logger.getLogger(GdprResource.class);
@@ -86,6 +95,37 @@ public class GdprResource {
     @Path("/export")
     @Authenticated
     @Transactional
+    @Operation(
+            summary = "Request GDPR data export",
+            description = "Request export of all user data (GDPR Article 15). Receive email with download link within 24 hours.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "202",
+                    description = "Export request accepted and queued",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Export request already in progress",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response requestExport(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
         String principalName = identity.getPrincipal().getName();
         UUID userId;
@@ -176,6 +216,37 @@ public class GdprResource {
     @Path("/delete")
     @Authenticated
     @Transactional
+    @Operation(
+            summary = "Request GDPR account deletion",
+            description = "Request permanent deletion of all user data (GDPR Article 17). WARNING: This is irreversible.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "202",
+                    description = "Deletion request accepted and queued",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Deletion request already in progress",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response requestDeletion(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
         String principalName = identity.getPrincipal().getName();
         UUID userId;

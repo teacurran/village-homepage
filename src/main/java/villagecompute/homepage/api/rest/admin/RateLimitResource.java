@@ -12,6 +12,14 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.RateLimitConfigType;
 import villagecompute.homepage.api.types.RateLimitViolationType;
@@ -43,6 +51,11 @@ import java.util.Optional;
  * {@link RateLimitService}.
  */
 @Path("/admin/api/rate-limits")
+@Tag(
+        name = "Admin - Rate Limits",
+        description = "Admin endpoints for rate limit configuration and violation monitoring (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @RolesAllowed("super_admin")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -59,6 +72,26 @@ public class RateLimitResource {
      * @return list of all configs with full configuration
      */
     @GET
+    @Operation(
+            summary = "List all rate limit configurations",
+            description = "Returns list of all rate limit configurations with full settings. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = RateLimitConfigType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response listConfigs() {
         List<RateLimitConfig> configs = rateLimitService.getAllConfigs();
         List<RateLimitConfigType> response = configs.stream().map(this::toType).toList();
@@ -76,7 +109,35 @@ public class RateLimitResource {
      */
     @GET
     @Path("/{action}/{tier}")
-    public Response getConfig(@PathParam("action") String actionType, @PathParam("tier") String tier) {
+    @Operation(
+            summary = "Get rate limit configuration",
+            description = "Returns a specific rate limit configuration by action type and tier. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = RateLimitConfigType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Rate limit configuration not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getConfig(@Parameter(
+            description = "Action type (e.g., login, search)",
+            required = true) @PathParam("action") String actionType,
+            @Parameter(
+                    description = "User tier (anonymous, logged_in, trusted)",
+                    required = true) @PathParam("tier") String tier) {
         Optional<RateLimitConfig> config = rateLimitService.getConfig(actionType, tier);
         if (config.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
@@ -102,7 +163,38 @@ public class RateLimitResource {
      */
     @PATCH
     @Path("/{action}/{tier}")
-    public Response updateConfig(@PathParam("action") String actionType, @PathParam("tier") String tier,
+    @Operation(
+            summary = "Update rate limit configuration",
+            description = "Updates a rate limit configuration with partial update support. Configuration cache is invalidated automatically. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - configuration updated",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = RateLimitConfigType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid request body"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Rate limit configuration not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response updateConfig(@Parameter(
+            description = "Action type to update",
+            required = true) @PathParam("action") String actionType,
+            @Parameter(
+                    description = "User tier to update",
+                    required = true) @PathParam("tier") String tier,
             @Valid UpdateRateLimitConfigRequestType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
@@ -146,8 +238,32 @@ public class RateLimitResource {
      */
     @GET
     @Path("/violations")
-    public Response getViolations(@QueryParam("user_id") Long userId, @QueryParam("ip_address") String ipAddress,
-            @QueryParam("limit") Integer limit) {
+    @Operation(
+            summary = "Query rate limit violations",
+            description = "Returns recent rate limit violations with optional filtering by user ID or IP address. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = RateLimitViolationType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getViolations(@Parameter(
+            description = "Filter by user ID (optional)") @QueryParam("user_id") Long userId,
+            @Parameter(
+                    description = "Filter by IP address (optional)") @QueryParam("ip_address") String ipAddress,
+            @Parameter(
+                    description = "Max results (default 100, max 1000)") @QueryParam("limit") Integer limit) {
         int maxResults = limit != null ? Math.min(limit, 1000) : 100;
 
         List<RateLimitViolation> violations;

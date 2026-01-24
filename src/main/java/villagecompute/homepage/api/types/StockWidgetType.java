@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
  * Type representing the complete stock widget response with quotes and metadata.
@@ -25,8 +26,31 @@ import jakarta.validation.constraints.NotNull;
  * @param rateLimited
  *            true if Alpha Vantage API rate limit was exceeded and stale cache was served
  */
-public record StockWidgetType(@NotNull @Valid List<StockQuoteType> quotes,
-        @JsonProperty("market_status") @NotBlank String marketStatus,
-        @JsonProperty("cached_at") @NotBlank String cachedAt, boolean stale,
-        @JsonProperty("rate_limited") boolean rateLimited) {
+@Schema(
+        description = "Stock widget response with quotes, market status, and cache metadata")
+public record StockWidgetType(@Schema(
+        description = "List of stock quotes for user's watchlist",
+        required = true) @NotNull @Valid List<StockQuoteType> quotes,
+
+        @Schema(
+                description = "Current market status",
+                example = "OPEN",
+                enumeration = {
+                        "OPEN", "CLOSED", "WEEKEND"},
+                required = true) @JsonProperty("market_status") @NotBlank String marketStatus,
+
+        @Schema(
+                description = "ISO 8601 timestamp when data was cached",
+                example = "2026-01-24T16:00:00Z",
+                required = true) @JsonProperty("cached_at") @NotBlank String cachedAt,
+
+        @Schema(
+                description = "True if cached data is older than 2 hours",
+                example = "false",
+                required = true) boolean stale,
+
+        @Schema(
+                description = "True if API rate limit exceeded and stale cache served",
+                example = "false",
+                required = true) @JsonProperty("rate_limited") boolean rateLimited){
 }

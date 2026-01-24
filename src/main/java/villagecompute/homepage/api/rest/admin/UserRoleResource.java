@@ -15,6 +15,14 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.AssignRoleRequestType;
 import villagecompute.homepage.api.types.UserRoleType;
@@ -48,6 +56,11 @@ import java.util.UUID;
  * Implements Task I2.T8 admin role management API per Iteration 2 goals.
  */
 @Path("/admin/api/users/roles")
+@Tag(
+        name = "Admin - Users",
+        description = "Admin endpoints for user role management (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @RolesAllowed("super_admin")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -69,7 +82,28 @@ public class UserRoleResource {
      * @return list of users with admin roles
      */
     @GET
-    public Response listAdminUsers(@QueryParam("role") String roleFilter) {
+    @Operation(
+            summary = "List admin users",
+            description = "Returns list of all users with admin roles, optionally filtered by specific role. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = UserRoleType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response listAdminUsers(@Parameter(
+            description = "Filter by role (super_admin, support, ops, read_only)") @QueryParam("role") String roleFilter) {
         List<User> users;
         if (roleFilter != null && !roleFilter.isBlank()) {
             users = User.findByAdminRole(roleFilter);
@@ -91,7 +125,35 @@ public class UserRoleResource {
      */
     @GET
     @Path("/{userId}")
-    public Response getUserRole(@PathParam("userId") String userId) {
+    @Operation(
+            summary = "Get user role",
+            description = "Returns role information for a specific user. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = UserRoleType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid user ID format"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found or has no admin role"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getUserRole(@Parameter(
+            description = "User ID (UUID)",
+            required = true) @PathParam("userId") String userId) {
         UUID userUuid;
         try {
             userUuid = UUID.fromString(userId);
@@ -130,7 +192,35 @@ public class UserRoleResource {
      */
     @PUT
     @Path("/{userId}")
-    public Response assignRole(@PathParam("userId") String userId, @Valid AssignRoleRequestType request,
+    @Operation(
+            summary = "Assign or update admin role",
+            description = "Assigns or updates an admin role for a user. All changes are logged for audit trail. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - role assigned",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = UserRoleType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid user ID format or request body"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response assignRole(@Parameter(
+            description = "User ID (UUID)",
+            required = true) @PathParam("userId") String userId, @Valid AssignRoleRequestType request,
             @Context SecurityContext securityContext) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
@@ -178,7 +268,31 @@ public class UserRoleResource {
      */
     @DELETE
     @Path("/{userId}")
-    public Response revokeRole(@PathParam("userId") String userId, @Context SecurityContext securityContext) {
+    @Operation(
+            summary = "Revoke admin role",
+            description = "Revokes an admin role from a user. Prevents self-revocation of super_admin role. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "204",
+                    description = "Success - role revoked"),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - cannot revoke own super_admin role or invalid user ID"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response revokeRole(@Parameter(
+            description = "User ID (UUID)",
+            required = true) @PathParam("userId") String userId, @Context SecurityContext securityContext) {
         UUID userUuid;
         try {
             userUuid = UUID.fromString(userId);

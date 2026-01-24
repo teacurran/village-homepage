@@ -7,6 +7,14 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 import villagecompute.homepage.api.types.CsvUploadForm;
@@ -58,6 +66,11 @@ import java.util.stream.Collectors;
  * @see villagecompute.homepage.jobs.BulkImportJobHandler
  */
 @Path("/admin/api/directory/import")
+@Tag(
+        name = "Admin - System",
+        description = "Admin endpoints for bulk directory import with AI categorization (requires super_admin or ops role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed({User.ROLE_SUPER_ADMIN, User.ROLE_OPS})
 public class DirectoryImportResource {
@@ -91,6 +104,27 @@ public class DirectoryImportResource {
     @POST
     @Path("/upload")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Operation(
+            summary = "Upload CSV for bulk import",
+            description = "Uploads CSV file for bulk directory import with AI categorization. Requires super_admin or ops role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - CSV uploaded and job queued",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid file format or size"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response uploadCsv(CsvUploadForm form, @Context SecurityIdentity identity) {
         try {
             FileUpload file = form.file;
@@ -167,7 +201,28 @@ public class DirectoryImportResource {
      */
     @GET
     @Path("/suggestions")
-    public Response listSuggestions(@QueryParam("status") @DefaultValue("pending") String status) {
+    @Operation(
+            summary = "List AI categorization suggestions",
+            description = "Returns AI categorization suggestions with optional status filter. Requires super_admin or ops role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = DirectoryAiSuggestionType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response listSuggestions(@Parameter(
+            description = "Filter by status (pending, approved, rejected, all)") @QueryParam("status") @DefaultValue("pending") String status) {
         List<DirectoryAiSuggestion> suggestions;
 
         if (status == null || status.equalsIgnoreCase("all")) {
@@ -190,7 +245,32 @@ public class DirectoryImportResource {
      */
     @GET
     @Path("/suggestions/{id}")
-    public Response getSuggestion(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Get AI suggestion details",
+            description = "Returns single AI suggestion with category comparison. Requires super_admin or ops role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = DirectoryAiSuggestionType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Suggestion not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getSuggestion(@Parameter(
+            description = "Suggestion UUID",
+            required = true) @PathParam("id") UUID id) {
         Optional<DirectoryAiSuggestion> suggestionOpt = DirectoryAiSuggestion.findByIdOptional(id);
 
         if (suggestionOpt.isEmpty()) {
@@ -221,7 +301,35 @@ public class DirectoryImportResource {
     @POST
     @Path("/suggestions/{id}/approve")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response approveSuggestion(@PathParam("id") UUID id, @FormParam("category_ids") String categoryIds,
+    @Operation(
+            summary = "Approve AI suggestion",
+            description = "Approves AI suggestion and creates directory site. Optional category override. Requires super_admin or ops role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - suggestion approved and site created",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - suggestion already processed"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Suggestion not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response approveSuggestion(@Parameter(
+            description = "Suggestion UUID",
+            required = true) @PathParam("id") UUID id,
+            @Parameter(
+                    description = "Admin-selected category IDs (comma-separated UUIDs, optional)") @FormParam("category_ids") String categoryIds,
             @Context SecurityIdentity identity) {
 
         Optional<DirectoryAiSuggestion> suggestionOpt = DirectoryAiSuggestion.findByIdOptional(id);
@@ -294,7 +402,33 @@ public class DirectoryImportResource {
      */
     @POST
     @Path("/suggestions/{id}/reject")
-    public Response rejectSuggestion(@PathParam("id") UUID id, @Context SecurityIdentity identity) {
+    @Operation(
+            summary = "Reject AI suggestion",
+            description = "Rejects AI suggestion. Requires super_admin or ops role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - suggestion rejected",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - suggestion already processed"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Suggestion not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response rejectSuggestion(@Parameter(
+            description = "Suggestion UUID",
+            required = true) @PathParam("id") UUID id, @Context SecurityIdentity identity) {
 
         Optional<DirectoryAiSuggestion> suggestionOpt = DirectoryAiSuggestion.findByIdOptional(id);
 

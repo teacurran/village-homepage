@@ -17,6 +17,13 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 
 import villagecompute.homepage.api.types.AiUsageReportType;
@@ -50,6 +57,11 @@ import villagecompute.homepage.services.AiUsageTrackingService;
  * @see AiUsageTracking
  */
 @Path("/admin/api/ai-usage")
+@Tag(
+        name = "Admin - Analytics",
+        description = "Admin endpoints for AI usage monitoring and cost tracking (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @Produces(MediaType.APPLICATION_JSON)
 public class AiUsageAdminResource {
 
@@ -86,6 +98,27 @@ public class AiUsageAdminResource {
      */
     @GET
     @Path("/current-month")
+    @Operation(
+            summary = "Get current month AI usage",
+            description = "Returns current month AI usage and budget status. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "No usage data found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     @RolesAllowed("super_admin")
     public Response getCurrentMonthUsage() {
         LOG.debug("Fetching current month AI usage for admin dashboard");
@@ -123,6 +156,24 @@ public class AiUsageAdminResource {
      */
     @GET
     @Path("/cache-stats")
+    @Operation(
+            summary = "Get AI cache statistics",
+            description = "Returns cache hit rate and performance metrics. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     @RolesAllowed("super_admin")
     public Response getCacheStats() {
         LOG.debug("Fetching cache statistics for admin dashboard");
@@ -174,8 +225,37 @@ public class AiUsageAdminResource {
      */
     @GET
     @Path("/cost-report")
+    @Operation(
+            summary = "Get AI cost report",
+            description = "Returns cost report for specified date range with token usage and budget analysis. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid date format"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "No usage data found for date range"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     @RolesAllowed("super_admin")
-    public Response getCostReport(@QueryParam("startDate") String startDate, @QueryParam("endDate") String endDate) {
+    public Response getCostReport(@Parameter(
+            description = "Start date (YYYY-MM-DD)",
+            required = true) @QueryParam("startDate") String startDate,
+            @Parameter(
+                    description = "End date (YYYY-MM-DD)",
+                    required = true) @QueryParam("endDate") String endDate) {
         if (startDate == null || startDate.isBlank() || endDate == null || endDate.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("Both startDate and endDate query parameters are required (ISO 8601 format: YYYY-MM-DD)")

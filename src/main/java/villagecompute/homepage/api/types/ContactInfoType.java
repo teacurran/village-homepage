@@ -3,6 +3,7 @@ package villagecompute.homepage.api.types;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.UUID;
 
@@ -50,8 +51,22 @@ import java.util.UUID;
  * @param maskedEmail
  *            generated relay email (displayed publicly, format: listing-{uuid}@villagecompute.com)
  */
-public record ContactInfoType(@NotNull @Email String email, String phone,
-        @JsonProperty("masked_email") @NotNull String maskedEmail) {
+@Schema(
+        description = "Contact information with masked email relay for privacy protection")
+public record ContactInfoType(@Schema(
+        description = "Seller's real email address (never displayed publicly)",
+        example = "seller@example.com",
+        required = true) @NotNull @Email String email,
+
+        @Schema(
+                description = "Optional seller phone number",
+                example = "+1-802-555-1234",
+                nullable = true) String phone,
+
+        @Schema(
+                description = "Generated masked email for public display and relay",
+                example = "listing-a3f8b9c0-1234-5678-abcd-1234567890ab@villagecompute.com",
+                required = true) @JsonProperty("masked_email") @NotNull String maskedEmail) {
 
     /**
      * Factory method for creating contact info with auto-generated masked email.

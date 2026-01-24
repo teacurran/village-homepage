@@ -8,6 +8,14 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.MultipartForm;
 import villagecompute.homepage.api.types.ImageUploadForm;
@@ -73,6 +81,9 @@ import java.util.stream.Collectors;
 @Path("/api/marketplace/listings/{listingId}/images")
 @RolesAllowed({"user", "super_admin", "support", "ops"})
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Marketplace",
+        description = "Marketplace listing search and management operations")
 public class ListingImageResource {
 
     private static final Logger LOG = Logger.getLogger(ListingImageResource.class);
@@ -111,7 +122,50 @@ public class ListingImageResource {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Transactional
-    public Response uploadImage(@PathParam("listingId") UUID listingId, @MultipartForm ImageUploadForm form) {
+    @Operation(
+            summary = "Upload listing image",
+            description = "Upload a new image for a marketplace listing. Maximum 12 images per listing, 10MB file size limit.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "202",
+                    description = "Image uploaded and queued for processing",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request (file too large, invalid type, limit exceeded)",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Not authorized to upload images for this listing",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Listing not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "409",
+                            description = "Cannot upload to removed/expired listing",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Upload failed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response uploadImage(@Parameter(
+            description = "Listing UUID",
+            required = true) @PathParam("listingId") UUID listingId, @MultipartForm ImageUploadForm form) {
 
         UUID userId = getCurrentUserId();
 
@@ -229,7 +283,37 @@ public class ListingImageResource {
      * @return list of images with signed URLs
      */
     @GET
-    public Response listImages(@PathParam("listingId") UUID listingId) {
+    @Operation(
+            summary = "List listing images",
+            description = "Get all images for a listing with signed URLs for all variants. URLs have 24-hour TTL.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Images returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = ListingImageType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Listing not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response listImages(@Parameter(
+            description = "Listing UUID",
+            required = true) @PathParam("listingId") UUID listingId) {
         UUID userId = getCurrentUserId();
 
         // 1. Validate listing exists (ownership check optional for read - could allow public)
@@ -289,7 +373,46 @@ public class ListingImageResource {
     @DELETE
     @Path("/{imageId}")
     @Transactional
-    public Response deleteImage(@PathParam("listingId") UUID listingId, @PathParam("imageId") UUID imageId) {
+    @Operation(
+            summary = "Delete listing image",
+            description = "Delete an image and all its variants (thumbnail, list, full) from a listing.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "204",
+                    description = "Image deleted successfully"),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Image does not belong to this listing",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Not authorized to delete this image",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Listing or image not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response deleteImage(@Parameter(
+            description = "Listing UUID",
+            required = true) @PathParam("listingId") UUID listingId,
+            @Parameter(
+                    description = "Image UUID",
+                    required = true) @PathParam("imageId") UUID imageId) {
 
         UUID userId = getCurrentUserId();
 

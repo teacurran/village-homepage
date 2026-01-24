@@ -1,5 +1,7 @@
 package villagecompute.homepage.api.types;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -95,8 +97,58 @@ import java.util.UUID;
  * @see SearchResultsType
  * @see SearchCriteria
  */
-public record ListingSearchResultType(UUID id, String title, String description, BigDecimal price, UUID categoryId,
-        Long geoCityId, String cityName, Instant createdAt, int imageCount, Double distance) {
+@Schema(
+        description = "Simplified marketplace listing for search results with distance and preview data")
+public record ListingSearchResultType(@Schema(
+        description = "Listing UUID",
+        example = "550e8400-e29b-41d4-a716-446655440000",
+        required = true) UUID id,
+
+        @Schema(
+                description = "Listing title",
+                example = "Vintage Road Bicycle",
+                required = true,
+                maxLength = 100) String title,
+
+        @Schema(
+                description = "Description preview (truncated to 200 characters)",
+                example = "Lightly used vintage road bike from the 1980s...",
+                nullable = true) String description,
+
+        @Schema(
+                description = "Price in USD",
+                example = "350.00",
+                nullable = true) BigDecimal price,
+
+        @Schema(
+                description = "Marketplace category UUID",
+                example = "770e8400-e29b-41d4-a716-446655440002",
+                required = true) UUID categoryId,
+
+        @Schema(
+                description = "Location city ID (geo_cities.id)",
+                example = "5128581",
+                nullable = true) Long geoCityId,
+
+        @Schema(
+                description = "Resolved city name for display",
+                example = "Seattle, WA",
+                nullable = true) String cityName,
+
+        @Schema(
+                description = "Listing creation timestamp",
+                example = "2026-01-05T10:30:00Z",
+                required = true) Instant createdAt,
+
+        @Schema(
+                description = "Number of images attached",
+                example = "5",
+                required = true) int imageCount,
+
+        @Schema(
+                description = "Distance in miles from search center (null if not a radius search)",
+                example = "12.3",
+                nullable = true) Double distance) {
 
     /**
      * Maximum description preview length for search results.

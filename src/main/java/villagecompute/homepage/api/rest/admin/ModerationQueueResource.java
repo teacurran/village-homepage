@@ -6,6 +6,14 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.FlagType;
 import villagecompute.homepage.api.types.ModerationStatsType;
@@ -56,6 +64,11 @@ import java.util.stream.Collectors;
  * @see ListingFlag
  */
 @Path("/admin/api/moderation")
+@Tag(
+        name = "Admin - Moderation",
+        description = "Admin endpoints for moderation queue management (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("super_admin")
@@ -99,6 +112,26 @@ public class ModerationQueueResource {
      */
     @GET
     @Path("/queue")
+    @Operation(
+            summary = "List pending flags in moderation queue",
+            description = "Returns all pending flags with enriched listing and user details. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = FlagType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response listPendingFlags() {
         LOG.info("Listing moderation queue (pending flags)");
 
@@ -123,7 +156,32 @@ public class ModerationQueueResource {
      */
     @GET
     @Path("/flags/{flagId}")
-    public Response getFlagDetails(@PathParam("flagId") UUID flagId) {
+    @Operation(
+            summary = "Get flag details",
+            description = "Returns full flag details including listing context, user info, and fraud analysis. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = FlagType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Flag not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getFlagDetails(@Parameter(
+            description = "Flag UUID",
+            required = true) @PathParam("flagId") UUID flagId) {
         LOG.infof("Fetching flag details: flagId=%s", flagId);
 
         ListingFlag flag = ListingFlag.findById(flagId);
@@ -164,7 +222,31 @@ public class ModerationQueueResource {
      */
     @POST
     @Path("/flags/{flagId}/approve")
-    public Response approveFlag(@PathParam("flagId") UUID flagId, @Valid ReviewActionRequest request) {
+    @Operation(
+            summary = "Approve flag and remove listing",
+            description = "Approves a flag, removes the listing, issues refund if eligible, and bans user if chargeback threshold met. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - flag approved and listing removed"),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - flag already reviewed"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Flag not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response approveFlag(@Parameter(
+            description = "Flag UUID",
+            required = true) @PathParam("flagId") UUID flagId, @Valid ReviewActionRequest request) {
         LOG.infof("Approving flag: flagId=%s", flagId);
 
         try {
@@ -213,7 +295,31 @@ public class ModerationQueueResource {
      */
     @POST
     @Path("/flags/{flagId}/dismiss")
-    public Response dismissFlag(@PathParam("flagId") UUID flagId, @Valid ReviewActionRequest request) {
+    @Operation(
+            summary = "Dismiss flag as invalid",
+            description = "Dismisses a flag as invalid and restores listing status if no pending flags remain. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - flag dismissed"),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - flag already reviewed"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Flag not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response dismissFlag(@Parameter(
+            description = "Flag UUID",
+            required = true) @PathParam("flagId") UUID flagId, @Valid ReviewActionRequest request) {
         LOG.infof("Dismissing flag: flagId=%s", flagId);
 
         try {
@@ -273,6 +379,26 @@ public class ModerationQueueResource {
      */
     @GET
     @Path("/stats")
+    @Operation(
+            summary = "Get moderation statistics",
+            description = "Returns aggregated moderation metrics including pending flags, approval rates, and banned users. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = ModerationStatsType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response getModerationStats() {
         LOG.info("Fetching moderation statistics");
 

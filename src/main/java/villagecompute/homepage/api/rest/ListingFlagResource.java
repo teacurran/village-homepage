@@ -6,6 +6,13 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.SubmitFlagRequestType;
 import villagecompute.homepage.data.models.ListingFlag;
@@ -53,6 +60,9 @@ import java.util.UUID;
 @Path("/api/marketplace/listings")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Marketplace",
+        description = "Marketplace listing search and management operations")
 public class ListingFlagResource {
 
     private static final Logger LOG = Logger.getLogger(ListingFlagResource.class);
@@ -97,7 +107,50 @@ public class ListingFlagResource {
     @POST
     @Path("/{listingId}/flag")
     @RolesAllowed({"user", "admin"})
-    public Response submitFlag(@PathParam("listingId") UUID listingId, @Valid SubmitFlagRequestType request) {
+    @Operation(
+            summary = "Flag listing",
+            description = "Submit a flag for a marketplace listing for policy violations. Rate limited to 5 flags per day per user.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "202",
+                    description = "Flag submitted successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request or validation failed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "User is banned from flagging",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Listing not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded (5 flags per day)",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to submit flag",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response submitFlag(@Parameter(
+            description = "Listing UUID to flag",
+            required = true) @PathParam("listingId") UUID listingId, @Valid SubmitFlagRequestType request) {
         LOG.infof("Flag submission request: listingId=%s, reason=%s", listingId, request.reason());
 
         // Validate request

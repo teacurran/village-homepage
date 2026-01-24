@@ -12,6 +12,13 @@ import jakarta.persistence.EntityManager;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 
 import java.time.LocalDate;
@@ -58,6 +65,11 @@ import java.util.*;
  * @see villagecompute.homepage.jobs.ClickRollupJobHandler
  */
 @Path("/admin/api/analytics")
+@Tag(
+        name = "Admin - Analytics",
+        description = "Admin analytics dashboard endpoints (requires super_admin, ops, or read_only role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed({"super_admin", "ops", "read_only"})
@@ -101,8 +113,30 @@ public class AnalyticsResource {
      */
     @GET
     @Path("/profiles/top-viewed")
-    public Response getTopViewedProfiles(@QueryParam("start_date") String startDate,
-            @QueryParam("end_date") String endDate, @QueryParam("limit") @DefaultValue("20") int limit) {
+    @Operation(
+            summary = "Get top-viewed profiles",
+            description = "Returns top-viewed profiles for a date range with total views and unique users. Requires super_admin, ops, or read_only role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - returns profile view statistics",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getTopViewedProfiles(@Parameter(
+            description = "Start date (YYYY-MM-DD, optional)") @QueryParam("start_date") String startDate,
+            @Parameter(
+                    description = "End date (YYYY-MM-DD, optional)") @QueryParam("end_date") String endDate,
+            @Parameter(
+                    description = "Max results (default 20, max 100)") @QueryParam("limit") @DefaultValue("20") int limit) {
         try {
             LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().minusDays(30);
             LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
@@ -186,8 +220,31 @@ public class AnalyticsResource {
      */
     @GET
     @Path("/profiles/{id}/curated-clicks")
-    public Response getCuratedArticleClicks(@PathParam("id") UUID profileId, @QueryParam("start_date") String startDate,
-            @QueryParam("end_date") String endDate) {
+    @Operation(
+            summary = "Get curated article click statistics",
+            description = "Returns curated article click statistics for a specific profile. Requires super_admin, ops, or read_only role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - returns article click statistics",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getCuratedArticleClicks(@Parameter(
+            description = "Profile UUID",
+            required = true) @PathParam("id") UUID profileId,
+            @Parameter(
+                    description = "Start date (YYYY-MM-DD, optional)") @QueryParam("start_date") String startDate,
+            @Parameter(
+                    description = "End date (YYYY-MM-DD, optional)") @QueryParam("end_date") String endDate) {
         try {
             LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().minusDays(30);
             LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
@@ -264,8 +321,28 @@ public class AnalyticsResource {
      */
     @GET
     @Path("/profiles/engagement")
-    public Response getProfileEngagement(@QueryParam("start_date") String startDate,
-            @QueryParam("end_date") String endDate) {
+    @Operation(
+            summary = "Get profile engagement metrics",
+            description = "Returns overall profile engagement metrics including views, clicks, and engagement rates. Requires super_admin, ops, or read_only role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - returns engagement metrics",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getProfileEngagement(@Parameter(
+            description = "Start date (YYYY-MM-DD, optional)") @QueryParam("start_date") String startDate,
+            @Parameter(
+                    description = "End date (YYYY-MM-DD, optional)") @QueryParam("end_date") String endDate) {
         try {
             LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().minusDays(30);
             LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
@@ -361,7 +438,26 @@ public class AnalyticsResource {
      */
     @GET
     @Path("/overview")
-    public Response getOverview(@QueryParam("date_range") @DefaultValue("7d") String dateRange) {
+    @Operation(
+            summary = "Get dashboard overview metrics",
+            description = "Returns overview dashboard metrics including clicks, users, and AI budget usage. Requires super_admin, ops, or read_only role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - returns overview metrics",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getOverview(@Parameter(
+            description = "Date range (1d, 7d, or 30d, default 7d)") @QueryParam("date_range") @DefaultValue("7d") String dateRange) {
         try {
             LocalDate endDate = LocalDate.now();
             LocalDate startDate = switch (dateRange) {
@@ -474,8 +570,30 @@ public class AnalyticsResource {
      */
     @GET
     @Path("/clicks/category-performance")
-    public Response getCategoryPerformance(@QueryParam("click_types") String clickTypes,
-            @QueryParam("start_date") String startDate, @QueryParam("end_date") String endDate) {
+    @Operation(
+            summary = "Get category performance breakdown",
+            description = "Returns click breakdown by category with optional filtering. Requires super_admin, ops, or read_only role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - returns category performance data",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getCategoryPerformance(@Parameter(
+            description = "Comma-separated click types to filter (optional)") @QueryParam("click_types") String clickTypes,
+            @Parameter(
+                    description = "Start date (YYYY-MM-DD, optional)") @QueryParam("start_date") String startDate,
+            @Parameter(
+                    description = "End date (YYYY-MM-DD, optional)") @QueryParam("end_date") String endDate) {
         try {
             LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().minusDays(7);
             LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
@@ -558,6 +676,24 @@ public class AnalyticsResource {
      */
     @GET
     @Path("/ai/budget")
+    @Operation(
+            summary = "Get AI budget usage",
+            description = "Returns AI budget usage details with daily trend and threshold warnings. Requires super_admin, ops, or read_only role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - returns AI budget details",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response getAiBudget() {
         try {
             int monthlyBudgetCents = 5000; // $50 monthly budget
@@ -638,6 +774,24 @@ public class AnalyticsResource {
      */
     @GET
     @Path("/jobs/health")
+    @Operation(
+            summary = "Get job queue health metrics",
+            description = "Returns job queue health metrics including backlog size, wait time, and stuck jobs. Requires super_admin, ops, or read_only role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - returns job health metrics",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response getJobHealth() {
         try {
             String sql = """

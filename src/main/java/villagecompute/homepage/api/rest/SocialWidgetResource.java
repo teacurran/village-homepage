@@ -11,6 +11,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.SocialWidgetStateType;
 import villagecompute.homepage.services.SocialIntegrationService;
@@ -70,6 +77,9 @@ import java.util.UUID;
  */
 @Path("/api/widgets/social")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Social",
+        description = "Social media integration operations")
 public class SocialWidgetResource {
 
     private static final Logger LOG = Logger.getLogger(SocialWidgetResource.class);
@@ -87,8 +97,35 @@ public class SocialWidgetResource {
      * @return social widget state with posts, connection status, and staleness
      */
     @GET
-    public Response getSocialFeed(@QueryParam("user_id") @NotBlank String userIdStr,
-            @QueryParam("platform") @NotBlank String platform) {
+    @Operation(
+            summary = "Get social media feed",
+            description = "Fetch social feed state for user and platform (Instagram or Facebook)")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Social feed returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = SocialWidgetStateType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid user_id or platform",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to fetch social feed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    public Response getSocialFeed(@Parameter(
+            description = "User UUID",
+            required = true,
+            example = "550e8400-e29b-41d4-a716-446655440000") @QueryParam("user_id") @NotBlank String userIdStr,
+            @Parameter(
+                    description = "Platform: instagram or facebook",
+                    required = true,
+                    example = "instagram") @QueryParam("platform") @NotBlank String platform) {
 
         try {
             // Validate user_id

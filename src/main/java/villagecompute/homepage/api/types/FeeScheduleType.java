@@ -3,6 +3,7 @@ package villagecompute.homepage.api.types;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.math.BigDecimal;
 
@@ -27,9 +28,22 @@ import java.math.BigDecimal;
  * @param bumpFee
  *            cost to bump listing (USD, default 0)
  */
-public record FeeScheduleType(@JsonProperty("posting_fee") @NotNull @PositiveOrZero BigDecimal postingFee,
-        @JsonProperty("featured_fee") @NotNull @PositiveOrZero BigDecimal featuredFee,
-        @JsonProperty("bump_fee") @NotNull @PositiveOrZero BigDecimal bumpFee) {
+@Schema(
+        description = "Fee schedule configuration for marketplace category monetization")
+public record FeeScheduleType(@Schema(
+        description = "Cost to create basic listing in USD",
+        example = "0.00",
+        required = true) @JsonProperty("posting_fee") @NotNull @PositiveOrZero BigDecimal postingFee,
+
+        @Schema(
+                description = "Cost to promote listing to featured placement in USD",
+                example = "5.00",
+                required = true) @JsonProperty("featured_fee") @NotNull @PositiveOrZero BigDecimal featuredFee,
+
+        @Schema(
+                description = "Cost to bump listing back to top in USD",
+                example = "2.00",
+                required = true) @JsonProperty("bump_fee") @NotNull @PositiveOrZero BigDecimal bumpFee) {
 
     /**
      * Factory method for free category (all fees zero).

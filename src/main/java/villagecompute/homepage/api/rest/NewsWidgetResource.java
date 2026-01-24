@@ -7,6 +7,14 @@ import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
@@ -110,6 +118,9 @@ import villagecompute.homepage.services.UserPreferenceService;
  */
 @Path("/api/widgets/news")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Widgets",
+        description = "Homepage widget data operations")
 public class NewsWidgetResource {
 
     private static final Logger LOG = Logger.getLogger(NewsWidgetResource.class);
@@ -150,9 +161,49 @@ public class NewsWidgetResource {
      * @return 200 OK with NewsWidgetType, 401 if not authenticated, 429 if rate limited
      */
     @GET
-    public Response getNews(@Context SecurityContext securityContext,
-            @QueryParam("limit") @DefaultValue("20") int limit, @QueryParam("offset") @DefaultValue("0") int offset,
-            @QueryParam("category") String category, @QueryParam("topics") String topics) {
+    @Operation(
+            summary = "Get news widget data",
+            description = "Retrieve personalized news feed with AI tags and pagination. 5-minute cache TTL.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "News feed returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = NewsWidgetType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid pagination parameters",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to retrieve news feed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response getNews(@Context SecurityContext securityContext, @Parameter(
+            description = "Maximum items per page (1-100)",
+            example = "20") @QueryParam("limit") @DefaultValue("20") int limit,
+            @Parameter(
+                    description = "Pagination offset",
+                    example = "0") @QueryParam("offset") @DefaultValue("0") int offset,
+            @Parameter(
+                    description = "Optional RSS source category filter") @QueryParam("category") String category,
+            @Parameter(
+                    description = "Optional comma-separated topics for AI tag matching") @QueryParam("topics") String topics) {
 
         // Extract user ID from security context
         UUID userId = extractUserId(securityContext);

@@ -14,6 +14,14 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.AdminKarmaAdjustmentType;
 import villagecompute.homepage.api.types.AdminTrustLevelChangeType;
@@ -45,6 +53,11 @@ import java.util.UUID;
  * <b>Audit Trail:</b> All mutations are logged to karma_audit table with admin user ID.
  */
 @Path("/admin/api/karma")
+@Tag(
+        name = "Admin - Users",
+        description = "Admin endpoints for karma management (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @RolesAllowed(User.ROLE_SUPER_ADMIN)
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -67,7 +80,32 @@ public class KarmaAdminResource {
      */
     @GET
     @Path("/{userId}")
-    public Response getUserKarma(@PathParam("userId") UUID userId) {
+    @Operation(
+            summary = "Get user karma summary",
+            description = "Returns user's karma summary with current status and privileges. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = KarmaSummaryType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getUserKarma(@Parameter(
+            description = "User UUID",
+            required = true) @PathParam("userId") UUID userId) {
         User user = User.findById(userId);
         if (user == null) {
             return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", "User not found: " + userId))
@@ -90,7 +128,30 @@ public class KarmaAdminResource {
      */
     @GET
     @Path("/{userId}/history")
-    public Response getUserKarmaHistory(@PathParam("userId") UUID userId) {
+    @Operation(
+            summary = "Get user karma history",
+            description = "Returns user's karma adjustment history ordered by most recent first. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getUserKarmaHistory(@Parameter(
+            description = "User UUID",
+            required = true) @PathParam("userId") UUID userId) {
         User user = User.findById(userId);
         if (user == null) {
             return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", "User not found: " + userId))
@@ -117,7 +178,35 @@ public class KarmaAdminResource {
      */
     @POST
     @Path("/{userId}/adjust")
-    public Response adjustKarma(@PathParam("userId") UUID userId, @Valid AdminKarmaAdjustmentType request) {
+    @Operation(
+            summary = "Manually adjust user karma",
+            description = "Adjusts user's karma for exceptional cases. All adjustments are logged with admin user ID. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - karma adjusted",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = KarmaSummaryType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - delta is zero or reason missing"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response adjustKarma(@Parameter(
+            description = "User UUID",
+            required = true) @PathParam("userId") UUID userId, @Valid AdminKarmaAdjustmentType request) {
         if (request.delta() == 0) {
             return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", "Delta must be non-zero"))
                     .build();
@@ -161,7 +250,32 @@ public class KarmaAdminResource {
      */
     @PATCH
     @Path("/{userId}/trust-level")
-    public Response setTrustLevel(@PathParam("userId") UUID userId, @Valid AdminTrustLevelChangeType request) {
+    @Operation(
+            summary = "Set user trust level",
+            description = "Manually changes user's trust level (e.g., promote to moderator). All changes are logged. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - trust level updated",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = KarmaSummaryType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid trust level or reason missing"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response setTrustLevel(@Parameter(
+            description = "User UUID",
+            required = true) @PathParam("userId") UUID userId, @Valid AdminTrustLevelChangeType request) {
         if (request.trustLevel() == null || request.trustLevel().isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", "Trust level is required"))
                     .build();

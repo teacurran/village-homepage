@@ -10,6 +10,13 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.DirectoryCategoryType;
 import villagecompute.homepage.api.types.DirectorySiteType;
@@ -50,6 +57,9 @@ import java.util.UUID;
  */
 @Path("/good-sites/moderate")
 @RolesAllowed({"super_admin", "ops"})
+@Tag(
+        name = "Directory",
+        description = "Good Sites directory submission and management operations")
 public class GoodSitesModerationResource {
 
     private static final Logger LOG = Logger.getLogger(GoodSitesModerationResource.class);
@@ -143,7 +153,45 @@ public class GoodSitesModerationResource {
     @Path("/api/{id}/approve")
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public Response approve(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Approve site submission",
+            description = "Approve a pending site-category submission. Awards +5 karma to submitter.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Site approved successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request or validation failed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Admin access required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Submission not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response approve(@Parameter(
+            description = "Site-category membership ID",
+            required = true) @PathParam("id") UUID id) {
         UUID moderatorId = getCurrentUserId();
 
         LOG.infof("Moderator %s approving site-category %s", moderatorId, id);
@@ -181,7 +229,45 @@ public class GoodSitesModerationResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional
-    public Response reject(@PathParam("id") UUID id, RejectRequestType request) {
+    @Operation(
+            summary = "Reject site submission",
+            description = "Reject a pending site-category submission. Deducts -3 karma from submitter.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Site rejected successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request or validation failed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Admin access required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Submission not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response reject(@Parameter(
+            description = "Site-category membership ID",
+            required = true) @PathParam("id") UUID id, RejectRequestType request) {
         UUID moderatorId = getCurrentUserId();
 
         LOG.infof("Moderator %s rejecting site-category %s (reason: %s)", moderatorId, id, request.reason());
@@ -215,6 +301,32 @@ public class GoodSitesModerationResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional
+    @Operation(
+            summary = "Bulk approve submissions",
+            description = "Approve multiple site-category submissions in one operation")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Bulk approval completed",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Admin access required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response bulkApprove(BulkActionRequestType request) {
         UUID moderatorId = getCurrentUserId();
 
@@ -254,6 +366,32 @@ public class GoodSitesModerationResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional
+    @Operation(
+            summary = "Bulk reject submissions",
+            description = "Reject multiple site-category submissions in one operation")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Bulk rejection completed",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Admin access required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response bulkReject(BulkActionRequestType request) {
         UUID moderatorId = getCurrentUserId();
 

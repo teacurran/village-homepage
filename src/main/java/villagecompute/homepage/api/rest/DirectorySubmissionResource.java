@@ -7,6 +7,14 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.DirectorySiteType;
 import villagecompute.homepage.api.types.SiteSubmissionResultType;
@@ -58,6 +66,9 @@ import java.util.UUID;
 @RolesAllowed({"user", "super_admin", "support", "ops"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Directory",
+        description = "Good Sites directory submission and management operations")
 public class DirectorySubmissionResource {
 
     private static final Logger LOG = Logger.getLogger(DirectorySubmissionResource.class);
@@ -100,6 +111,44 @@ public class DirectorySubmissionResource {
      * @return 201 Created with submission result
      */
     @POST
+    @Operation(
+            summary = "Submit site to directory",
+            description = "Submit a new site to the Good Sites directory. Auto-approved for trusted users, requires moderation for untrusted users.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "201",
+                    description = "Site submitted successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = SiteSubmissionResultType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Validation failed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Category not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "409",
+                            description = "Duplicate URL already submitted",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to submit site",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response submitSite(@Valid SubmitSiteType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
@@ -163,6 +212,29 @@ public class DirectorySubmissionResource {
      * @return List of user's submissions
      */
     @GET
+    @Operation(
+            summary = "List user submissions",
+            description = "Get all directory submissions by the current user")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Submissions returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = DirectorySiteType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to list submissions",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response listUserSubmissions() {
         try {
             UUID userId = getCurrentUserId();
@@ -193,7 +265,42 @@ public class DirectorySubmissionResource {
      */
     @GET
     @Path("/{id}")
-    public Response getSubmission(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Get submission details",
+            description = "Retrieve details of a specific directory submission")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Submission returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = DirectorySiteType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Not authorized to view this submission",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Submission not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to get submission",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response getSubmission(@Parameter(
+            description = "Site UUID",
+            required = true) @PathParam("id") UUID id) {
         try {
             DirectorySiteType site = directoryService.getSite(id);
 
@@ -235,7 +342,38 @@ public class DirectorySubmissionResource {
      */
     @DELETE
     @Path("/{id}")
-    public Response deleteSubmission(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Delete submission",
+            description = "Delete a directory submission (soft-delete)")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "204",
+                    description = "Submission deleted successfully"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Not authorized to delete this submission",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Submission not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to delete submission",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response deleteSubmission(@Parameter(
+            description = "Site UUID to delete",
+            required = true) @PathParam("id") UUID id) {
         try {
             UUID userId = getCurrentUserId();
 

@@ -12,6 +12,14 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.CategoryType;
 import villagecompute.homepage.api.types.CreateCategoryRequestType;
@@ -44,6 +52,11 @@ import java.util.UUID;
  * <b>Validation:</b> JAX-RS {@code @Valid} annotation triggers constraint validation (slug format, name length).
  */
 @Path("/admin/api/marketplace/categories")
+@Tag(
+        name = "Admin - Categories",
+        description = "Admin endpoints for marketplace category management (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @RolesAllowed("super_admin")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -61,6 +74,26 @@ public class MarketplaceCategoryResource {
      * @return list of all categories
      */
     @GET
+    @Operation(
+            summary = "List all marketplace categories",
+            description = "Returns all marketplace categories in flat list, ordered hierarchically. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = CategoryType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response listCategories() {
         List<MarketplaceCategory> categories = MarketplaceCategory.findAllOrdered();
         List<CategoryType> response = CategoryType.fromEntities(categories);
@@ -77,6 +110,22 @@ public class MarketplaceCategoryResource {
      */
     @GET
     @Path("/tree")
+    @Operation(
+            summary = "Get category tree",
+            description = "Returns hierarchical marketplace category tree with nested children. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response getCategoryTree() {
         List<MarketplaceCategory.CategoryNode> tree = MarketplaceCategory.buildCategoryTree();
         return Response.ok(tree).build();
@@ -91,7 +140,32 @@ public class MarketplaceCategoryResource {
      */
     @GET
     @Path("/{id}")
-    public Response getCategory(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Get marketplace category by ID",
+            description = "Returns a single marketplace category by ID. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = CategoryType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Category not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getCategory(@Parameter(
+            description = "Category UUID",
+            required = true) @PathParam("id") UUID id) {
         MarketplaceCategory category = MarketplaceCategory.findById(id);
         if (category == null) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ErrorResponse("Category not found: " + id))
@@ -112,6 +186,32 @@ public class MarketplaceCategoryResource {
      * @return created category configuration with 201 Created status
      */
     @POST
+    @Operation(
+            summary = "Create marketplace category",
+            description = "Creates a new marketplace category. Validates slug uniqueness and parent existence. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "201",
+                    description = "Created",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = CategoryType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid request body"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "409",
+                            description = "Conflict - slug already exists or parent not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response createCategory(@Valid CreateCategoryRequestType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
@@ -171,7 +271,38 @@ public class MarketplaceCategoryResource {
      */
     @PATCH
     @Path("/{id}")
-    public Response updateCategory(@PathParam("id") UUID id, @Valid UpdateCategoryRequestType request) {
+    @Operation(
+            summary = "Update marketplace category",
+            description = "Updates a marketplace category with partial update support. Validates slug uniqueness if changed. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - category updated",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = CategoryType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - invalid request body"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Category not found"),
+                    @APIResponse(
+                            responseCode = "409",
+                            description = "Conflict - slug already exists"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response updateCategory(@Parameter(
+            description = "Category UUID",
+            required = true) @PathParam("id") UUID id, @Valid UpdateCategoryRequestType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
                     .build();
@@ -235,7 +366,31 @@ public class MarketplaceCategoryResource {
      */
     @DELETE
     @Path("/{id}")
-    public Response deleteCategory(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Delete marketplace category",
+            description = "Deletes a marketplace category if it has no children or associated listings. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "204",
+                    description = "Success - category deleted"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Category not found"),
+                    @APIResponse(
+                            responseCode = "409",
+                            description = "Conflict - category has children or associated listings"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response deleteCategory(@Parameter(
+            description = "Category UUID",
+            required = true) @PathParam("id") UUID id) {
         try {
             MarketplaceCategory.deleteIfSafe(id);
             LOG.infof("Deleted marketplace category: id=%s", id);

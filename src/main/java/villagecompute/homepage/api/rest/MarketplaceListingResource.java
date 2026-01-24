@@ -14,6 +14,14 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.ContactInfoType;
 import villagecompute.homepage.api.types.CreateListingRequestType;
@@ -73,6 +81,9 @@ import java.util.UUID;
 @RolesAllowed({"user", "super_admin", "support", "ops"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Marketplace",
+        description = "Marketplace listing management endpoints")
 public class MarketplaceListingResource {
 
     private static final Logger LOG = Logger.getLogger(MarketplaceListingResource.class);
@@ -90,6 +101,41 @@ public class MarketplaceListingResource {
      * @return list of user's listings
      */
     @GET
+    @Operation(
+            summary = "List current user's marketplace listings",
+            description = "Returns all listings created by the authenticated user across all statuses (draft, active, expired, removed)")
+    @SecurityRequirement(
+            name = "bearerAuth")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "List of user's listings retrieved successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = ListingType.class))),
+            @APIResponse(
+                    responseCode = "401",
+                    description = "User not authenticated",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "User does not have required role",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
     public Response listUserListings() {
         UUID userId = getCurrentUserId();
 
@@ -113,7 +159,50 @@ public class MarketplaceListingResource {
      */
     @GET
     @Path("/{id}")
-    public Response getListing(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Get a single marketplace listing",
+            description = "Returns listing details if user is the owner or if the listing is active (publicly visible)")
+    @SecurityRequirement(
+            name = "bearerAuth")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "Listing retrieved successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = ListingType.class))),
+            @APIResponse(
+                    responseCode = "401",
+                    description = "User not authenticated",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Not authorized to view this listing",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "404",
+                    description = "Listing not found",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response getListing(@Parameter(
+            description = "The listing UUID",
+            required = true) @PathParam("id") UUID id) {
         MarketplaceListing listing = MarketplaceListing.findById(id);
         if (listing == null) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ErrorResponse("Listing not found: " + id))
@@ -150,7 +239,56 @@ public class MarketplaceListingResource {
      * @return created listing with 201 Created status
      */
     @POST
-    public Response createListing(@Valid CreateListingRequestType request) {
+    @Operation(
+            summary = "Create a new marketplace listing",
+            description = "Creates a new listing as draft or active. Active listings may transition to pending_payment if category requires posting fee.")
+    @SecurityRequirement(
+            name = "bearerAuth")
+    @APIResponses({@APIResponse(
+            responseCode = "201",
+            description = "Listing created successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = ListingType.class))),
+            @APIResponse(
+                    responseCode = "400",
+                    description = "Invalid request (validation failure, missing required fields)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "401",
+                    description = "User not authenticated",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "User does not have required role",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "409",
+                    description = "Conflict (category not found, city not found)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response createListing(@Parameter(
+            description = "Listing creation request",
+            required = true) @Valid CreateListingRequestType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
                     .build();
@@ -221,7 +359,65 @@ public class MarketplaceListingResource {
      */
     @PATCH
     @Path("/{id}")
-    public Response updateListing(@PathParam("id") UUID id, @Valid UpdateListingRequestType request) {
+    @Operation(
+            summary = "Update a marketplace listing",
+            description = "Updates an existing draft listing. Only draft listings can be modified. Supports partial updates.")
+    @SecurityRequirement(
+            name = "bearerAuth")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "Listing updated successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = ListingType.class))),
+            @APIResponse(
+                    responseCode = "400",
+                    description = "Invalid request (validation failure, missing request body)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "401",
+                    description = "User not authenticated",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Not authorized to update this listing (not owner)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "404",
+                    description = "Listing not found",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "409",
+                    description = "Conflict (cannot update non-draft listing, category not found)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response updateListing(@Parameter(
+            description = "The listing UUID",
+            required = true) @PathParam("id") UUID id,
+            @Parameter(
+                    description = "Listing update request with optional fields",
+                    required = true) @Valid UpdateListingRequestType request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse("Request body required"))
                     .build();
@@ -311,7 +507,47 @@ public class MarketplaceListingResource {
      */
     @DELETE
     @Path("/{id}")
-    public Response deleteListing(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Delete a marketplace listing",
+            description = "Soft-deletes a listing by setting status to 'removed'. Preserves data for audit trail.")
+    @SecurityRequirement(
+            name = "bearerAuth")
+    @APIResponses({@APIResponse(
+            responseCode = "204",
+            description = "Listing deleted successfully"),
+            @APIResponse(
+                    responseCode = "401",
+                    description = "User not authenticated",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Not authorized to delete this listing (not owner)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "404",
+                    description = "Listing not found",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response deleteListing(@Parameter(
+            description = "The listing UUID",
+            required = true) @PathParam("id") UUID id) {
         try {
             MarketplaceListing listing = MarketplaceListing.findById(id);
             if (listing == null) {
@@ -354,7 +590,56 @@ public class MarketplaceListingResource {
      */
     @POST
     @Path("/{id}/publish")
-    public Response publishListing(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Publish a draft listing",
+            description = "Activates a draft listing. Transitions to 'active' if category has no posting fee, or 'pending_payment' if payment required.")
+    @SecurityRequirement(
+            name = "bearerAuth")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "Listing published successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = ListingType.class))),
+            @APIResponse(
+                    responseCode = "401",
+                    description = "User not authenticated",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Not authorized to publish this listing (not owner)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "404",
+                    description = "Listing not found",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "409",
+                    description = "Conflict (cannot publish non-draft listing, category not found)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response publishListing(@Parameter(
+            description = "The listing UUID",
+            required = true) @PathParam("id") UUID id) {
         try {
             MarketplaceListing listing = MarketplaceListing.findById(id);
             if (listing == null) {

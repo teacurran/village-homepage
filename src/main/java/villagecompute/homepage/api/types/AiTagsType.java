@@ -3,6 +3,7 @@ package villagecompute.homepage.api.types;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.List;
 
@@ -28,6 +29,27 @@ import java.util.List;
  * @param confidence
  *            confidence score (0.0-1.0) for tag quality
  */
-public record AiTagsType(@NotNull List<String> topics, @NotNull String sentiment, @NotNull List<String> categories,
-        @NotNull @DecimalMin("0.0") @DecimalMax("1.0") Double confidence) {
+@Schema(
+        description = "AI-generated tags for content categorization and sentiment analysis")
+public record AiTagsType(@Schema(
+        description = "Extracted topics/keywords from article content",
+        example = "[\"artificial intelligence\", \"machine learning\", \"GPT-4\"]",
+        required = true) @NotNull List<String> topics,
+
+        @Schema(
+                description = "Sentiment analysis result",
+                example = "positive",
+                enumeration = {
+                        "positive", "negative", "neutral", "mixed"},
+                required = true) @NotNull String sentiment,
+
+        @Schema(
+                description = "Content categories",
+                example = "[\"Technology\", \"AI/ML\"]",
+                required = true) @NotNull List<String> categories,
+
+        @Schema(
+                description = "Confidence score for tag quality (0.0-1.0)",
+                example = "0.87",
+                required = true) @NotNull @DecimalMin("0.0") @DecimalMax("1.0") Double confidence){
 }

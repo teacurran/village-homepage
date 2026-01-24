@@ -8,6 +8,13 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
@@ -116,6 +123,9 @@ import villagecompute.homepage.services.MarketplaceSearchService;
  */
 @Path("/api/marketplace/search")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Marketplace",
+        description = "Marketplace listing search and management operations")
 public class MarketplaceSearchResource {
 
     private static final Logger LOG = Logger.getLogger(MarketplaceSearchResource.class);
@@ -156,12 +166,63 @@ public class MarketplaceSearchResource {
      * @return Search results with pagination metadata
      */
     @GET
-    public Response search(@QueryParam("q") String query, @QueryParam("category") UUID categoryId,
-            @QueryParam("min_price") BigDecimal minPrice, @QueryParam("max_price") BigDecimal maxPrice,
-            @QueryParam("location") Long geoCityId, @QueryParam("radius") Integer radiusMiles,
-            @QueryParam("has_images") Boolean hasImages, @QueryParam("min_date") Instant minDate,
-            @QueryParam("max_date") Instant maxDate, @QueryParam("sort") @DefaultValue("newest") String sortBy,
-            @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("limit") @DefaultValue("25") int limit) {
+    @Operation(
+            summary = "Search marketplace listings",
+            description = "Search marketplace listings with full-text search, location-based filtering, and pagination. Combines Elasticsearch and PostGIS for optimal performance.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Search results returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = SearchResultsType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid search parameters",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Search service error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    public Response search(@Parameter(
+            description = "Full-text search query (searches title and description)",
+            example = "vintage bicycle") @QueryParam("q") String query,
+            @Parameter(
+                    description = "Filter by marketplace category UUID") @QueryParam("category") UUID categoryId,
+            @Parameter(
+                    description = "Minimum price in USD (inclusive)",
+                    example = "50.00") @QueryParam("min_price") BigDecimal minPrice,
+            @Parameter(
+                    description = "Maximum price in USD (inclusive)",
+                    example = "500.00") @QueryParam("max_price") BigDecimal maxPrice,
+            @Parameter(
+                    description = "Center location for radius search (geo_cities.id)") @QueryParam("location") Long geoCityId,
+            @Parameter(
+                    description = "Radius in miles (5, 10, 25, 50, 100, 250)",
+                    example = "25") @QueryParam("radius") Integer radiusMiles,
+            @Parameter(
+                    description = "Filter to listings with at least one image") @QueryParam("has_images") Boolean hasImages,
+            @Parameter(
+                    description = "Filter to listings created on/after this date (ISO-8601 format)") @QueryParam("min_date") Instant minDate,
+            @Parameter(
+                    description = "Filter to listings created on/before this date (ISO-8601 format)") @QueryParam("max_date") Instant maxDate,
+            @Parameter(
+                    description = "Sorting option: newest, price_asc, price_desc, distance",
+                    example = "newest") @QueryParam("sort") @DefaultValue("newest") String sortBy,
+            @Parameter(
+                    description = "Pagination offset (0-based)",
+                    example = "0") @QueryParam("offset") @DefaultValue("0") int offset,
+            @Parameter(
+                    description = "Results per page (1-100)",
+                    example = "25") @QueryParam("limit") @DefaultValue("25") int limit) {
 
         // Validate limit (max 100)
         if (limit > 100) {

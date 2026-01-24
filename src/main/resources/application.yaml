@@ -5,6 +5,23 @@ quarkus:
   http:
     port: 8080
 
+  # OpenAPI/Swagger UI Configuration (Task I6.T9)
+  smallrye-openapi:
+    path: /q/openapi
+    info-title: Village Homepage API
+    info-version: 1.0.0
+    info-description: Customizable homepage portal API with widgets, marketplace classifieds, and curated web directory
+    info-contact-email: tcurran@villagecompute.com
+    info-contact-name: Village Compute
+    info-contact-url: https://villagecompute.com
+    info-license-name: Proprietary
+  swagger-ui:
+    always-include: true
+    path: /q/swagger-ui
+    title: Village Homepage API
+    theme: flattop
+    urls-primary-name: Village Homepage API
+
   # Qute Configuration
   qute:
     strict-rendering: false
@@ -115,6 +132,8 @@ quarkus:
   # Hibernate Search + Elasticsearch Configuration (Policy P11, Feature F12.2)
   hibernate-search-orm:
     elasticsearch:
+      # Elasticsearch version (required by Quarkus)
+      version: 8
       # Dev: localhost, Prod: ES cluster endpoint
       hosts: ${ELASTICSEARCH_HOSTS:localhost:9200}
       protocol: http

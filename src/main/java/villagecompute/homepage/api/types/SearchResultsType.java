@@ -1,5 +1,7 @@
 package villagecompute.homepage.api.types;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 import java.util.List;
 
 /**
@@ -66,7 +68,26 @@ import java.util.List;
  * @see ListingSearchResultType
  * @see SearchCriteria
  */
-public record SearchResultsType(List<ListingSearchResultType> results, long totalCount, int offset, int limit) {
+@Schema(
+        description = "Search results wrapper with pagination metadata")
+public record SearchResultsType(@Schema(
+        description = "List of search result listings",
+        required = true) List<ListingSearchResultType> results,
+
+        @Schema(
+                description = "Total number of matching listings across all pages",
+                example = "142",
+                required = true) long totalCount,
+
+        @Schema(
+                description = "Current page offset (0-based)",
+                example = "0",
+                required = true) int offset,
+
+        @Schema(
+                description = "Results per page",
+                example = "25",
+                required = true) int limit) {
 
     /**
      * Returns true if there are more results beyond the current page.

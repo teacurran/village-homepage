@@ -18,6 +18,13 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.OAuthUrlResponseType;
 import villagecompute.homepage.services.AuthIdentityService;
@@ -42,6 +49,9 @@ import java.util.Objects;
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Authentication",
+        description = "OAuth login flows, session management, bootstrap admin creation")
 public class AuthResource {
 
     private static final Logger LOG = Logger.getLogger(AuthResource.class);
@@ -54,6 +64,19 @@ public class AuthResource {
 
     @POST
     @Path("/anonymous")
+    @Operation(
+            summary = "Create anonymous session",
+            description = "Issues an anonymous cookie (vu_anon_id) for personalization without login. "
+                    + "Allows anonymous users to customize widgets and preferences.")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "Anonymous cookie issued successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = AnonymousResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error")})
     public Response issueAnonymousCookie() {
         NewCookie cookie = authService.issueAnonymousCookie();
         AnonymousResponse body = new AnonymousResponse("Anonymous account created", cookie.getValue());
@@ -62,7 +85,34 @@ public class AuthResource {
 
     @GET
     @Path("/login/{provider}")
-    public Response login(@PathParam("provider") String provider, @QueryParam("bootstrap") boolean bootstrapFlow,
+    @Operation(
+            summary = "Initiate OAuth login flow",
+            description = "Redirects to the specified OAuth provider's authorization endpoint. "
+                    + "Supports Google, Facebook, and Apple. Rate limited per IP to prevent abuse. "
+                    + "Set bootstrap=true query parameter for first superuser creation flow.")
+    @APIResponses({@APIResponse(
+            responseCode = "303",
+            description = "Redirect to OAuth provider authorization URL"),
+            @APIResponse(
+                    responseCode = "404",
+                    description = "Unsupported OAuth provider",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Too many login attempts - rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error")})
+    public Response login(@Parameter(
+            description = "OAuth provider (google, facebook, apple)",
+            required = true) @PathParam("provider") String provider,
+            @Parameter(
+                    description = "Set to true for bootstrap superuser creation flow") @QueryParam("bootstrap") boolean bootstrapFlow,
             @Context UriInfo uriInfo, @Context HttpHeaders headers, @Context HttpServerRequest request) {
 
         String normalizedProvider = provider == null ? null : provider.toLowerCase();
@@ -89,7 +139,43 @@ public class AuthResource {
     @GET
     @Path("/bootstrap")
     @Produces(MediaType.TEXT_HTML)
-    public Response bootstrap(@QueryParam("token") String token, @Context HttpHeaders headers,
+    @Operation(
+            summary = "Bootstrap landing page",
+            description = "HTML page for creating the first superuser account. "
+                    + "Requires valid bootstrap token from environment configuration. "
+                    + "Rate limited per IP. Only accessible when no superuser exists.")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "Bootstrap page with OAuth provider links",
+            content = @Content(
+                    mediaType = MediaType.TEXT_HTML)),
+            @APIResponse(
+                    responseCode = "400",
+                    description = "Missing or invalid bootstrap token",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Bootstrap token invalid or superuser already exists",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Too many bootstrap attempts - rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Bootstrap token not configured",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response bootstrap(@Parameter(
+            description = "Bootstrap token from environment configuration",
+            required = true) @QueryParam("token") String token, @Context HttpHeaders headers,
             @Context HttpServerRequest request, @Context UriInfo uriInfo) {
 
         String clientIp = resolveClientIp(headers, request);
@@ -120,6 +206,41 @@ public class AuthResource {
 
     @POST
     @Path("/bootstrap")
+    @Operation(
+            summary = "Complete bootstrap superuser creation",
+            description = "Finalizes first superuser account creation after OAuth authentication. "
+                    + "Requires valid bootstrap token and OAuth provider details. "
+                    + "Issues JWT session token for the newly created superuser.")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "Superuser created successfully with JWT session",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = BootstrapResponse.class))),
+            @APIResponse(
+                    responseCode = "400",
+                    description = "Missing required fields or unsupported provider",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Bootstrap token invalid or superuser already exists",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "429",
+                    description = "Too many bootstrap attempts - rate limit exceeded",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Bootstrap token not configured or internal error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
     public Response completeBootstrap(@Valid BootstrapRequest request, @Context HttpHeaders headers,
             @Context HttpServerRequest httpRequest) {
 
@@ -218,6 +339,16 @@ public class AuthResource {
      */
     @POST
     @Path("/logout")
+    @Operation(
+            summary = "Terminate user session",
+            description = "Logs out the current user by clearing session and anonymous cookies. "
+                    + "Returns 204 No Content per REST best practices. " + "Client handles post-logout navigation.")
+    @APIResponses({@APIResponse(
+            responseCode = "204",
+            description = "Logout successful - cookies cleared"),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error")})
     public Response logout(@Context HttpHeaders headers) {
         LOG.infof("User logout requested");
 
@@ -245,6 +376,20 @@ public class AuthResource {
      */
     @GET
     @Path("/google/login")
+    @Operation(
+            summary = "Initiate Google OAuth login",
+            description = "Generates Google OAuth authorization URL with CSRF state token. "
+                    + "The state token is stored in the database with a 5-minute expiration "
+                    + "and validated during the callback to prevent CSRF attacks.")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "OAuth URL generated successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = OAuthUrlResponseType.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error")})
     public Response googleLogin(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
         // Extract or generate session ID (anonymous cookie or new UUID)
         String sessionId = extractSessionId(headers);
@@ -279,8 +424,49 @@ public class AuthResource {
      */
     @GET
     @Path("/google/callback")
-    public Response googleCallback(@QueryParam("code") String code, @QueryParam("state") String state,
-            @QueryParam("error") String error, @QueryParam("error_description") String errorDescription,
+    @Operation(
+            summary = "Handle Google OAuth callback",
+            description = "OAuth callback endpoint invoked by Google after user authorization. "
+                    + "Validates CSRF state token, exchanges authorization code for access token, "
+                    + "retrieves user profile, creates or links account, and issues JWT session. "
+                    + "On success, redirects to homepage with JWT token in query parameter.")
+    @APIResponses({@APIResponse(
+            responseCode = "303",
+            description = "Authentication successful - redirecting to homepage with JWT token"),
+            @APIResponse(
+                    responseCode = "400",
+                    description = "Missing authorization code or state parameter, or user cancelled authentication",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Invalid or expired state token (CSRF protection)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "409",
+                    description = "Email already exists with different OAuth provider",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Authentication failed - network error, API error, or internal error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response googleCallback(@Parameter(
+            description = "Authorization code from Google",
+            required = true) @QueryParam("code") String code,
+            @Parameter(
+                    description = "CSRF state token",
+                    required = true) @QueryParam("state") String state,
+            @Parameter(
+                    description = "Error code if user cancelled or authorization failed") @QueryParam("error") String error,
+            @Parameter(
+                    description = "Human-readable error description") @QueryParam("error_description") String errorDescription,
             @Context UriInfo uriInfo) {
 
         // Handle OAuth errors (user cancellation, permission denial, etc.)
@@ -354,6 +540,20 @@ public class AuthResource {
      */
     @GET
     @Path("/facebook/login")
+    @Operation(
+            summary = "Initiate Facebook OAuth login",
+            description = "Generates Facebook OAuth authorization URL with CSRF state token. "
+                    + "The state token is stored in the database with a 5-minute expiration "
+                    + "and validated during the callback to prevent CSRF attacks.")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "OAuth URL generated successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = OAuthUrlResponseType.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error")})
     public Response facebookLogin(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
         // Extract or generate session ID (anonymous cookie or new UUID)
         String sessionId = extractSessionId(headers);
@@ -388,8 +588,49 @@ public class AuthResource {
      */
     @GET
     @Path("/facebook/callback")
-    public Response facebookCallback(@QueryParam("code") String code, @QueryParam("state") String state,
-            @QueryParam("error") String error, @QueryParam("error_description") String errorDescription,
+    @Operation(
+            summary = "Handle Facebook OAuth callback",
+            description = "OAuth callback endpoint invoked by Facebook after user authorization. "
+                    + "Validates CSRF state token, exchanges authorization code for access token, "
+                    + "retrieves user profile, creates or links account, and issues JWT session. "
+                    + "On success, redirects to homepage with JWT token in query parameter.")
+    @APIResponses({@APIResponse(
+            responseCode = "303",
+            description = "Authentication successful - redirecting to homepage with JWT token"),
+            @APIResponse(
+                    responseCode = "400",
+                    description = "Missing authorization code or state parameter, or user cancelled authentication",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Invalid or expired state token (CSRF protection)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "409",
+                    description = "Email already exists with different OAuth provider or email permission denied",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Authentication failed - network error, API error, or internal error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response facebookCallback(@Parameter(
+            description = "Authorization code from Facebook",
+            required = true) @QueryParam("code") String code,
+            @Parameter(
+                    description = "CSRF state token",
+                    required = true) @QueryParam("state") String state,
+            @Parameter(
+                    description = "Error code if user cancelled or authorization failed") @QueryParam("error") String error,
+            @Parameter(
+                    description = "Human-readable error description") @QueryParam("error_description") String errorDescription,
             @Context UriInfo uriInfo) {
 
         // Handle OAuth errors (user cancellation, permission denial, etc.)
@@ -463,6 +704,20 @@ public class AuthResource {
      */
     @GET
     @Path("/apple/login")
+    @Operation(
+            summary = "Initiate Apple OAuth login",
+            description = "Generates Apple OAuth authorization URL with CSRF state token. "
+                    + "The state token is stored in the database with a 5-minute expiration "
+                    + "and validated during the callback to prevent CSRF attacks.")
+    @APIResponses({@APIResponse(
+            responseCode = "200",
+            description = "OAuth URL generated successfully",
+            content = @Content(
+                    schema = @Schema(
+                            implementation = OAuthUrlResponseType.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error")})
     public Response appleLogin(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
         // Extract or generate session ID (anonymous cookie or new UUID)
         String sessionId = extractSessionId(headers);
@@ -500,8 +755,49 @@ public class AuthResource {
     @POST
     @Path("/apple/callback")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response appleCallback(@FormParam("code") String code, @FormParam("state") String state,
-            @FormParam("error") String error, @Context UriInfo uriInfo) {
+    @Operation(
+            summary = "Handle Apple OAuth callback",
+            description = "OAuth callback endpoint invoked by Apple after user authorization. "
+                    + "Validates CSRF state token, exchanges authorization code for access token, "
+                    + "parses ID token to extract user profile, creates or links account, and issues JWT session. "
+                    + "On success, redirects to homepage with JWT token in query parameter. "
+                    + "Apple-specific: Uses POST with form parameters (response_mode=form_post) for enhanced security.")
+    @APIResponses({@APIResponse(
+            responseCode = "303",
+            description = "Authentication successful - redirecting to homepage with JWT token"),
+            @APIResponse(
+                    responseCode = "400",
+                    description = "Missing authorization code or state parameter, or user cancelled authentication",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "403",
+                    description = "Invalid or expired state token (CSRF protection)",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "409",
+                    description = "Email already exists with different OAuth provider",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class))),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Authentication failed - network error, API error, JWT parsing error, or internal error",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class)))})
+    public Response appleCallback(@Parameter(
+            description = "Authorization code from Apple",
+            required = true) @FormParam("code") String code,
+            @Parameter(
+                    description = "CSRF state token",
+                    required = true) @FormParam("state") String state,
+            @Parameter(
+                    description = "Error code if user cancelled or authorization failed") @FormParam("error") String error,
+            @Context UriInfo uriInfo) {
 
         // Handle OAuth errors (user cancellation, permission denial, etc.)
         if (error != null) {

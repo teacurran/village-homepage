@@ -19,6 +19,14 @@ import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.LayoutWidgetType;
 import villagecompute.homepage.api.types.ThemeType;
@@ -65,6 +73,9 @@ import java.util.stream.Collectors;
  * is mounted to enable drag-and-drop layout customization.
  */
 @Path("/")
+@Tag(
+        name = "Homepage",
+        description = "Homepage rendering and customization endpoints")
 public class HomepageResource {
 
     private static final Logger LOG = Logger.getLogger(HomepageResource.class);
@@ -111,7 +122,49 @@ public class HomepageResource {
      */
     @GET
     @Produces(MediaType.TEXT_HTML)
-    public Response homepage(@CookieParam("vu_anon_id") String anonCookie, @QueryParam("edit") boolean editMode,
+    @Operation(
+            summary = "Render personalized homepage",
+            description = "Server-side renders the homepage with user preferences, feature flags, and widget layout. "
+                    + "Supports both anonymous and authenticated users. Anonymous users receive a vu_anon_id cookie. "
+                    + "Authenticated users can enable edit mode to customize their layout.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Successfully rendered homepage HTML",
+                    content = @Content(
+                            mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid query parameters",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_PLAIN)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication failed (invalid or expired token)",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_PLAIN)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_PLAIN)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error during rendering",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_PLAIN))})
+    public Response homepage(@Parameter(
+            description = "Anonymous session identifier cookie (auto-generated if missing)",
+            required = false,
+            schema = @Schema(
+                    type = SchemaType.STRING,
+                    format = "uuid")) @CookieParam("vu_anon_id") String anonCookie,
+            @Parameter(
+                    description = "Enable layout editing mode (requires authentication)",
+                    required = false,
+                    schema = @Schema(
+                            type = SchemaType.BOOLEAN,
+                            defaultValue = "false")) @QueryParam("edit") boolean editMode,
             @Context SecurityContext securityContext) {
 
         Span span = tracer.spanBuilder("homepage.render").startSpan();

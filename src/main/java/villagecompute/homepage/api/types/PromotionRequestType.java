@@ -2,6 +2,7 @@ package villagecompute.homepage.api.types;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
  * Request type for creating a listing promotion (POST /api/marketplace/listings/{id}/promote).
@@ -33,7 +34,14 @@ import jakarta.validation.constraints.Pattern;
  * @param type
  *            promotion type: "featured" or "bump"
  */
-public record PromotionRequestType(@NotNull @Pattern(
-        regexp = "featured|bump",
-        message = "type must be 'featured' or 'bump'") String type) {
+@Schema(
+        description = "Request to promote a marketplace listing")
+public record PromotionRequestType(@Schema(
+        description = "Promotion type",
+        example = "featured",
+        enumeration = {
+                "featured", "bump"},
+        required = true) @NotNull @Pattern(
+                regexp = "featured|bump",
+                message = "type must be 'featured' or 'bump'") String type){
 }

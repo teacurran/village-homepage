@@ -12,6 +12,14 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.*;
 import villagecompute.homepage.data.models.*;
@@ -50,6 +58,9 @@ import java.util.*;
  * </p>
  */
 @Path("/good-sites")
+@Tag(
+        name = "Directory",
+        description = "Good Sites web directory browsing and voting")
 public class GoodSitesResource {
 
     private static final Logger LOG = Logger.getLogger(GoodSitesResource.class);
@@ -99,6 +110,20 @@ public class GoodSitesResource {
     @PermitAll
     @Produces(MediaType.TEXT_HTML)
     @Transactional
+    @Operation(
+            summary = "Directory homepage",
+            description = "Displays the Good Sites directory homepage with root categories and top-ranked popular sites")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Homepage rendered successfully",
+                    content = @Content(
+                            mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML))})
     public TemplateInstance homepage() {
         LOG.info("Rendering Good Sites homepage");
 
@@ -140,8 +165,31 @@ public class GoodSitesResource {
     @PermitAll
     @Produces(MediaType.TEXT_HTML)
     @Transactional
-    public TemplateInstance categoryPage(@PathParam("slug") String slug,
-            @QueryParam("page") @DefaultValue("1") int page) {
+    @Operation(
+            summary = "Category page",
+            description = "Displays a category page with sites, subcategories, breadcrumbs, and voting controls. "
+                    + "Sites with score ≥10 and rank ≤3 from child categories bubble up to the parent.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Category page rendered successfully",
+                    content = @Content(
+                            mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Category not found",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML))})
+    public TemplateInstance categoryPage(@Parameter(
+            description = "Category URL slug (e.g., 'computers', 'news')",
+            required = true) @PathParam("slug") String slug,
+            @Parameter(
+                    description = "Page number (1-indexed, default 1)") @QueryParam("page") @DefaultValue("1") int page) {
         // Normalize page number (treat negative/zero as 1)
         int normalizedPage = Math.max(1, page);
         LOG.infof("Rendering category page: slug=%s, page=%d", slug, normalizedPage);
@@ -217,7 +265,29 @@ public class GoodSitesResource {
     @PermitAll
     @Produces(MediaType.TEXT_HTML)
     @Transactional
-    public TemplateInstance siteDetail(@PathParam("id") UUID id) {
+    @Operation(
+            summary = "Site detail page",
+            description = "Displays detailed information about a specific site including title, description, "
+                    + "screenshot, OpenGraph metadata, and all category memberships with voting stats")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Site detail page rendered successfully",
+                    content = @Content(
+                            mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Site not found",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML))})
+    public TemplateInstance siteDetail(@Parameter(
+            description = "Site UUID",
+            required = true) @PathParam("id") UUID id) {
         LOG.infof("Rendering site detail: id=%s", id);
 
         // Find site
@@ -276,8 +346,30 @@ public class GoodSitesResource {
     @PermitAll
     @Produces(MediaType.TEXT_HTML)
     @Transactional
-    public TemplateInstance search(@QueryParam("q") String query,
-            @QueryParam("category") @DefaultValue("") String categoryFilter) {
+    @Operation(
+            summary = "Search directory sites",
+            description = "Full-text search across site titles and descriptions. Returns top 50 results sorted by title.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Search results rendered successfully",
+                    content = @Content(
+                            mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid search query",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML))})
+    public TemplateInstance search(@Parameter(
+            description = "Search query (searches title and description)",
+            required = true) @QueryParam("q") String query,
+            @Parameter(
+                    description = "Optional category ID filter") @QueryParam("category") @DefaultValue("") String categoryFilter) {
         LOG.infof("Rendering search results: query=%s, category=%s", query, categoryFilter);
 
         if (query == null || query.isBlank()) {
@@ -343,7 +435,59 @@ public class GoodSitesResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional
-    public Response castVote(VoteRequestType request) {
+    @Operation(
+            summary = "Cast or update vote",
+            description = "Casts or updates a vote on a site-category membership. Vote value must be +1 (upvote) or -1 (downvote). "
+                    + "Rate limited to 50 votes per hour per user. Requires authentication.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Vote cast successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = VoteResponseType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid vote request or validation error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON,
+                                    schema = @Schema(
+                                            implementation = ErrorResponse.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Not authenticated",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Site-category membership not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON,
+                                    schema = @Schema(
+                                            implementation = ErrorResponse.class))),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded (50 votes/hour)",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON,
+                                    schema = @Schema(
+                                            implementation = ErrorResponse.class))),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response castVote(@Parameter(
+            description = "Vote request with site-category ID and vote value (+1 or -1)",
+            required = true) VoteRequestType request) {
         UUID userId = getCurrentUserId();
 
         LOG.infof("User %s casting vote on site-category %s: %+d", userId, request.siteCategoryId(), request.vote());
@@ -392,7 +536,40 @@ public class GoodSitesResource {
     @RolesAllowed({"user", "super_admin", "support", "ops"})
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public Response removeVote(@PathParam("siteCategoryId") UUID siteCategoryId) {
+    @Operation(
+            summary = "Remove vote",
+            description = "Removes the user's vote from a site-category membership. Requires authentication.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "204",
+                    description = "Vote removed successfully"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Not authenticated",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Site-category membership not found or user has no vote",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON,
+                                    schema = @Schema(
+                                            implementation = ErrorResponse.class))),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response removeVote(@Parameter(
+            description = "Site-category membership UUID",
+            required = true) @PathParam("siteCategoryId") UUID siteCategoryId) {
         UUID userId = getCurrentUserId();
 
         LOG.infof("User %s removing vote from site-category %s", userId, siteCategoryId);

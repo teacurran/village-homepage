@@ -3,6 +3,7 @@ package villagecompute.homepage.api.types;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.List;
 
@@ -26,7 +27,35 @@ import java.util.List;
  * @param reason
  *            optional explanation for audit log
  */
-public record UpdateFeatureFlagRequestType(String description, Boolean enabled,
-        @JsonProperty("rollout_percentage") @Min(0) @Max(100) Short rolloutPercentage, List<String> whitelist,
-        @JsonProperty("analytics_enabled") Boolean analyticsEnabled, String reason) {
+@Schema(
+        description = "Request to update feature flag configuration (partial update)")
+public record UpdateFeatureFlagRequestType(@Schema(
+        description = "New feature description",
+        example = "Enable enhanced stock market widget",
+        nullable = true) String description,
+
+        @Schema(
+                description = "New master kill switch state",
+                example = "true",
+                nullable = true) Boolean enabled,
+
+        @Schema(
+                description = "New rollout percentage (0-100)",
+                example = "75",
+                nullable = true) @JsonProperty("rollout_percentage") @Min(0) @Max(100) Short rolloutPercentage,
+
+        @Schema(
+                description = "New whitelist entries",
+                example = "[\"user_123\", \"session_abc\"]",
+                nullable = true) List<String> whitelist,
+
+        @Schema(
+                description = "New analytics logging toggle",
+                example = "false",
+                nullable = true) @JsonProperty("analytics_enabled") Boolean analyticsEnabled,
+
+        @Schema(
+                description = "Optional explanation for audit log",
+                example = "Increasing rollout to 75% for beta testing",
+                nullable = true) String reason) {
 }

@@ -11,6 +11,13 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.ContactInquiryRequest;
 import villagecompute.homepage.data.models.MarketplaceListing;
@@ -109,6 +116,9 @@ import java.util.UUID;
  */
 @Path("/api/marketplace/listings")
 @ApplicationScoped
+@Tag(
+        name = "Marketplace",
+        description = "Marketplace listing search and management operations")
 public class ListingContactResource {
 
     private static final Logger LOG = Logger.getLogger(ListingContactResource.class);
@@ -139,7 +149,45 @@ public class ListingContactResource {
     @Path("/{listingId}/contact")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response sendInquiry(@PathParam("listingId") UUID listingId, @Valid ContactInquiryRequest request) {
+    @Operation(
+            summary = "Contact listing seller",
+            description = "Send an inquiry message to the listing seller via masked email relay. Requires authentication to prevent spam.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "202",
+                    description = "Message queued successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request or spam detected",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Listing not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to process inquiry",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response sendInquiry(@Parameter(
+            description = "Listing UUID",
+            required = true) @PathParam("listingId") UUID listingId, @Valid ContactInquiryRequest request) {
 
         // 1. Validate listing exists and is active
         MarketplaceListing listing = MarketplaceListing.findById(listingId);

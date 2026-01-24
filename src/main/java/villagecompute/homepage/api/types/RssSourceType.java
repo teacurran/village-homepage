@@ -2,6 +2,7 @@ package villagecompute.homepage.api.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import villagecompute.homepage.data.models.RssSource;
 
 import java.time.Instant;
@@ -40,14 +41,73 @@ import java.util.UUID;
  * @param updatedAt
  *            last modification timestamp
  */
-public record RssSourceType(@NotNull UUID id, @NotNull String name, @NotNull String url, String category,
-        @JsonProperty("is_system") @NotNull Boolean isSystem, @JsonProperty("user_id") UUID userId,
-        @JsonProperty("refresh_interval_minutes") @NotNull Integer refreshIntervalMinutes,
-        @JsonProperty("is_active") @NotNull Boolean isActive, @JsonProperty("last_fetched_at") Instant lastFetchedAt,
-        @JsonProperty("error_count") @NotNull Integer errorCount,
-        @JsonProperty("last_error_message") String lastErrorMessage,
-        @JsonProperty("created_at") @NotNull Instant createdAt,
-        @JsonProperty("updated_at") @NotNull Instant updatedAt) {
+@Schema(
+        description = "RSS/Atom feed source configuration with refresh settings and error tracking")
+public record RssSourceType(@Schema(
+        description = "Unique RSS source identifier",
+        example = "550e8400-e29b-41d4-a716-446655440000",
+        required = true) @NotNull UUID id,
+
+        @Schema(
+                description = "Feed display name",
+                example = "TechCrunch",
+                required = true,
+                maxLength = 200) @NotNull String name,
+
+        @Schema(
+                description = "RSS/Atom feed URL",
+                example = "https://techcrunch.com/feed",
+                required = true) @NotNull String url,
+
+        @Schema(
+                description = "Optional category",
+                example = "Technology",
+                nullable = true) String category,
+
+        @Schema(
+                description = "Whether this is a system-managed feed",
+                example = "true",
+                required = true) @JsonProperty("is_system") @NotNull Boolean isSystem,
+
+        @Schema(
+                description = "Owner UUID for user-custom feeds (null for system feeds)",
+                example = "660e8400-e29b-41d4-a716-446655440001",
+                nullable = true) @JsonProperty("user_id") UUID userId,
+
+        @Schema(
+                description = "Refresh interval in minutes (15-1440)",
+                example = "60",
+                required = true) @JsonProperty("refresh_interval_minutes") @NotNull Integer refreshIntervalMinutes,
+
+        @Schema(
+                description = "Whether feed is active and being refreshed",
+                example = "true",
+                required = true) @JsonProperty("is_active") @NotNull Boolean isActive,
+
+        @Schema(
+                description = "Last successful fetch timestamp",
+                example = "2026-01-24T10:00:00Z",
+                nullable = true) @JsonProperty("last_fetched_at") Instant lastFetchedAt,
+
+        @Schema(
+                description = "Consecutive error count (resets on success)",
+                example = "0",
+                required = true) @JsonProperty("error_count") @NotNull Integer errorCount,
+
+        @Schema(
+                description = "Last error message for debugging",
+                example = "Feed temporarily unavailable (HTTP 503)",
+                nullable = true) @JsonProperty("last_error_message") String lastErrorMessage,
+
+        @Schema(
+                description = "Creation timestamp",
+                example = "2026-01-24T10:00:00Z",
+                required = true) @JsonProperty("created_at") @NotNull Instant createdAt,
+
+        @Schema(
+                description = "Last modification timestamp",
+                example = "2026-01-24T12:30:00Z",
+                required = true) @JsonProperty("updated_at") @NotNull Instant updatedAt) {
 
     /**
      * Converts an RssSource entity to API type.

@@ -15,6 +15,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.SecurityContext;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.data.models.User;
 
@@ -39,6 +45,11 @@ import villagecompute.homepage.data.models.User;
  * @see villagecompute.homepage.api.rest.admin.AnalyticsResource
  */
 @Path("/admin")
+@Tag(
+        name = "Admin - Users",
+        description = "Admin UI endpoints for server-side rendered pages (requires super_admin, ops, or read_only role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 public class AdminResource {
 
     private static final Logger LOG = Logger.getLogger(AdminResource.class);
@@ -82,6 +93,24 @@ public class AdminResource {
     @GET
     @Path("/analytics")
     @Produces(MediaType.TEXT_HTML)
+    @Operation(
+            summary = "Render analytics dashboard page",
+            description = "Returns server-rendered analytics dashboard with React island components. Requires super_admin, ops, or read_only role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - HTML page rendered",
+                    content = @Content(
+                            mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin, ops, or read_only role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     @RolesAllowed({User.ROLE_SUPER_ADMIN, User.ROLE_OPS, User.ROLE_READ_ONLY})
     public TemplateInstance analytics(@Context SecurityContext ctx) {
         User user = (User) ctx.getUserPrincipal();

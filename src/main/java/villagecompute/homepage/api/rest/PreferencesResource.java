@@ -11,6 +11,13 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.UserPreferencesType;
 import villagecompute.homepage.services.RateLimitService;
@@ -52,6 +59,9 @@ import java.util.UUID;
 @Path("/api/preferences")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Widgets",
+        description = "Homepage widget data operations")
 public class PreferencesResource {
 
     private static final Logger LOG = Logger.getLogger(PreferencesResource.class);
@@ -74,6 +84,39 @@ public class PreferencesResource {
      * @return 200 OK with preferences, 401 if not authenticated, 429 if rate limited
      */
     @GET
+    @Operation(
+            summary = "Get user preferences",
+            description = "Retrieve current user's homepage preferences")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Preferences returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = UserPreferencesType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to retrieve preferences",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response getPreferences(@Context SecurityContext securityContext) {
         // Extract user ID from security context
         UUID userId = extractUserId(securityContext);
@@ -128,6 +171,39 @@ public class PreferencesResource {
      * @return 200 OK with updated preferences, 400 if validation fails, 401 if not authenticated, 429 if rate limited
      */
     @PUT
+    @Operation(
+            summary = "Update user preferences",
+            description = "Update current user's homepage preferences")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Preferences updated successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = UserPreferencesType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request or validation failed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Failed to update preferences",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response updatePreferences(@Valid UserPreferencesType preferences,
             @Context SecurityContext securityContext) {
         // Extract user ID from security context

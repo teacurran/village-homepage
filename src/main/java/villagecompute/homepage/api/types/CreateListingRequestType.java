@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -53,15 +54,55 @@ import java.util.UUID;
  * @param status
  *            initial status (draft or active, defaults to active)
  */
-public record CreateListingRequestType(@JsonProperty("category_id") @NotNull UUID categoryId,
-        @JsonProperty("geo_city_id") @NotNull Long geoCityId, @NotNull @Size(
-                min = 10,
-                max = 100) String title,
-        @NotNull @Size(
-                min = 50,
-                max = 8000) String description,
-        @DecimalMin("0.00") BigDecimal price, @JsonProperty("contact_email") @NotNull @Email String contactEmail,
-        @JsonProperty("contact_phone") String contactPhone, String status) {
+@Schema(
+        description = "Request to create a new marketplace listing")
+public record CreateListingRequestType(@Schema(
+        description = "Marketplace category UUID",
+        example = "770e8400-e29b-41d4-a716-446655440002",
+        required = true) @JsonProperty("category_id") @NotNull UUID categoryId,
+
+        @Schema(
+                description = "City location ID from geo_cities table",
+                example = "5128581",
+                required = true) @JsonProperty("geo_city_id") @NotNull Long geoCityId,
+
+        @Schema(
+                description = "Listing title (10-100 characters)",
+                example = "2019 Honda Civic EX",
+                required = true,
+                maxLength = 100) @NotNull @Size(
+                        min = 10,
+                        max = 100) String title,
+
+        @Schema(
+                description = "Listing description (50-8000 characters)",
+                example = "Well-maintained sedan with low mileage, excellent condition",
+                required = true,
+                maxLength = 8000) @NotNull @Size(
+                        min = 50,
+                        max = 8000) String description,
+
+        @Schema(
+                description = "Price in USD (must be >= 0)",
+                example = "15999.99",
+                nullable = true) @DecimalMin("0.00") BigDecimal price,
+
+        @Schema(
+                description = "Seller's real email address (never displayed publicly)",
+                example = "seller@example.com",
+                required = true) @JsonProperty("contact_email") @NotNull @Email String contactEmail,
+
+        @Schema(
+                description = "Optional seller phone number",
+                example = "+1-802-555-1234",
+                nullable = true) @JsonProperty("contact_phone") String contactPhone,
+
+        @Schema(
+                description = "Initial status (draft or active, defaults to active)",
+                example = "active",
+                enumeration = {
+                        "draft", "active"},
+                nullable = true) String status){
 
     /**
      * Returns the effective status for the listing.

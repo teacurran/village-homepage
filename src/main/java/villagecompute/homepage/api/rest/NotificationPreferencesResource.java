@@ -7,6 +7,14 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.NotificationPreferencesType;
 import villagecompute.homepage.api.types.NotificationPreferencesUpdateType;
@@ -25,6 +33,9 @@ import java.util.UUID;
  * preference management and one-click unauthenticated unsubscribe.
  */
 @Path("/api/notifications")
+@Tag(
+        name = "Notifications",
+        description = "Notification preferences and unsubscribe management")
 public class NotificationPreferencesResource {
 
     private static final Logger LOG = Logger.getLogger(NotificationPreferencesResource.class);
@@ -44,7 +55,35 @@ public class NotificationPreferencesResource {
     @Path("/unsubscribe")
     @Produces(MediaType.TEXT_HTML)
     @Transactional
-    public Response unsubscribe(@QueryParam("token") String token) {
+    @Operation(
+            summary = "One-click unsubscribe",
+            description = "Process unsubscribe request from email link without authentication. Validates HMAC-signed token, updates preferences, and redirects to success page. Tokens expire after 30 days.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "303",
+                    description = "Successfully unsubscribed, redirecting to success page"),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid or missing token",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_HTML))})
+    public Response unsubscribe(@Parameter(
+            description = "Base64-encoded HMAC-signed unsubscribe token from email link",
+            required = true,
+            example = "eyJ1c2VySWQiOiJhYmMxMjMiLCJ0eXBlIjoiZW1haWxEaWdlc3QiLCJleHBpcmVzIjoxNzA2MjgwMDAwfQ==") @QueryParam("token") String token) {
         if (token == null || token.isBlank()) {
             LOG.warnf("Unsubscribe called with missing token");
             return Response.status(Response.Status.BAD_REQUEST)
@@ -95,6 +134,37 @@ public class NotificationPreferencesResource {
     @GET
     @Path("/preferences")
     @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Get notification preferences",
+            description = "Retrieve notification preferences for the authenticated user. Requires authentication via bearer token.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Preferences retrieved successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = NotificationPreferencesType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response getPreferences(@Context SecurityContext securityContext) {
         // Extract and validate user ID (requires authentication)
         UUID userId = extractUserId(securityContext);
@@ -132,8 +202,45 @@ public class NotificationPreferencesResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public Response updatePreferences(@Context SecurityContext securityContext,
-            NotificationPreferencesUpdateType updateRequest) {
+    @Operation(
+            summary = "Update notification preferences",
+            description = "Update notification preferences for the authenticated user. All preference fields must be provided. Requires authentication via bearer token.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Preferences updated successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid request body",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "User not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response updatePreferences(@Context SecurityContext securityContext, @Parameter(
+            description = "Updated notification preferences",
+            required = true,
+            schema = @Schema(
+                    implementation = NotificationPreferencesUpdateType.class)) NotificationPreferencesUpdateType updateRequest) {
         // Extract and validate user ID (requires authentication)
         UUID userId = extractUserId(securityContext);
         if (userId == null) {

@@ -3,6 +3,13 @@ package villagecompute.homepage.api.rest;
 import java.util.List;
 import java.util.UUID;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
@@ -36,6 +43,9 @@ import villagecompute.homepage.services.UserPreferenceService;
 @Path("/api/widgets/stocks")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Widgets",
+        description = "Homepage widget data operations")
 public class StockWidgetResource {
 
     private static final Logger LOG = Logger.getLogger(StockWidgetResource.class);
@@ -59,6 +69,34 @@ public class StockWidgetResource {
      * @return StockWidgetType with quotes and metadata
      */
     @GET
+    @Operation(
+            summary = "Get stock widget data",
+            description = "Retrieve stock quotes for user's watchlist with market status")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Stock data returned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = StockWidgetType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "429",
+                            description = "Rate limit exceeded",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response getStocks(@Context SecurityContext securityContext) {
         // Extract user ID from security context
         UUID userId = extractUserId(securityContext);
@@ -108,6 +146,32 @@ public class StockWidgetResource {
     @PUT
     @Path("/watchlist")
     @Transactional
+    @Operation(
+            summary = "Update stock watchlist",
+            description = "Update user's stock watchlist (maximum 20 symbols)")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Watchlist updated successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid watchlist (too many symbols or invalid format)",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Server error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
     public Response updateWatchlist(@Valid @NotNull @Size(
             max = MAX_WATCHLIST_SIZE) List<String> symbols, @Context SecurityContext securityContext) {
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -49,13 +50,46 @@ import java.util.UUID;
  * @param contactPhone
  *            optional seller phone number
  */
-public record UpdateListingRequestType(@JsonProperty("category_id") UUID categoryId,
-        @JsonProperty("geo_city_id") Long geoCityId, @Size(
-                min = 10,
-                max = 100) String title,
-        @Size(
-                min = 50,
-                max = 8000) String description,
-        @DecimalMin("0.00") BigDecimal price, @JsonProperty("contact_email") @Email String contactEmail,
-        @JsonProperty("contact_phone") String contactPhone) {
+@Schema(
+        description = "Request to update an existing marketplace listing (partial update)")
+public record UpdateListingRequestType(@Schema(
+        description = "Marketplace category UUID",
+        example = "770e8400-e29b-41d4-a716-446655440002",
+        nullable = true) @JsonProperty("category_id") UUID categoryId,
+
+        @Schema(
+                description = "City location ID from geo_cities table",
+                example = "5128581",
+                nullable = true) @JsonProperty("geo_city_id") Long geoCityId,
+
+        @Schema(
+                description = "Listing title (10-100 characters)",
+                example = "2019 Honda Civic EX",
+                nullable = true,
+                maxLength = 100) @Size(
+                        min = 10,
+                        max = 100) String title,
+
+        @Schema(
+                description = "Listing description (50-8000 characters)",
+                example = "Well-maintained sedan with low mileage",
+                nullable = true,
+                maxLength = 8000) @Size(
+                        min = 50,
+                        max = 8000) String description,
+
+        @Schema(
+                description = "Price in USD (must be >= 0)",
+                example = "15999.99",
+                nullable = true) @DecimalMin("0.00") BigDecimal price,
+
+        @Schema(
+                description = "Seller's real email address",
+                example = "seller@example.com",
+                nullable = true) @JsonProperty("contact_email") @Email String contactEmail,
+
+        @Schema(
+                description = "Optional seller phone number",
+                example = "+1-802-555-1234",
+                nullable = true) @JsonProperty("contact_phone") String contactPhone) {
 }

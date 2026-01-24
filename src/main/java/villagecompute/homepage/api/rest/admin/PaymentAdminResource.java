@@ -8,6 +8,14 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.RefundActionRequestType;
 import villagecompute.homepage.api.types.RefundType;
@@ -52,6 +60,11 @@ import java.util.stream.Collectors;
  * </ul>
  */
 @Path("/admin/api/marketplace/refunds")
+@Tag(
+        name = "Admin - Payments",
+        description = "Admin endpoints for payment refund management (requires super_admin role)")
+@SecurityRequirement(
+        name = "bearerAuth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("super_admin")
@@ -94,6 +107,26 @@ public class PaymentAdminResource {
      * @return List of pending refunds
      */
     @GET
+    @Operation(
+            summary = "List pending refunds",
+            description = "Returns all pending refund requests awaiting admin review. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = RefundType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
     public Response listPendingRefunds() {
         LOG.info("Listing pending refunds");
 
@@ -114,7 +147,32 @@ public class PaymentAdminResource {
      */
     @GET
     @Path("/{id}")
-    public Response getRefund(@PathParam("id") UUID refundId) {
+    @Operation(
+            summary = "Get refund details",
+            description = "Returns details for a specific refund. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = RefundType.class))),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Refund not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response getRefund(@Parameter(
+            description = "Refund UUID",
+            required = true) @PathParam("id") UUID refundId) {
         LOG.infof("Getting refund: id=%s", refundId);
 
         PaymentRefund refund = PaymentRefund.findById(refundId);
@@ -156,7 +214,35 @@ public class PaymentAdminResource {
      */
     @POST
     @Path("/{id}/approve")
-    public Response approveRefund(@PathParam("id") UUID refundId, @Valid RefundActionRequestType request,
+    @Operation(
+            summary = "Approve refund request",
+            description = "Approves a pending refund and processes it via Stripe API. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - refund approved and processed",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = RefundType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - refund not pending"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Refund not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error - Stripe API failure")})
+    public Response approveRefund(@Parameter(
+            description = "Refund UUID",
+            required = true) @PathParam("id") UUID refundId, @Valid RefundActionRequestType request,
             @Context SecurityContext securityContext) {
         String adminEmail = securityContext.getUserPrincipal().getName();
         LOG.infof("Approving refund: id=%s, adminEmail=%s", refundId, adminEmail);
@@ -229,7 +315,35 @@ public class PaymentAdminResource {
      */
     @POST
     @Path("/{id}/reject")
-    public Response rejectRefund(@PathParam("id") UUID refundId, @Valid RefundActionRequestType request,
+    @Operation(
+            summary = "Reject refund request",
+            description = "Rejects a pending refund request. Requires super_admin role.")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Success - refund rejected",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = RefundType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Bad request - refund not pending"),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - missing or invalid authentication"),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "Forbidden - insufficient permissions (requires super_admin role)"),
+                    @APIResponse(
+                            responseCode = "404",
+                            description = "Refund not found"),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Internal server error")})
+    public Response rejectRefund(@Parameter(
+            description = "Refund UUID",
+            required = true) @PathParam("id") UUID refundId, @Valid RefundActionRequestType request,
             @Context SecurityContext securityContext) {
         String adminEmail = securityContext.getUserPrincipal().getName();
         LOG.infof("Rejecting refund: id=%s, adminEmail=%s", refundId, adminEmail);

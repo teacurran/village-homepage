@@ -8,6 +8,14 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.homepage.api.types.PaymentIntentResponseType;
 import villagecompute.homepage.api.types.PromotionRequestType;
@@ -48,6 +56,9 @@ import java.util.UUID;
 @Path("/api/marketplace/listings")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+        name = "Marketplace",
+        description = "Marketplace listing search and management operations")
 public class MarketplacePaymentResource {
 
     private static final Logger LOG = Logger.getLogger(MarketplacePaymentResource.class);
@@ -95,7 +106,42 @@ public class MarketplacePaymentResource {
     @POST
     @Path("/{id}/checkout")
     @RolesAllowed({"user", "super_admin"})
-    public Response createCheckoutPayment(@PathParam("id") UUID listingId, @Context SecurityContext securityContext) {
+    @Operation(
+            summary = "Create checkout payment",
+            description = "Create a Stripe Payment Intent for listing posting fee")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Payment Intent created successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = PaymentIntentResponseType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Category has no posting fee or invalid request",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "User does not own this listing",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Payment processing error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response createCheckoutPayment(@Parameter(
+            description = "Listing UUID",
+            required = true) @PathParam("id") UUID listingId, @Context SecurityContext securityContext) {
         String userEmail = securityContext.getUserPrincipal().getName();
         LOG.infof("Creating checkout payment: listingId=%s, userEmail=%s", listingId, userEmail);
 
@@ -175,7 +221,42 @@ public class MarketplacePaymentResource {
     @POST
     @Path("/{id}/promote")
     @RolesAllowed({"user", "super_admin"})
-    public Response createPromotionPayment(@PathParam("id") UUID listingId, @Valid PromotionRequestType request,
+    @Operation(
+            summary = "Create promotion payment",
+            description = "Create a Stripe Payment Intent for listing promotion (featured or bump)")
+    @APIResponses(
+            value = {@APIResponse(
+                    responseCode = "200",
+                    description = "Payment Intent created successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON,
+                            schema = @Schema(
+                                    implementation = PaymentIntentResponseType.class))),
+                    @APIResponse(
+                            responseCode = "400",
+                            description = "Invalid promotion type or validation failed",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "401",
+                            description = "Authentication required",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "403",
+                            description = "User does not own this listing",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON)),
+                    @APIResponse(
+                            responseCode = "500",
+                            description = "Payment processing error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON))})
+    @SecurityRequirement(
+            name = "bearerAuth")
+    public Response createPromotionPayment(@Parameter(
+            description = "Listing UUID",
+            required = true) @PathParam("id") UUID listingId, @Valid PromotionRequestType request,
             @Context SecurityContext securityContext) {
         String userEmail = securityContext.getUserPrincipal().getName();
         LOG.infof("Creating promotion payment: listingId=%s, type=%s, userEmail=%s", listingId, request.type(),
