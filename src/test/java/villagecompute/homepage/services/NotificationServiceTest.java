@@ -9,6 +9,7 @@ import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -18,6 +19,7 @@ import villagecompute.homepage.data.models.*;
 import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -57,9 +59,11 @@ import static org.mockito.Mockito.*;
 @TestProfile(PostgreSQLTestProfile.class)
 class NotificationServiceTest extends BaseIntegrationTest {
 
+    private static final Logger LOG = Logger.getLogger(NotificationServiceTest.class);
+
     @RegisterExtension
     static GreenMailExtension greenMail = new GreenMailExtension(ServerSetupTest.SMTP)
-            .withConfiguration(GreenMailConfiguration.aConfig().withUser("test", "test"));
+            .withConfiguration(GreenMailConfiguration.aConfig().withDisabledAuthentication());
 
     @Inject
     NotificationService notificationService;
@@ -100,8 +104,24 @@ class NotificationServiceTest extends BaseIntegrationTest {
         // Act: Queue email
         notificationService.sendWelcomeEmail(testUser);
 
+        // Debug: Check if EmailDeliveryLog was created
+        List<EmailDeliveryLog> queued = EmailDeliveryLog.findQueued(10);
+        LOG.infof("DEBUG: Found %d queued emails after sendWelcomeEmail", queued.size());
+        if (!queued.isEmpty()) {
+            LOG.infof("DEBUG: First queued email: to=%s, subject=%s, status=%s", queued.get(0).emailAddress,
+                    queued.get(0).subject, queued.get(0).status);
+        }
+
         // Process email queue to actually send via SMTP
         emailDeliveryJob.processQueuedEmails();
+
+        // Wait for async email delivery to complete (reactive mailer is async)
+        greenMail.waitForIncomingEmail(5000, 1); // Wait max 5 seconds for 1 email
+
+        // Debug: Check GreenMail state
+        LOG.infof("DEBUG: GreenMail received message count: %d", greenMail.getReceivedMessages().length);
+        LOG.infof("DEBUG: GreenMail SMTP server running: %s", greenMail.getSmtp().isRunning());
+        LOG.infof("DEBUG: GreenMail SMTP port: %d", greenMail.getSmtp().getPort());
 
         // Assert email sent via GreenMail
         MimeMessage[] messages = greenMail.getReceivedMessages();

@@ -5,7 +5,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
+import villagecompute.homepage.data.models.DirectoryCategory;
 import villagecompute.homepage.data.models.DirectorySite;
+import villagecompute.homepage.data.models.DirectorySiteCategory;
 import villagecompute.homepage.data.models.EmailDeliveryLog;
 import villagecompute.homepage.data.models.ListingFlag;
 import villagecompute.homepage.data.models.MarketplaceListing;
@@ -257,7 +259,7 @@ public class NotificationService {
 
             // Build template data
             Map<String, Object> data = Map.of("userName", user.displayName, "profileUrl", baseUrl + "/profile/edit",
-                    "baseUrl", baseUrl, "unsubscribeUrl", unsubscribeUrl);
+                    "loginUrl", baseUrl + "/login", "baseUrl", baseUrl, "unsubscribeUrl", unsubscribeUrl);
 
             // Render templates
             String subject = "Welcome to " + platformName + "!";
@@ -518,14 +520,25 @@ public class NotificationService {
                 return;
             }
 
+            // Get the primary category for this site
+            List<DirectorySiteCategory> siteCategories = DirectorySiteCategory
+                    .find("siteId = ?1 and status = 'approved'", site.id).list();
+            String categoryName = "Web Directory";
+            if (!siteCategories.isEmpty()) {
+                DirectoryCategory category = DirectoryCategory.findById(siteCategories.get(0).categoryId);
+                if (category != null) {
+                    categoryName = category.name;
+                }
+            }
+
             // Generate unsubscribe token
             String unsubscribeToken = notificationPreferencesService.generateUnsubscribeToken(submitter,
                     "email_site_approved");
             String unsubscribeUrl = baseUrl + "/api/notifications/unsubscribe?token=" + unsubscribeToken;
 
-            // Build template data
-            Map<String, Object> data = Map.of("siteTitle", site.title, "siteUrl", site.url, "directoryUrl",
-                    baseUrl + "/directory/site/" + site.id, "baseUrl", baseUrl, "unsubscribeUrl", unsubscribeUrl);
+            // Build template data (match template variable names)
+            Map<String, Object> data = Map.of("userName", submitter.displayName, "siteName", site.title, "siteUrl",
+                    site.url, "categoryName", categoryName, "baseUrl", baseUrl, "unsubscribeUrl", unsubscribeUrl);
 
             // Render templates
             String subject = "Your site has been approved: " + site.title;
