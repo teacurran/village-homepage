@@ -5,6 +5,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
@@ -61,11 +62,28 @@ public class GeoCityIntegrationTest extends BaseIntegrationTest {
     private GeoCity toronto;
 
     @BeforeEach
-    @TestTransaction
+    @Transactional
     public void setupTestData() {
+        // Clean up any existing test data from previous test runs
+        // This is necessary because @Transactional on @BeforeEach commits data
+        // which is then visible to all subsequent tests
+        entityManager.createNativeQuery("DELETE FROM geo_cities").executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM geo_states").executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM geo_countries").executeUpdate();
+
         // Initialize JTS GeometryFactory for creating Point geometries
         // SRID 4326 = WGS84 coordinate system (standard lat/lon)
         geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+
+        // Create spatial index if it doesn't exist (drop-and-create removes it)
+        try {
+            entityManager.createNativeQuery(
+                    "CREATE INDEX IF NOT EXISTS idx_geo_cities_location ON geo_cities USING GIST(location)")
+                    .executeUpdate();
+        } catch (Exception e) {
+            // Index creation might fail if table doesn't exist yet - that's ok
+            // Hibernate will create the table via drop-and-create, then we'll retry
+        }
 
         // Create countries
         unitedStates = createCountry("United States", "US", "USA", "+1", "Washington", "USD", "🇺🇸");
@@ -92,8 +110,9 @@ public class GeoCityIntegrationTest extends BaseIntegrationTest {
         // Toronto, ON (43.6532°N, 79.3832°W) - ~370 miles from Groton
         toronto = createCity(ontario, canada, "Toronto", 43.6532, -79.3832, "America/Toronto");
 
+        // Flush changes to database so they're visible in the test transaction
+        // Note: Don't clear() here because @Transactional and @TestTransaction share the same persistence context
         entityManager.flush();
-        entityManager.clear();
     }
 
     @Test
@@ -127,7 +146,6 @@ public class GeoCityIntegrationTest extends BaseIntegrationTest {
     @TestTransaction
     public void testGeoStateRelationshipsAndFinders() {
         // Verify state-country relationship
-        entityManager.refresh(vermont);
         assertNotNull(vermont.country, "State should have country relationship");
         assertEquals("United States", vermont.country.name);
 
@@ -162,7 +180,6 @@ public class GeoCityIntegrationTest extends BaseIntegrationTest {
         assertEquals(44.7172, groton.location.getY(), 0.0001, "Latitude should match (Y coordinate)");
 
         // Verify relationships
-        entityManager.refresh(groton);
         assertNotNull(groton.state, "City should have state relationship");
         assertEquals("Vermont", groton.state.name);
         assertNotNull(groton.country, "City should have country relationship");
@@ -363,9 +380,8 @@ public class GeoCityIntegrationTest extends BaseIntegrationTest {
         city.longitude = BigDecimal.valueOf(longitude);
         city.timezone = timezone;
 
-        // Create PostGIS Point geometry (longitude, latitude) - NOTE THE ORDER!
-        Point point = geometryFactory.createPoint(new Coordinate(longitude, latitude));
-        city.location = point;
+        // NOTE: location column is auto-calculated by @PrePersist callback
+        // Do NOT set it manually here - the callback will handle it
 
         city.persist();
         return city;

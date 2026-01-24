@@ -10,11 +10,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedQuery;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -166,6 +171,31 @@ public class GeoCity extends PanacheEntityBase {
     public Instant createdAt;
 
     /**
+     * Auto-calculates PostGIS location from latitude/longitude before persist/update.
+     *
+     * <p>
+     * PostGIS uses (longitude, latitude) order for ST_MakePoint, not (lat, lon). This is because PostGIS follows the
+     * (X, Y) convention where X is longitude and Y is latitude.
+     *
+     * <p>
+     * SRID 4326 is WGS84 coordinate system (GPS coordinates).
+     *
+     * <p>
+     * This method is called automatically by JPA before INSERT or UPDATE operations. It ensures the spatial location
+     * column is always in sync with the latitude/longitude values.
+     */
+    @PrePersist
+    @PreUpdate
+    public void calculateLocation() {
+        if (latitude != null && longitude != null && location == null) {
+            // CRITICAL: JTS Point constructor uses (x, y) which maps to (longitude, latitude)
+            // This matches PostGIS ST_MakePoint(longitude, latitude) convention
+            GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+            location = geometryFactory.createPoint(new Coordinate(longitude.doubleValue(), latitude.doubleValue()));
+        }
+    }
+
+    /**
      * Finds cities by name prefix (autocomplete search).
      *
      * <p>
@@ -300,27 +330,28 @@ public class GeoCity extends PanacheEntityBase {
     public static List<DistancedGeoCity> findNearbyWithDistance(double latitude, double longitude, double radiusMiles) {
         double radiusMeters = radiusMiles * METERS_PER_MILE;
 
-        // Native query that returns Object[] with [GeoCity, Double distance_miles]
+        // Native query that returns Object[] with [column1, column2, ..., distance_miles]
+        // We cannot use GeoCity.class result type when adding extra columns
         // Cast geometry to geography for accurate distance calculations
         List<Object[]> results = getEntityManager()
                 .createNativeQuery(
-                        "SELECT c.*, ST_Distance(c.location::geography, ST_MakePoint(?1, ?2)::geography) / ?4 as distance_miles "
+                        "SELECT c.id, c.state_id, c.country_id, c.name, c.latitude, c.longitude, c.timezone, c.location, c.created_at, "
+                                + "ST_Distance(c.location::geography, ST_MakePoint(?1, ?2)::geography) / ?4 as distance_miles "
                                 + "FROM geo_cities c "
                                 + "WHERE ST_DWithin(c.location::geography, ST_MakePoint(?1, ?2)::geography, ?3) "
-                                + "ORDER BY distance_miles",
-                        GeoCity.class)
+                                + "ORDER BY distance_miles")
                 .setParameter(1, longitude) // X coordinate = longitude
                 .setParameter(2, latitude) // Y coordinate = latitude
                 .setParameter(3, radiusMeters).setParameter(4, METERS_PER_MILE).getResultList();
 
         // Transform Object[] results into DistancedGeoCity records
         return results.stream().map(row -> {
-            GeoCity city = (GeoCity) row[0];
-            // Distance is appended as extra column, not part of entity mapping
-            // We need to calculate it separately since JPA doesn't map extra columns
-            double distance = calculateDistance(latitude, longitude, city.latitude.doubleValue(),
-                    city.longitude.doubleValue());
-            return new DistancedGeoCity(city, distance);
+            // Manually reconstruct GeoCity from columns
+            Long id = ((Number) row[0]).longValue();
+            GeoCity city = GeoCity.findById(id);
+            // Distance is the last column
+            double distanceMiles = ((Number) row[9]).doubleValue();
+            return new DistancedGeoCity(city, distanceMiles);
         }).toList();
     }
 

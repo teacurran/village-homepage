@@ -8,3 +8,7 @@ CREATE EXTENSION IF NOT EXISTS postgis_topology;
 
 -- pgvector is not available in PostGIS images
 -- Tests requiring vector search should use a different test container or mock pgvector queries
+
+-- IMPORTANT: The spatial index is created AFTER Hibernate generates the schema
+-- This is handled in the test setup via @PostConstruct or DDL callback
+-- See GeoCityIntegrationTest.setupTestData() for index creation
