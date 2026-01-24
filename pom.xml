@@ -426,11 +426,10 @@
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
-                    <!-- Unset .env datasource variables to allow Dev Services Testcontainers -->
+                    <!-- Prevent .env file from loading during tests -->
+                    <!-- quarkus.dotenv.enabled=false disables .env file loading, allowing Dev Services to activate -->
                     <environmentVariables>
-                        <QUARKUS_DATASOURCE_JDBC_URL></QUARKUS_DATASOURCE_JDBC_URL>
-                        <QUARKUS_DATASOURCE_USERNAME></QUARKUS_DATASOURCE_USERNAME>
-                        <QUARKUS_DATASOURCE_PASSWORD></QUARKUS_DATASOURCE_PASSWORD>
+                        <QUARKUS_DOTENV_ENABLED>false</QUARKUS_DOTENV_ENABLED>
                     </environmentVariables>
                     <!-- @{argLine} is set by JaCoCo plugin - append to it rather than replacing -->
                     <!-- PostgreSQLTestProfile handles datasource configuration overrides -->

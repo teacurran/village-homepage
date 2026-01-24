@@ -2,6 +2,9 @@ package villagecompute.homepage.data.models;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -96,6 +99,7 @@ public class ListingFlag extends PanacheEntityBase {
     @Column(
             name = "fraud_reasons",
             columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     public String fraudReasons;
 
     @Column(

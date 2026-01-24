@@ -80,6 +80,12 @@ public class FraudDetectionService {
      * @return fraud analysis result with score and reasons
      */
     public FraudAnalysisResultType analyzeListing(UUID listingId) {
+        // Defensive null check
+        if (listingId == null) {
+            LOG.warn("Cannot analyze listing - listingId is null");
+            return FraudAnalysisResultType.clean(PROMPT_VERSION);
+        }
+
         MarketplaceListing listing = MarketplaceListing.findById(listingId);
         if (listing == null) {
             LOG.warnf("Cannot analyze listing %s - not found", listingId);
