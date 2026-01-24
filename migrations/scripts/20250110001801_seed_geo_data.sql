@@ -1,0 +1,137 @@
+-- // seed_geo_data
+-- Documents the geographic data seeding process for marketplace location filtering.
+--
+-- This migration does NOT insert data directly via SQL. Instead, it documents the
+-- process for loading 153K+ cities from dr5hn/countries-states-cities-database
+-- with US + Canada filtering per Policy P6.
+--
+-- DATA LOADING PROCESS:
+-- =====================
+--
+-- STEP 1: Download and load raw dr5hn dataset
+-- --------------------------------------------
+-- Executes: ./scripts/load-geo-data.sh
+--
+-- Downloads JSON from https://github.com/dr5hn/countries-states-cities-database
+-- and populates native schema tables (countries, states, cities) with 153K+ cities globally.
+--
+-- Tables created:
+--   - countries (249 countries)
+--   - states (5,000+ states/provinces)
+--   - cities (153,000+ cities worldwide)
+--
+-- STEP 2: Transform into application schema with US+CA filtering
+-- ---------------------------------------------------------------
+-- Executes: ./scripts/import-geo-data-to-app-schema.sh
+--
+-- Filters to US + Canada only per Policy P6:
+--   - 2 countries (United States, Canada)
+--   - 63 states/provinces (50 US states + 13 Canadian provinces/territories)
+--   - ~40,000 cities (US + Canada combined)
+--
+-- Populates application tables:
+--   - geo_countries (from countries WHERE iso2 IN ('US', 'CA'))
+--   - geo_states (from states WHERE country_id IN (US, CA))
+--   - geo_cities (from cities WHERE country_id IN (US, CA))
+--
+-- PostGIS location column is populated via:
+--   UPDATE geo_cities
+--   SET location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography;
+--
+-- STEP 3: Create spatial indexes (already in V017 migration)
+-- -----------------------------------------------------------
+-- GIST index on geo_cities.location enables fast radius queries:
+--   CREATE INDEX idx_geo_cities_location ON geo_cities USING GIST(location);
+--
+-- STEP 4: Verify data load
+-- -------------------------
+-- Run: ./scripts/verify-geo-data.sh
+--
+-- Validation queries:
+--
+--   -- Count cities by country
+--   SELECT c.name, COUNT(ci.id) as city_count
+--   FROM geo_countries c
+--   JOIN geo_cities ci ON ci.country_id = c.id
+--   GROUP BY c.name
+--   ORDER BY city_count DESC;
+--
+--   -- Test radius query (50 miles from Seattle: 47.6062°N, 122.3321°W)
+--   SELECT name,
+--          ST_Distance(location, ST_MakePoint(-122.3321, 47.6062)::geography) / 1609.34 as distance_miles
+--   FROM geo_cities
+--   WHERE ST_DWithin(location, ST_MakePoint(-122.3321, 47.6062)::geography, 80467)
+--   ORDER BY distance_miles
+--   LIMIT 10;
+--
+--   -- Benchmark query performance (should use GIST index, p95 < 100ms per P11)
+--   EXPLAIN ANALYZE
+--   SELECT COUNT(*)
+--   FROM geo_cities
+--   WHERE ST_DWithin(location, ST_MakePoint(-74.0060, 40.7128)::geography, 160934);  -- 100 miles from NYC
+--
+-- AUTOMATED LOADING (Development):
+-- =================================
+--
+-- To automate data loading during development setup:
+--
+--   if (!GeoDataLoader.verifyDataLoaded()) {
+--       GeoDataLoader.loadData();
+--   }
+--
+-- See: src/main/java/villagecompute/homepage/util/GeoDataLoader.java
+--
+-- PRODUCTION DEPLOYMENT:
+-- ======================
+--
+-- For production environments, run the scripts manually before application deployment:
+--
+--   cd /path/to/village-homepage
+--   ./scripts/load-geo-data.sh
+--   ./scripts/import-geo-data-to-app-schema.sh
+--   ./scripts/verify-geo-data.sh
+--
+-- Expected execution time: < 5 minutes for US+CA dataset
+--
+-- POLICY COMPLIANCE:
+-- ==================
+--
+-- Policy P6: PostGIS spatial indexing for radius queries (5-250 mile scope)
+-- Policy P11: Marketplace search optimization (p95 < 100ms for ≤100mi radius)
+--
+-- DATA SOURCE:
+-- ============
+--
+-- dr5hn/countries-states-cities-database
+-- https://github.com/dr5hn/countries-states-cities-database
+-- License: ODbL (Open Database License)
+--
+-- Dataset includes:
+--   - 249 countries
+--   - 5,000+ states/provinces
+--   - 153,000+ cities
+--   - Latitude/longitude coordinates (WGS84)
+--   - Timezone information (IANA)
+--
+-- RELATED ENTITIES:
+-- =================
+--
+-- Java entities mapping to these tables:
+--   - villagecompute.homepage.data.models.GeoCountry
+--   - villagecompute.homepage.data.models.GeoState
+--   - villagecompute.homepage.data.models.GeoCity
+--
+-- Key methods:
+--   - GeoCity.findNearby(lat, lon, radiusMiles) - Radius search
+--   - GeoCity.findByNamePrefix(prefix) - Autocomplete search
+--   - GeoDataLoader.loadData() - Programmatic data loading
+--   - GeoDataLoader.verifyDataLoaded() - Data validation
+--
+-- //@UNDO
+--
+-- This is a documentation-only migration; no data is inserted directly.
+-- To remove geographic data, truncate the tables:
+--
+-- TRUNCATE TABLE geo_cities CASCADE;
+-- TRUNCATE TABLE geo_states CASCADE;
+-- TRUNCATE TABLE geo_countries CASCADE;

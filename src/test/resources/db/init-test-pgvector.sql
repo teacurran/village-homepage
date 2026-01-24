@@ -1,9 +1,11 @@
--- Test database initialization for PostgreSQL 17 + pgvector
+-- Test database initialization for PostgreSQL 17 + pgvector + PostGIS
 -- This script is executed when the testcontainer starts
 
 -- Enable pgvector extension (for semantic search embeddings)
 -- NOTE: pgvector/pgvector:pg17 image has pgvector pre-installed
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- NOTE: PostGIS is not available in pgvector/pgvector:pg17 image
--- Tests requiring geographic queries should use a different test resource or mock the queries
+-- Enable PostGIS extension (for geographic queries - Feature I6.T2)
+-- NOTE: postgis/postgis images have PostGIS pre-installed
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS postgis_topology;

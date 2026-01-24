@@ -131,6 +131,20 @@
             <artifactId>quarkus-hibernate-search-orm-elasticsearch</artifactId>
         </dependency>
 
+        <!-- Hibernate Spatial for PostGIS geography type (Feature I6.T2) -->
+        <!-- Version MUST match Quarkus 3.26.1's Hibernate ORM 7.1.0.Final -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-spatial</artifactId>
+            <version>7.1.0.Final</version>
+        </dependency>
+        <!-- JTS Topology Suite for geometry types (required by Hibernate Spatial) -->
+        <dependency>
+            <groupId>org.locationtech.jts</groupId>
+            <artifactId>jts-core</artifactId>
+            <version>1.19.0</version>
+        </dependency>
+
         <!-- Security & Authentication -->
         <dependency>
             <groupId>io.quarkus</groupId>

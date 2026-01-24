@@ -67,7 +67,7 @@ CREATE TABLE geo_cities (
     latitude NUMERIC(10, 7) NOT NULL,
     longitude NUMERIC(10, 7) NOT NULL,
     timezone TEXT,
-    location geography(Point, 4326),  -- PostGIS spatial column for radius queries
+    location geometry(Point, 4326),  -- PostGIS spatial column for radius queries (geometry type for Hibernate Spatial compatibility)
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
