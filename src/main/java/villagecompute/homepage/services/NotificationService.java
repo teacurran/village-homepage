@@ -199,6 +199,38 @@ public class NotificationService {
     Template adminFlagReviewTxt;
 
     /**
+     * Checks if email delivery is enabled for a user.
+     *
+     * <p>
+     * Email delivery can be disabled if the user's email address has excessive bounces:
+     * <ul>
+     * <li>Hard bounce (5.x.x DSN) - Immediate disable</li>
+     * <li>5 consecutive soft bounces (4.x.x DSN) within 30 days - Automatic disable</li>
+     * </ul>
+     *
+     * <p>
+     * This check should be performed BEFORE preference and rate limit checks to avoid wasting resources on emails that
+     * will never be delivered.
+     *
+     * @param user
+     *            the user to check
+     * @return true if email delivery is enabled, false if disabled due to bounces
+     */
+    private boolean isEmailEnabled(User user) {
+        if (user == null) {
+            return false;
+        }
+
+        if (user.emailDisabled) {
+            LOG.infof("Email delivery disabled for user %s (%s) due to bounces, skipping notification", user.id,
+                    user.email);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Sends welcome email to newly registered user.
      *
      * <p>
@@ -209,6 +241,11 @@ public class NotificationService {
      */
     public void sendWelcomeEmail(User user) {
         try {
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(user)) {
+                return;
+            }
+
             // Welcome emails are always sent (no preference check, first-time user)
 
             // Check rate limit
@@ -263,6 +300,11 @@ public class NotificationService {
             User listingOwner = User.findById(listing.userId);
             if (listingOwner == null) {
                 LOG.errorf("User not found for listing %s", listing.id);
+                return;
+            }
+
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(listingOwner)) {
                 return;
             }
 
@@ -334,6 +376,11 @@ public class NotificationService {
                 return;
             }
 
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(listingOwner)) {
+                return;
+            }
+
             // Listing flagged notifications are always sent (important moderation alert)
 
             // Check rate limit
@@ -392,6 +439,11 @@ public class NotificationService {
                 return;
             }
 
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(listingOwner)) {
+                return;
+            }
+
             // Listing expiration notifications are always sent (important business alert)
 
             // Check rate limit
@@ -447,6 +499,11 @@ public class NotificationService {
             User submitter = User.findById(site.submittedByUserId);
             if (submitter == null) {
                 LOG.errorf("User not found for site %s", site.id);
+                return;
+            }
+
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(submitter)) {
                 return;
             }
 
@@ -512,6 +569,11 @@ public class NotificationService {
                 return;
             }
 
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(submitter)) {
+                return;
+            }
+
             // Check preferences
             if (!checkNotificationPreference(submitter, "email_site_rejected")) {
                 LOG.debugf("User %s opted out of site rejected emails", submitter.id);
@@ -568,6 +630,11 @@ public class NotificationService {
      */
     public void sendPasswordResetEmail(User user, String resetToken) {
         try {
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(user)) {
+                return;
+            }
+
             // Password reset emails are always sent (security critical)
 
             // Check rate limit (stricter limits for security emails)
@@ -616,6 +683,11 @@ public class NotificationService {
      */
     public void sendEmailVerificationEmail(User user, String verificationToken) {
         try {
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(user)) {
+                return;
+            }
+
             // Email verification emails are always sent (security critical)
 
             // Check rate limit
@@ -665,6 +737,11 @@ public class NotificationService {
      */
     public void sendNotificationDigest(User user, List<UserNotification> notifications) {
         try {
+            // Check if email delivery is enabled (bounce protection)
+            if (!isEmailEnabled(user)) {
+                return;
+            }
+
             // Check preferences
             if (!checkNotificationPreference(user, "email_digest")) {
                 LOG.debugf("User %s opted out of notification digest emails", user.id);
@@ -718,6 +795,11 @@ public class NotificationService {
      */
     public void sendAdminFlagReviewEmail(User admin, ListingFlag flag) {
         try {
+            // Check if email delivery is enabled for admin user (bounce protection)
+            if (admin != null && !isEmailEnabled(admin)) {
+                return;
+            }
+
             // Admin alerts are always sent (important moderation action)
 
             String recipientEmail = admin != null ? admin.email : opsAlertEmail;

@@ -45,6 +45,8 @@ import java.util.UUID;
  * <li>{@code is_banned} (BOOLEAN) - User banned from platform (typically for 2+ chargebacks per P3)</li>
  * <li>{@code banned_at} (TIMESTAMPTZ) - Timestamp when user was banned</li>
  * <li>{@code ban_reason} (TEXT) - Reason for ban (e.g., "Repeated chargebacks (3)")</li>
+ * <li>{@code email_disabled} (BOOLEAN) - Email delivery disabled due to bounces (hard bounce or 5+ consecutive soft
+ * bounces)</li>
  * <li>{@code google_refresh_token} (TEXT) - Google OAuth refresh token (never expires)</li>
  * <li>{@code google_access_token_expires_at} (TIMESTAMPTZ) - Google access token expiration</li>
  * <li>{@code facebook_access_token} (TEXT) - Facebook long-lived access token (60 days)</li>
@@ -186,6 +188,11 @@ public class User extends PanacheEntityBase {
     @Column(
             name = "ban_reason")
     public String banReason;
+
+    @Column(
+            name = "email_disabled",
+            nullable = false)
+    public boolean emailDisabled = false;
 
     @Column(
             name = "last_active_at")
