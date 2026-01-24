@@ -100,10 +100,11 @@ public class BackgroundJobsTest extends WireMockTestBase {
      */
     @Test
     public void testRssFeedRefresh() throws Exception {
-        // 1. Setup: Create RSS source
+        // 1. Setup: Create RSS source with unique URL to avoid conflicts
         // Note: Do NOT use @Transactional - job handlers manage their own transactions
         UUID sourceId = io.quarkus.narayana.jta.QuarkusTransaction.requiringNew().call(() -> {
-            RssSource source = TestFixtures.createTestRssSource();
+            String uniqueUrl = "https://example-" + java.util.UUID.randomUUID().toString().substring(0, 8) + ".com/feed.xml";
+            RssSource source = TestFixtures.createTestRssSource(uniqueUrl, "Test Feed " + java.util.UUID.randomUUID().toString().substring(0, 8));
             source.lastFetchedAt = Instant.now().minusSeconds(3600); // Last fetched 1 hour ago
             source.persist();
             assertNotNull(source.id, "RSS source should be created with ID");
@@ -117,6 +118,10 @@ public class BackgroundJobsTest extends WireMockTestBase {
             return s;
         });
 
+        // 2. Generate unique GUIDs to avoid conflicts across test runs
+        String guid1 = "item-1-" + java.util.UUID.randomUUID().toString();
+        String guid2 = "item-2-" + java.util.UUID.randomUUID().toString();
+
         // 2. Stub RSS feed XML response
         String rssFeedXml = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -129,19 +134,19 @@ public class BackgroundJobsTest extends WireMockTestBase {
                             <title>Breaking News: AI Breakthrough</title>
                             <link>https://example.com/ai-breakthrough</link>
                             <description>Scientists achieve major AI advancement</description>
-                            <guid>item-1-unique-guid</guid>
+                            <guid>%s</guid>
                             <pubDate>Mon, 24 Jan 2026 10:00:00 GMT</pubDate>
                         </item>
                         <item>
                             <title>Tech Stock Rally Continues</title>
                             <link>https://example.com/stock-rally</link>
                             <description>Tech stocks reach new highs</description>
-                            <guid>item-2-unique-guid</guid>
+                            <guid>%s</guid>
                             <pubDate>Mon, 24 Jan 2026 11:00:00 GMT</pubDate>
                         </item>
                     </channel>
                 </rss>
-                """;
+                """.formatted(guid1, guid2);
 
         wireMockServer.stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(
                 com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo("/rss.xml"))
@@ -163,27 +168,31 @@ public class BackgroundJobsTest extends WireMockTestBase {
 
         // Execute in separate transaction to avoid detached entity issues
         try {
-            rssFeedRefreshJobHandler.execute(1L, refreshPayload); // jobId = 1L for testing
+            // Use unique jobId based on source ID to avoid conflicts
+            long uniqueJobId = sourceId.getMostSignificantBits() & Long.MAX_VALUE;
+            rssFeedRefreshJobHandler.execute(uniqueJobId, refreshPayload);
         } catch (Exception e) {
             // Log but don't fail test - we'll verify the results below
             System.err.println("RSS refresh encountered error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         // 4. Verify: New feed items created (check by unique GUID to avoid duplicates)
         List<FeedItem> items = io.quarkus.narayana.jta.QuarkusTransaction.requiringNew().call(() -> {
             return FeedItem.find("sourceId", sourceId).list();
         });
+
         // Find the two specific items we expect from the RSS feed
-        long item1Count = items.stream().filter(i -> i.itemGuid.equals("item-1-unique-guid")).count();
-        long item2Count = items.stream().filter(i -> i.itemGuid.equals("item-2-unique-guid")).count();
-        assertEquals(1, item1Count, "Should have exactly 1 item with GUID 'item-1-unique-guid'");
-        assertEquals(1, item2Count, "Should have exactly 1 item with GUID 'item-2-unique-guid'");
+        long item1Count = items.stream().filter(i -> i.itemGuid.equals(guid1)).count();
+        long item2Count = items.stream().filter(i -> i.itemGuid.equals(guid2)).count();
+        assertEquals(1, item1Count, "Should have exactly 1 item with GUID '" + guid1 + "'");
+        assertEquals(1, item2Count, "Should have exactly 1 item with GUID '" + guid2 + "'");
 
         // 5. Verify: Feed items have correct data
         FeedItem item1 = io.quarkus.narayana.jta.QuarkusTransaction.requiringNew().call(() -> {
             List<FeedItem> allItems = FeedItem.find("sourceId", sourceId).list();
             return allItems.stream()
-                    .filter(i -> i.itemGuid.equals("item-1-unique-guid"))
+                    .filter(i -> i.itemGuid.equals(guid1))
                     .findFirst()
                     .orElse(null);
         });

@@ -63,8 +63,10 @@ public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManag
         config.put("quarkus.hibernate-orm.sql-load-script", "no-file");
         // Enable Jackson for JSONB type handling
         config.put("quarkus.hibernate-orm.mapping.jackson.convert-to-json-mode", "enabled");
-        // Use PostGIS dialect for spatial type support
-        config.put("quarkus.hibernate-orm.dialect", "org.hibernate.spatial.dialect.postgis.PostgisPG10Dialect");
+        // Use standard PostgreSQL dialect (NOT PostGIS) for tests
+        // This avoids dependency on PostGIS extension which is not installed in pgvector image
+        // Geographic queries are tested separately with real PostGIS database
+        config.put("quarkus.hibernate-orm.dialect", "org.hibernate.dialect.PostgreSQLDialect");
 
         return config;
     }
