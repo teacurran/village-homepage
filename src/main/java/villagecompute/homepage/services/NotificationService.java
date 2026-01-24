@@ -14,11 +14,7 @@ import villagecompute.homepage.data.models.NotificationPreferences;
 import villagecompute.homepage.data.models.User;
 import villagecompute.homepage.data.models.UserNotification;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -95,6 +91,9 @@ public class NotificationService {
     @Inject
     RateLimitService rateLimitService;
 
+    @Inject
+    NotificationPreferencesService notificationPreferencesService;
+
     @ConfigProperty(
             name = "email.notifications.from")
     String fromEmail;
@@ -110,11 +109,6 @@ public class NotificationService {
     @ConfigProperty(
             name = "email.notifications.ops-alert-email")
     String opsAlertEmail;
-
-    @ConfigProperty(
-            name = "email.unsubscribe.secret",
-            defaultValue = "default-dev-secret-change-in-prod")
-    String unsubscribeSecret;
 
     // Template injections (HTML + TXT for each notification type)
 
@@ -328,8 +322,9 @@ public class NotificationService {
             }
 
             // Generate unsubscribe token
-            String unsubscribeToken = generateUnsubscribeToken(listingOwner, "email_listing_messages");
-            String unsubscribeUrl = baseUrl + "/preferences/unsubscribe?token=" + unsubscribeToken;
+            String unsubscribeToken = notificationPreferencesService.generateUnsubscribeToken(listingOwner,
+                    "email_listing_messages");
+            String unsubscribeUrl = baseUrl + "/api/notifications/unsubscribe?token=" + unsubscribeToken;
 
             // Build template data
             String messagePreview = message.body.substring(0, Math.min(100, message.body.length()));
@@ -524,8 +519,9 @@ public class NotificationService {
             }
 
             // Generate unsubscribe token
-            String unsubscribeToken = generateUnsubscribeToken(submitter, "email_site_approved");
-            String unsubscribeUrl = baseUrl + "/preferences/unsubscribe?token=" + unsubscribeToken;
+            String unsubscribeToken = notificationPreferencesService.generateUnsubscribeToken(submitter,
+                    "email_site_approved");
+            String unsubscribeUrl = baseUrl + "/api/notifications/unsubscribe?token=" + unsubscribeToken;
 
             // Build template data
             Map<String, Object> data = Map.of("siteTitle", site.title, "siteUrl", site.url, "directoryUrl",
@@ -591,8 +587,9 @@ public class NotificationService {
             }
 
             // Generate unsubscribe token
-            String unsubscribeToken = generateUnsubscribeToken(submitter, "email_site_rejected");
-            String unsubscribeUrl = baseUrl + "/preferences/unsubscribe?token=" + unsubscribeToken;
+            String unsubscribeToken = notificationPreferencesService.generateUnsubscribeToken(submitter,
+                    "email_site_rejected");
+            String unsubscribeUrl = baseUrl + "/api/notifications/unsubscribe?token=" + unsubscribeToken;
 
             // Build template data
             Map<String, Object> data = Map.of("siteTitle", site.title, "siteUrl", site.url, "rejectionReason", reason,
@@ -759,8 +756,8 @@ public class NotificationService {
             }
 
             // Generate unsubscribe token
-            String unsubscribeToken = generateUnsubscribeToken(user, "email_digest");
-            String unsubscribeUrl = baseUrl + "/preferences/unsubscribe?token=" + unsubscribeToken;
+            String unsubscribeToken = notificationPreferencesService.generateUnsubscribeToken(user, "email_digest");
+            String unsubscribeUrl = baseUrl + "/api/notifications/unsubscribe?token=" + unsubscribeToken;
 
             // Build template data
             Map<String, Object> data = Map.of("userName", user.displayName, "notificationCount", notifications.size(),
@@ -880,42 +877,6 @@ public class NotificationService {
             case "email_digest" -> prefs.emailDigest;
             default -> true; // Unknown types default to enabled
         };
-    }
-
-    /**
-     * Generates cryptographically secure unsubscribe token for user and notification type.
-     *
-     * <p>
-     * Token format: {@code base64(userId:notificationType:timestamp:hmac)} where HMAC is SHA256 signature using secret
-     * key from config. Tokens expire after 30 days (validated on redemption).
-     *
-     * @param user
-     *            the user to generate token for
-     * @param notificationType
-     *            the notification type to unsubscribe from
-     * @return base64-encoded unsubscribe token
-     */
-    private String generateUnsubscribeToken(User user, String notificationType) {
-        try {
-            // Token payload: userId:notificationType:timestamp
-            long timestamp = Instant.now().getEpochSecond();
-            String payload = user.id + ":" + notificationType + ":" + timestamp;
-
-            // Generate HMAC signature
-            Mac mac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec keySpec = new SecretKeySpec(unsubscribeSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-            mac.init(keySpec);
-            byte[] hmac = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
-            String signature = Base64.getUrlEncoder().withoutPadding().encodeToString(hmac);
-
-            // Final token: base64(payload:signature)
-            String token = payload + ":" + signature;
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(token.getBytes(StandardCharsets.UTF_8));
-
-        } catch (Exception e) {
-            LOG.errorf(e, "Failed to generate unsubscribe token for user %s", user.id);
-            return ""; // Return empty token on error (email will still have preferences link)
-        }
     }
 
     /**

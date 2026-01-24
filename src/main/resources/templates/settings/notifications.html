@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Settings - Village Homepage</title>
+    <link rel="stylesheet" href="/assets/css/homepage.css">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .settings-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .settings-header h2 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .settings-header p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .preference-section {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .preference-section h3 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .preference-group {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .preference-group label {
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            font-size: 15px;
+            color: #333;
+        }
+
+        .preference-group input[type="checkbox"] {
+            margin-right: 12px;
+            margin-top: 3px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .preference-label {
+            flex: 1;
+        }
+
+        .preference-label strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: #666;
+            margin: 4px 0 0 0;
+            line-height: 1.4;
+        }
+
+        .master-toggle {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .master-toggle strong {
+            color: #1976d2;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn-primary {
+            padding: 12px 24px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #1976d2;
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            padding: 12px 24px;
+            background: white;
+            color: #666;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+
+        .btn-secondary:hover {
+            border-color: #999;
+            color: #333;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><a href="/">Village Homepage</a></h1>
+        </div>
+    </header>
+
+    <main class="settings-container">
+        <div class="settings-header">
+            <h2>Email Notification Preferences</h2>
+            <p>Manage how and when we send you email notifications</p>
+        </div>
+
+        <div id="alert-success" class="alert alert-success">
+            Preferences saved successfully!
+        </div>
+
+        <div id="alert-error" class="alert alert-error">
+            Failed to save preferences. Please try again.
+        </div>
+
+        <form id="preferences-form">
+            <div class="preference-section">
+                <div class="preference-group master-toggle">
+                    <label>
+                        <input type="checkbox"
+                               id="emailEnabled"
+                               name="emailEnabled"
+                               {#if data.preferences.emailEnabled}checked{/if}>
+                        <div class="preference-label">
+                            <strong>Enable all email notifications</strong>
+                            <p class="help-text">
+                                Master toggle for all email notifications.
+                                Unchecking this will disable ALL emails from Village Homepage.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="preference-section">
+                <h3>Notification Types</h3>
+
+                <div class="preference-group">
+                    <label>
+                        <input type="checkbox"
+                               id="emailListingMessages"
+                               name="emailListingMessages"
+                               {#if data.preferences.emailListingMessages}checked{/if}>
+                        <div class="preference-label">
+                            <strong>Marketplace Messages</strong>
+                            <p class="help-text">
+                                Get notified when someone sends you a message about your marketplace listings.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="preference-group">
+                    <label>
+                        <input type="checkbox"
+                               id="emailSiteApproved"
+                               name="emailSiteApproved"
+                               {#if data.preferences.emailSiteApproved}checked{/if}>
+                        <div class="preference-label">
+                            <strong>Directory Site Approved</strong>
+                            <p class="help-text">
+                                Get notified when your submitted website is approved for the Good Sites directory.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="preference-group">
+                    <label>
+                        <input type="checkbox"
+                               id="emailSiteRejected"
+                               name="emailSiteRejected"
+                               {#if data.preferences.emailSiteRejected}checked{/if}>
+                        <div class="preference-label">
+                            <strong>Directory Site Feedback</strong>
+                            <p class="help-text">
+                                Get notified when your submitted website needs changes or is rejected, including moderator feedback.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="preference-group">
+                    <label>
+                        <input type="checkbox"
+                               id="emailDigest"
+                               name="emailDigest"
+                               {#if data.preferences.emailDigest}checked{/if}>
+                        <div class="preference-label">
+                            <strong>Daily Digest</strong>
+                            <p class="help-text">
+                                Receive a daily summary of your activity, including votes, new listings in your area, and more.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary" id="save-button">
+                    Save Preferences
+                </button>
+                <a href="/" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        // Handle form submission with fetch API
+        document.getElementById('preferences-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const saveButton = document.getElementById('save-button');
+            const alertSuccess = document.getElementById('alert-success');
+            const alertError = document.getElementById('alert-error');
+
+            // Hide previous alerts
+            alertSuccess.style.display = 'none';
+            alertError.style.display = 'none';
+
+            // Disable button during request
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+
+            const preferences = {
+                emailEnabled: document.getElementById('emailEnabled').checked,
+                emailListingMessages: document.getElementById('emailListingMessages').checked,
+                emailSiteApproved: document.getElementById('emailSiteApproved').checked,
+                emailSiteRejected: document.getElementById('emailSiteRejected').checked,
+                emailDigest: document.getElementById('emailDigest').checked
+            };
+
+            try {
+                const response = await fetch('/api/notifications/preferences', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(preferences)
+                });
+
+                if (response.ok) {
+                    alertSuccess.style.display = 'block';
+                    // Scroll to top to show success message
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (response.status === 401) {
+                    alertError.textContent = 'You must be logged in to update preferences.';
+                    alertError.style.display = 'block';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    alertError.textContent = 'Failed to save preferences. Please try again.';
+                    alertError.style.display = 'block';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) {
+                console.error('Error saving preferences:', error);
+                alertError.textContent = 'Network error. Please check your connection and try again.';
+                alertError.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } finally {
+                // Re-enable button
+                saveButton.disabled = false;
+                saveButton.textContent = 'Save Preferences';
+            }
+        });
+
+        // Auto-hide success message after 5 seconds
+        function hideAlertAfterDelay(alertElement, delay) {
+            if (alertElement.style.display === 'block') {
+                setTimeout(() => {
+                    alertElement.style.display = 'none';
+                }, delay);
+            }
+        }
+
+        // Watch for success alert being shown
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target.id === 'alert-success' && mutation.target.style.display === 'block') {
+                    hideAlertAfterDelay(mutation.target, 5000);
+                }
+            });
+        });
+
+        observer.observe(document.getElementById('alert-success'), {
+            attributes: true,
+            attributeFilter: ['style']
+        });
+    </script>
+</body>
+</html>
