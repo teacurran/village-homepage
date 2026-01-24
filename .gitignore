@@ -100,3 +100,8 @@ service-account.json
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Backup files
+*.bak
+*.backup
+*~
