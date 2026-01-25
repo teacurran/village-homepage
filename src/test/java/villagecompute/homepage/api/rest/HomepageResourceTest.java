@@ -1,7 +1,6 @@
 package villagecompute.homepage.api.rest;
 
 import io.quarkus.narayana.jta.QuarkusTransaction;
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.transaction.Transactional;
 import org.hamcrest.Matchers;
@@ -9,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.FeatureFlag;
 import villagecompute.homepage.data.models.User;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.util.List;
 import java.util.UUID;
@@ -35,7 +33,6 @@ import static org.hamcrest.Matchers.not;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class HomepageResourceTest {
 
     private UUID testUserId;

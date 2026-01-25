@@ -1,7 +1,6 @@
 package villagecompute.homepage.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -13,7 +12,6 @@ import villagecompute.homepage.api.types.UserPreferencesType;
 import villagecompute.homepage.api.types.WeatherLocationType;
 import villagecompute.homepage.api.types.WidgetConfigType;
 import villagecompute.homepage.data.models.User;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.util.List;
 import java.util.Map;
@@ -38,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class UserPreferenceServiceTest {
 
     @Inject

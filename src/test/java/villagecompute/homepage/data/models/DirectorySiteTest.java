@@ -1,11 +1,9 @@
 package villagecompute.homepage.data.models;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.time.Instant;
 import java.util.List;
@@ -30,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class DirectorySiteTest {
 
     private UUID testUserId;

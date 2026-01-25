@@ -1,6 +1,5 @@
 package villagecompute.homepage.api.rest.profile;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
@@ -11,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.ReservedUsername;
 import villagecompute.homepage.data.models.User;
 import villagecompute.homepage.data.models.UserProfile;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.time.Instant;
 import java.util.Map;
@@ -36,7 +34,6 @@ import static org.hamcrest.Matchers.*;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 public class ProfileResourceTest {
 
     private UUID testUserId;

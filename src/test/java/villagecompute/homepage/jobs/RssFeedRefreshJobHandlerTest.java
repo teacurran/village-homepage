@@ -1,6 +1,5 @@
 package villagecompute.homepage.jobs;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -8,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.FeedItem;
 import villagecompute.homepage.data.models.RssSource;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -32,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Coverage target: ≥80% line and branch coverage.
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class RssFeedRefreshJobHandlerTest {
 
     @Inject

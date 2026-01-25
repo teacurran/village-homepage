@@ -12,7 +12,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -23,7 +22,6 @@ import villagecompute.homepage.data.models.DirectoryVote;
 import villagecompute.homepage.data.models.User;
 import villagecompute.homepage.exceptions.ResourceNotFoundException;
 import villagecompute.homepage.exceptions.ValidationException;
-import villagecompute.homepage.testing.H2TestResource;
 
 /**
  * Unit tests for {@link DirectoryVotingService}.
@@ -44,7 +42,6 @@ import villagecompute.homepage.testing.H2TestResource;
  * calculation tests.
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class DirectoryVotingServiceTest {
 
     @Inject

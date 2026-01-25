@@ -1,6 +1,5 @@
 package villagecompute.homepage.api.rest.admin;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.transaction.Transactional;
@@ -8,7 +7,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.DirectoryCategory;
-import villagecompute.homepage.testing.H2TestResource;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -36,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * Note: Tests use @TestSecurity to simulate super_admin role for RBAC per Policy I2.T8.
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 @TestSecurity(
         user = "test-admin",
         roles = "super_admin")

@@ -1,13 +1,11 @@
 package villagecompute.homepage.data.models;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.api.types.ContactInfoType;
 import villagecompute.homepage.api.types.FeeScheduleType;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -36,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class MarketplaceListingTest {
 
     private UUID testUserId;

@@ -1,7 +1,6 @@
 package villagecompute.homepage.services;
 
 import io.quarkus.test.InjectMock;
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -11,7 +10,6 @@ import org.mockito.Mockito;
 import villagecompute.homepage.api.types.FraudAnalysisResultType;
 import villagecompute.homepage.data.models.*;
 import villagecompute.homepage.exceptions.RateLimitException;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -35,7 +33,6 @@ import static org.mockito.ArgumentMatchers.any;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class ModerationServiceTest {
 
     @Inject

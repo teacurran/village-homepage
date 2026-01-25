@@ -1,6 +1,5 @@
 package villagecompute.homepage.api.rest;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
@@ -11,7 +10,6 @@ import villagecompute.homepage.data.models.DirectoryCategory;
 import villagecompute.homepage.data.models.DirectorySite;
 import villagecompute.homepage.data.models.DirectorySiteCategory;
 import villagecompute.homepage.data.models.User;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -34,7 +32,6 @@ import static org.hamcrest.Matchers.*;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 public class GoodSitesResourceTest {
 
     private UUID testCategoryId;

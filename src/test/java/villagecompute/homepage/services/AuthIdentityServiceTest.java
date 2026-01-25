@@ -1,7 +1,6 @@
 package villagecompute.homepage.services;
 
 import io.quarkus.narayana.jta.QuarkusTransaction;
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -9,7 +8,6 @@ import jakarta.ws.rs.core.NewCookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.User;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.util.UUID;
 
@@ -24,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Coverage target: ≥80% line and branch coverage.
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class AuthIdentityServiceTest {
 
     @Inject

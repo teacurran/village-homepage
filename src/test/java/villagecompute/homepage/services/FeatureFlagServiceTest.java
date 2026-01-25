@@ -1,7 +1,6 @@
 package villagecompute.homepage.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -10,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.FeatureFlag;
 import villagecompute.homepage.data.models.FeatureFlagAudit;
 import villagecompute.homepage.services.FeatureFlagService.EvaluationResult;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -35,7 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class FeatureFlagServiceTest {
 
     @Inject

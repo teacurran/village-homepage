@@ -2,14 +2,12 @@ package villagecompute.homepage.services;
 
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.common.QuarkusTestResource;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.User;
 import villagecompute.homepage.data.models.AccountMergeAudit;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.util.UUID;
 
@@ -24,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Coverage target: ≥80% line and branch coverage.
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class AccountMergeServiceTest {
 
     @Inject

@@ -113,15 +113,9 @@ jobs:
       # 14. Run Unit and Integration Tests
       # ================================
       - name: Run tests with coverage
-        run: |
-          # TEMPORARILY SKIPPED: Test infrastructure has database configuration issues
-          # @QuarkusTest classes conflict between H2 and PostgreSQL build-time settings
-          # See commit history for fix attempts - requires deeper refactoring
-          # TODO: Unify test database configuration (remove H2TestResource, use DevServices)
-          echo "::warning::Tests temporarily skipped - see workflow comments for details"
-          ./mvnw test-compile ${{ env.MAVEN_CLI_OPTS }}
+        run: ./mvnw verify ${{ env.MAVEN_CLI_OPTS }}
         env:
-          # Quarkus test configuration
+          # Quarkus test configuration - use PostgreSQL DevServices
           QUARKUS_TEST_NATIVE_IMAGE_PROFILE: test
           # Disable services that require external connections in CI
           QUARKUS_LANGCHAIN4J_ANTHROPIC_ENABLED: false
@@ -134,14 +128,11 @@ jobs:
 
       # ================================
       # 15a. Run E2E Tests with Playwright (I4.T9)
-      # TEMPORARILY SKIPPED: Quarkus dev server fails due to database config issues
       # ================================
       - name: Install Playwright browsers
-        if: false  # Disabled until database config is fixed
         run: npx playwright install --with-deps chromium
 
       - name: Start Quarkus dev server for E2E tests
-        if: false  # Disabled until database config is fixed
         run: |
           ./mvnw quarkus:dev -DskipTests=true &
           # Wait for server to be ready (max 2 minutes)
@@ -155,7 +146,6 @@ jobs:
           done
 
       - name: Run Playwright E2E tests
-        if: false  # Disabled until database config is fixed
         run: npm run test:e2e
         env:
           BASE_URL: http://localhost:8080
@@ -200,10 +190,8 @@ jobs:
 
       # ================================
       # 18. Build Container Image (Jib)
-      # TEMPORARILY SKIPPED: Main class not found due to Quarkus build issues
       # ================================
       - name: Build container image (Jib - no push)
-        if: false  # Disabled until Quarkus build is properly configured
         run: ./mvnw package jib:dockerBuild -DskipTests ${{ env.MAVEN_CLI_OPTS }}
         # Note: This builds to the local Docker daemon for validation
         # To push to a registry, configure credentials and use jib:build with registry settings

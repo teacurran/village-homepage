@@ -1,6 +1,5 @@
 package villagecompute.homepage.api.rest.admin;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.transaction.Transactional;
@@ -9,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.api.types.FeeScheduleType;
 import villagecompute.homepage.data.models.MarketplaceCategory;
-import villagecompute.homepage.testing.H2TestResource;
 
 import java.math.BigDecimal;
 
@@ -38,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * Note: Tests use @TestSecurity to simulate super_admin role for RBAC.
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 @TestSecurity(
         user = "test-admin",
         roles = "super_admin")

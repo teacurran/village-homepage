@@ -11,7 +11,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -20,7 +19,6 @@ import villagecompute.homepage.data.models.DirectorySite;
 import villagecompute.homepage.data.models.DirectorySiteCategory;
 import villagecompute.homepage.data.models.KarmaAudit;
 import villagecompute.homepage.data.models.User;
-import villagecompute.homepage.testing.H2TestResource;
 
 /**
  * Unit tests for {@link KarmaService}.
@@ -41,7 +39,6 @@ import villagecompute.homepage.testing.H2TestResource;
  * </ul>
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
 class KarmaServiceTest {
 
     @Inject
