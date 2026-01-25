@@ -87,7 +87,9 @@ email:
       password: test
       devservices:
         enabled: true
-        image-name: postgis/postgis:17-3.5-alpine
+        # Use image with PostGIS + pgvector + other extensions
+        # See: https://github.com/ivanlonel/postgis-with-extensions
+        image-name: ivanlonel/postgis-with-extensions:17-3.5
         init-script-path: db/init-test-postgis.sql
     hibernate-orm:
       database:
