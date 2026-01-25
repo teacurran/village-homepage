@@ -12,8 +12,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.time.Instant;
+
+import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -93,8 +99,8 @@ class StorageGatewayTest {
      * Test: Successful upload returns expected result with metadata.
      */
     @Test
-    void testUpload_success() {
-        byte[] testData = "test-image-data".getBytes();
+    void testUpload_success() throws Exception {
+        byte[] testData = createValidTestImage();
         PutObjectResponse putResponse = PutObjectResponse.builder().build();
 
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenReturn(putResponse);
@@ -107,7 +113,7 @@ class StorageGatewayTest {
         assertTrue(result.objectKey().startsWith("site-123/thumbnail/"));
         assertEquals("image/webp", result.contentType());
         assertEquals("thumbnail", result.variant());
-        assertEquals((long) testData.length, result.sizeBytes());
+        assertTrue(result.sizeBytes() > 0, "Converted image should have non-zero size");
         assertNotNull(result.uploadedAt());
 
         verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
@@ -117,8 +123,8 @@ class StorageGatewayTest {
      * Test: Upload failure throws RuntimeException with descriptive message.
      */
     @Test
-    void testUpload_failure() {
-        byte[] testData = "test-image-data".getBytes();
+    void testUpload_failure() throws Exception {
+        byte[] testData = createValidTestImage();
         S3Exception s3Exception = (S3Exception) S3Exception.builder().message("Access Denied").statusCode(403).build();
 
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenThrow(s3Exception);
@@ -277,7 +283,7 @@ class StorageGatewayTest {
     @Test
     void testBucketNameResolution() throws Exception {
         // Test via upload to verify bucket names are resolved correctly
-        byte[] testData = "test".getBytes();
+        byte[] testData = createValidTestImage();
         PutObjectResponse putResponse = PutObjectResponse.builder().build();
 
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenReturn(putResponse);
@@ -299,8 +305,8 @@ class StorageGatewayTest {
      * Test: Object key prefixing strategy follows expected format.
      */
     @Test
-    void testObjectKeyPrefixing() {
-        byte[] testData = "test".getBytes();
+    void testObjectKeyPrefixing() throws Exception {
+        byte[] testData = createValidTestImage();
         PutObjectResponse putResponse = PutObjectResponse.builder().build();
 
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenReturn(putResponse);
@@ -314,11 +320,11 @@ class StorageGatewayTest {
     }
 
     /**
-     * Test: WebP conversion stub returns original bytes (placeholder implementation).
+     * Test: WebP conversion produces valid output with non-zero size.
      */
     @Test
-    void testWebPConversionStub() {
-        byte[] testData = "test-image-data".getBytes();
+    void testWebPConversionStub() throws Exception {
+        byte[] testData = createValidTestImage();
         PutObjectResponse putResponse = PutObjectResponse.builder().build();
 
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenReturn(putResponse);
@@ -326,9 +332,9 @@ class StorageGatewayTest {
         StorageUploadResultType result = storageGateway.upload(BucketType.SCREENSHOTS, "site-123", "thumbnail",
                 testData, "image/jpeg");
 
-        // WebP conversion is currently a pass-through stub
-        // When implemented, this test should verify actual conversion
-        assertEquals(testData.length, result.sizeBytes(), "Current stub implementation preserves original size");
+        // WebP conversion is now implemented - verify output is valid
+        assertTrue(result.sizeBytes() > 0, "WebP conversion should produce non-zero output");
+        assertEquals("image/webp", result.contentType(), "Content type should be WebP after conversion");
     }
 
     /**
@@ -338,5 +344,21 @@ class StorageGatewayTest {
         java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    /**
+     * Creates a valid test image (10x10 red square) as JPEG bytes.
+     * This is needed because StorageGateway now performs actual WebP conversion.
+     */
+    private byte[] createValidTestImage() throws Exception {
+        BufferedImage image = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        g.setColor(Color.RED);
+        g.fillRect(0, 0, 10, 10);
+        g.dispose();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpeg", baos);
+        return baos.toByteArray();
     }
 }
