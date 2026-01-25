@@ -1,10 +1,12 @@
 package villagecompute.homepage;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.*;
+import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
 import java.util.List;
 
@@ -32,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <b>Cache Verification:</b> Tests load entities twice and verify second load is faster (cache hit).
  */
 @QuarkusTest
+@TestProfile(PostgreSQLTestProfile.class)
 public class PerformanceOptimizationTest {
 
     @Inject

@@ -34,14 +34,15 @@ public class PostgreSQLTestProfile implements QuarkusTestProfile {
 
     @Override
     public List<TestResourceEntry> testResources() {
-        // Use PostgreSQLTestResource to manage testcontainer lifecycle
-        return Collections.singletonList(new TestResourceEntry(PostgreSQLTestResource.class));
+        // Don't use PostgreSQLTestResource - rely on Quarkus DevServices which is already configured
+        // in application.yaml %test profile with postgis/postgis:17-3.5-alpine image
+        return Collections.emptyList();
     }
 
     @Override
     public boolean disableGlobalTestResources() {
-        // CRITICAL: Disable H2TestResource and other global test resources
-        // This ensures PostgreSQL Testcontainers is used instead of H2
+        // Disable H2TestResource and other global test resources
+        // DevServices will provide PostgreSQL
         return true;
     }
 

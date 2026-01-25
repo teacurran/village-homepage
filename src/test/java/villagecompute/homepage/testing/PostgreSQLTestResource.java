@@ -50,23 +50,12 @@ public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManag
         postgresContainer.start();
 
         // Return configuration overrides
+        // NOTE: Only override runtime properties here. Build-time properties like devservices.enabled,
+        // db-kind, and dialect cannot be changed at runtime (they cause "Build time property cannot be changed" errors)
         Map<String, String> config = new HashMap<>();
-        config.put("quarkus.datasource.db-kind", "postgresql");
         config.put("quarkus.datasource.username", postgresContainer.getUsername());
         config.put("quarkus.datasource.password", postgresContainer.getPassword());
         config.put("quarkus.datasource.jdbc.url", postgresContainer.getJdbcUrl());
-        config.put("quarkus.datasource.jdbc.driver", "org.postgresql.Driver");
-        config.put("quarkus.datasource.devservices.enabled", "false"); // Disable Dev Services (we're managing
-                                                                       // container)
-        config.put("quarkus.hibernate-orm.database.generation", "drop-and-create");
-        config.put("quarkus.hibernate-orm.log.sql", "true");
-        config.put("quarkus.hibernate-orm.sql-load-script", "no-file");
-        // Enable Jackson for JSONB type handling
-        config.put("quarkus.hibernate-orm.mapping.jackson.convert-to-json-mode", "enabled");
-        // Use standard PostgreSQL dialect (NOT PostGIS) for tests
-        // This avoids dependency on PostGIS extension which is not installed in pgvector image
-        // Geographic queries are tested separately with real PostGIS database
-        config.put("quarkus.hibernate-orm.dialect", "org.hibernate.dialect.PostgreSQLDialect");
 
         return config;
     }
