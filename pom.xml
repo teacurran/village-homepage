@@ -48,7 +48,7 @@
         <quarkus.package.jar.type>uber-jar</quarkus.package.jar.type>
 
         <!-- SonarCloud Configuration -->
-        <sonar.organization>teacurran</sonar.organization>
+        <sonar.organization>appi</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.projectKey>teacurran_village-homepage</sonar.projectKey>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
