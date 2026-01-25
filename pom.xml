@@ -46,6 +46,17 @@
         <!-- Build Properties -->
         <skipITs>true</skipITs>
         <quarkus.package.jar.type>uber-jar</quarkus.package.jar.type>
+
+        <!-- SonarCloud Configuration -->
+        <sonar.organization>villagecompute</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.projectKey>VillageCompute_village-homepage</sonar.projectKey>
+        <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+        <sonar.sources>src/main/java</sonar.sources>
+        <sonar.tests>src/test/java</sonar.tests>
+        <sonar.exclusions>**/generated/**,**/target/**</sonar.exclusions>
     </properties>
 
     <dependencyManagement>
