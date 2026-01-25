@@ -21,6 +21,10 @@ villagecompute:
       login:
         max-requests: 20
         window-seconds: 60
+  # Apple Sign-In test configuration
+  apple:
+    key-id: test-apple-key-id
+    team-id: test-apple-team-id
 
 quarkus:
   log:
@@ -37,9 +41,19 @@ quarkus:
   # Legacy tests use @QuarkusTestResource(H2TestResource.class) which provides H2 configuration
   # New integration tests using BaseIntegrationTest use @TestProfile(PostgreSQLTestProfile.class) which provides PostgreSQL configuration
 
-  # Disable OIDC security for integration tests
+  # OIDC test configuration - OAuth providers with test values
   oidc:
     enabled: false
+    google:
+      client-id: test-google-client-id
+      credentials:
+        secret: test-google-secret
+    apple:
+      client-id: test-apple-client-id
+    facebook:
+      client-id: test-facebook-client-id
+      credentials:
+        secret: test-facebook-secret
   security:
     auth:
       enabled-in-dev-mode: false
