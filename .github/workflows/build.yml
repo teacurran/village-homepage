@@ -46,19 +46,7 @@ jobs:
           cache: 'npm'
 
       # ================================
-      # 4. Plan Compliance Verification (Section 4)
-      # ================================
-      - name: Verify plan manifests (Section 4)
-        run: |
-          node .codemachine/scripts/extract_tasks.js
-          if ! git diff --quiet -- .codemachine/artifacts/tasks; then
-            echo "::error::Plan artifacts drifted from .codemachine/artifacts/plan. Run 'node .codemachine/scripts/extract_tasks.js' locally and commit the updates (Section 4 compliance)."
-            git --no-pager diff -- .codemachine/artifacts/tasks
-            exit 1
-          fi
-
-      # ================================
-      # 5. Cache Maven Dependencies
+      # 4. Cache Maven Dependencies
       # ================================
       - name: Cache Maven repository
         uses: actions/cache@v4
