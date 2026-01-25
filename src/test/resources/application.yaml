@@ -87,11 +87,10 @@ email:
       password: test
       devservices:
         enabled: true
-        # Use official pgvector image - compatible with Quarkus DevServices
-        # Provides pgvector extension + mock geometry type for Hibernate schema validation
-        # Full PostGIS not needed for most tests (geo-specific tests can be skipped in CI)
-        image-name: pgvector/pgvector:pg17
-        init-script-path: db/init-test-pgvector.sql
+        # Combined PostGIS + pgvector image (PostgreSQL 13 based)
+        # Has both geometry types for spatial queries and vector type for embeddings
+        image-name: joshuasundance/postgis_pgvector:latest
+        init-script-path: db/init-test-postgis.sql
     hibernate-orm:
       database:
         generation: drop-and-create

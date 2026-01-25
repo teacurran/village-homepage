@@ -1,6 +1,6 @@
--- Test database initialization for PostgreSQL 17 + PostGIS + pgvector
+-- Test database initialization for PostgreSQL + PostGIS + pgvector
 -- This script is executed when the testcontainer starts
--- Using ivanlonel/postgis-with-extensions:17-3.5 image which has all extensions
+-- Using joshuasundance/postgis_pgvector:latest which has both extensions
 
 -- Enable PostGIS extension (for geographic queries - Feature I6.T2)
 CREATE EXTENSION IF NOT EXISTS postgis;
