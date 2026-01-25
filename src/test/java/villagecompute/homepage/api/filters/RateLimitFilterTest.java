@@ -1,12 +1,12 @@
 package villagecompute.homepage.api.filters;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.homepage.data.models.RateLimitConfig;
-import villagecompute.homepage.testing.H2TestResource;
+import villagecompute.homepage.testing.PostgreSQLTestProfile;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Coverage target: Verify filter behavior and configuration.
  */
 @QuarkusTest
-@QuarkusTestResource(H2TestResource.class)
+@TestProfile(PostgreSQLTestProfile.class)
 class RateLimitFilterTest {
 
     @BeforeEach
