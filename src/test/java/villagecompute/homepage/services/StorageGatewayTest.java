@@ -347,8 +347,8 @@ class StorageGatewayTest {
     }
 
     /**
-     * Creates a valid test image (10x10 red square) as JPEG bytes.
-     * This is needed because StorageGateway now performs actual WebP conversion.
+     * Creates a valid test image (10x10 red square) as JPEG bytes. This is needed because StorageGateway now performs
+     * actual WebP conversion.
      */
     private byte[] createValidTestImage() throws Exception {
         BufferedImage image = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
