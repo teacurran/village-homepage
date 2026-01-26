@@ -66,15 +66,15 @@ public class DirectorySiteCategory extends PanacheEntityBase {
 
     @Column(
             nullable = false)
-    public int score;
+    public int score = 0;
 
     @Column(
             nullable = false)
-    public int upvotes;
+    public int upvotes = 0;
 
     @Column(
             nullable = false)
-    public int downvotes;
+    public int downvotes = 0;
 
     @Column(
             name = "rank_in_category")
@@ -83,7 +83,7 @@ public class DirectorySiteCategory extends PanacheEntityBase {
     @Column(
             name = "wilson_score",
             nullable = false)
-    public Double wilsonScore;
+    public Double wilsonScore = 0.0;
 
     @Column(
             name = "submitted_by_user_id",
@@ -96,17 +96,17 @@ public class DirectorySiteCategory extends PanacheEntityBase {
 
     @Column(
             nullable = false)
-    public String status;
+    public String status = "pending";
 
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     // JPQL query constants for named queries
     public static final String JPQL_FIND_TOP_RANKED = "FROM DirectorySiteCategory WHERE categoryId = :categoryId AND status = 'approved' ORDER BY wilsonScore DESC, createdAt DESC";
