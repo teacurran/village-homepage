@@ -145,12 +145,12 @@ public class FeedItem extends PanacheEntityBase {
     @Column(
             name = "ai_tagged",
             nullable = false)
-    public boolean aiTagged;
+    public boolean aiTagged = false;
 
     @Column(
             name = "fetched_at",
             nullable = false)
-    public Instant fetchedAt;
+    public Instant fetchedAt = Instant.now();
 
     /**
      * OpenAI embedding vector (1536 dimensions) for semantic search on feed content.

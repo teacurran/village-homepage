@@ -111,7 +111,7 @@ public class RssSource extends PanacheEntityBase {
     @Column(
             name = "is_system",
             nullable = false)
-    public boolean isSystem;
+    public boolean isSystem = false;
 
     @Column(
             name = "user_id")
@@ -120,12 +120,12 @@ public class RssSource extends PanacheEntityBase {
     @Column(
             name = "refresh_interval_minutes",
             nullable = false)
-    public int refreshIntervalMinutes;
+    public int refreshIntervalMinutes = 60;
 
     @Column(
             name = "is_active",
             nullable = false)
-    public boolean isActive;
+    public boolean isActive = true;
 
     @Column(
             name = "last_fetched_at")
@@ -134,7 +134,7 @@ public class RssSource extends PanacheEntityBase {
     @Column(
             name = "error_count",
             nullable = false)
-    public int errorCount;
+    public int errorCount = 0;
 
     @Column(
             name = "last_error_message")
@@ -143,12 +143,12 @@ public class RssSource extends PanacheEntityBase {
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     /**
      * Finds an RSS source by its feed URL.

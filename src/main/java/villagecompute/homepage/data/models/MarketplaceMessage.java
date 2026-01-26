@@ -176,7 +176,7 @@ public class MarketplaceMessage extends PanacheEntityBase {
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "is_spam")

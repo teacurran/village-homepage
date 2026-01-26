@@ -58,33 +58,33 @@ public class FeatureFlag extends PanacheEntityBase {
 
     @Column(
             nullable = false)
-    public boolean enabled;
+    public boolean enabled = false;
 
     @Column(
             name = "rollout_percentage",
             nullable = false)
-    public short rolloutPercentage;
+    public short rolloutPercentage = 0;
 
     @Column(
             nullable = false,
             columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    public List<String> whitelist;
+    public List<String> whitelist = List.of();
 
     @Column(
             name = "analytics_enabled",
             nullable = false)
-    public boolean analyticsEnabled;
+    public boolean analyticsEnabled = false;
 
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     /**
      * Finds a feature flag by its unique key.

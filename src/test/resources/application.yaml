@@ -79,12 +79,13 @@ email:
     poll-interval-seconds: 60
 
 # Profile for PostgreSQL 17 + PostGIS integration tests (Task I1.T2)
+# NOTE: When running tests locally with .env file loaded, env vars may override these settings.
+# To ensure DevServices works, either unset QUARKUS_DATASOURCE_* env vars or run: unset QUARKUS_DATASOURCE_JDBC_URL
 "%test":
   quarkus:
     datasource:
       db-kind: postgresql
-      username: test
-      password: test
+      # DevServices manages credentials - no explicit config needed
       devservices:
         enabled: true
         # Combined PostGIS + pgvector image (PostgreSQL 13 based)

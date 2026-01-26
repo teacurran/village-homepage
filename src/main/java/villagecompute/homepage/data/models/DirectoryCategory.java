@@ -123,27 +123,27 @@ public class DirectoryCategory extends PanacheEntityBase {
     @Column(
             name = "sort_order",
             nullable = false)
-    public int sortOrder;
+    public int sortOrder = 0;
 
     @Column(
             name = "link_count",
             nullable = false)
-    public int linkCount;
+    public int linkCount = 0;
 
     @Column(
             name = "is_active",
             nullable = false)
-    public boolean isActive;
+    public boolean isActive = true;
 
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     /**
      * Finds all root categories (parent_id IS NULL) that are active, ordered by sort_order.

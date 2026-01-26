@@ -126,38 +126,38 @@ public class UserProfile extends PanacheEntityBase {
             nullable = false,
             columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    public Map<String, Object> socialLinks;
+    public Map<String, Object> socialLinks = Map.of();
 
     @Column(
             nullable = false)
-    public String template;
+    public String template = TEMPLATE_PUBLIC_HOMEPAGE;
 
     @Column(
             name = "template_config",
             nullable = false,
             columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    public Map<String, Object> templateConfig;
+    public Map<String, Object> templateConfig = Map.of();
 
     @Column(
             name = "is_published",
             nullable = false)
-    public boolean isPublished;
+    public boolean isPublished = false;
 
     @Column(
             name = "view_count",
             nullable = false)
-    public long viewCount;
+    public long viewCount = 0;
 
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     @Column(
             name = "deleted_at")

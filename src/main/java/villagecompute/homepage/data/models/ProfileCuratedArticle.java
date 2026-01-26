@@ -144,22 +144,22 @@ public class ProfileCuratedArticle extends PanacheEntityBase {
             nullable = false,
             columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    public Map<String, Object> slotAssignment;
+    public Map<String, Object> slotAssignment = Map.of();
 
     @Column(
             name = "is_active",
             nullable = false)
-    public boolean isActive;
+    public boolean isActive = true;
 
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     /**
      * Finds all curated articles for a profile (active and inactive).

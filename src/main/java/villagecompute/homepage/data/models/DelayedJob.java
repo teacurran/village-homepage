@@ -93,35 +93,35 @@ public class DelayedJob extends PanacheEntityBase {
     @Column(
             name = "priority",
             nullable = false)
-    public int priority;
+    public int priority = 0;
 
     @Column(
             name = "payload",
             nullable = false,
             columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    public Map<String, Object> payload;
+    public Map<String, Object> payload = Map.of();
 
     @Column(
             name = "status",
             nullable = false)
     @Enumerated(EnumType.STRING)
-    public JobStatus status;
+    public JobStatus status = JobStatus.PENDING;
 
     @Column(
             name = "attempts",
             nullable = false)
-    public int attempts;
+    public int attempts = 0;
 
     @Column(
             name = "max_attempts",
             nullable = false)
-    public int maxAttempts;
+    public int maxAttempts = 5;
 
     @Column(
             name = "scheduled_at",
             nullable = false)
-    public Instant scheduledAt;
+    public Instant scheduledAt = Instant.now();
 
     @Column(
             name = "locked_at")
@@ -146,12 +146,12 @@ public class DelayedJob extends PanacheEntityBase {
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     /**
      * Job lifecycle statuses.

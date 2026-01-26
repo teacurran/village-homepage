@@ -153,7 +153,7 @@ public class LinkClick extends PanacheEntityBase {
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     /**
      * Find clicks by type within date range.

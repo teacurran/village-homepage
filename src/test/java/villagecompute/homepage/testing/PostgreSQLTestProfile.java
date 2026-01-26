@@ -4,6 +4,7 @@ import io.quarkus.test.junit.QuarkusTestProfile;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Quarkus test profile for PostgreSQL 17 + PostGIS integration tests.
@@ -41,13 +42,22 @@ public class PostgreSQLTestProfile implements QuarkusTestProfile {
 
     @Override
     public boolean disableGlobalTestResources() {
-        // Disable H2TestResource and other global test resources
-        // DevServices will provide PostgreSQL
-        return true;
+        // Don't disable global test resources - DevServices needs to work
+        return false;
     }
 
     @Override
     public String getConfigProfile() {
         return "test";
+    }
+
+    @Override
+    public Map<String, String> getConfigOverrides() {
+        // Override any env vars that might interfere with DevServices
+        // Note: We deliberately do NOT set jdbc.url - DevServices needs it to be unset to auto-generate the URL
+        // Note: We don't set username/password - DevServices uses its own credentials by default
+        return Map.of("quarkus.datasource.db-kind", "postgresql", "quarkus.datasource.devservices.enabled", "true",
+                "quarkus.datasource.devservices.image-name", "joshuasundance/postgis_pgvector:latest",
+                "quarkus.datasource.devservices.init-script-path", "db/init-test-postgis.sql");
     }
 }
