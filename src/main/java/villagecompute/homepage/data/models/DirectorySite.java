@@ -115,7 +115,7 @@ public class DirectorySite extends PanacheEntityBase {
 
     @Column(
             nullable = false)
-    public String status;
+    public String status = "pending";
 
     @Column(
             name = "last_checked_at")
@@ -124,22 +124,22 @@ public class DirectorySite extends PanacheEntityBase {
     @Column(
             name = "is_dead",
             nullable = false)
-    public boolean isDead;
+    public boolean isDead = false;
 
     @Column(
             name = "health_check_failures",
             nullable = false)
-    public int healthCheckFailures;
+    public int healthCheckFailures = 0;
 
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     /**
      * OpenAI embedding vector (1536 dimensions) for semantic search on site descriptions.

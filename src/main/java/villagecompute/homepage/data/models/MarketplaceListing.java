@@ -294,7 +294,7 @@ public class MarketplaceListing extends PanacheEntityBase {
 
     @Column(
             nullable = false)
-    public String status;
+    public String status = "draft";
 
     @Column(
             name = "expires_at")
@@ -311,24 +311,24 @@ public class MarketplaceListing extends PanacheEntityBase {
     @Column(
             name = "reminder_sent",
             nullable = false)
-    public boolean reminderSent;
+    public boolean reminderSent = false;
 
     @Column(
             name = "flag_count",
             nullable = false)
-    public Long flagCount;
+    public Long flagCount = 0L;
 
     @Column(
             name = "created_at",
             nullable = false)
     @GenericField(
             sortable = Sortable.YES)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     /**
      * AI-generated category suggestion stored as JSONB.

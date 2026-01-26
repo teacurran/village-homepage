@@ -72,17 +72,17 @@ public class DirectoryVote extends PanacheEntityBase {
 
     @Column(
             nullable = false)
-    public short vote;
+    public short vote = 0;
 
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     // JPQL query constants for named queries
     public static final String JPQL_FIND_BY_USER_AND_SITE_CATEGORY = "FROM DirectoryVote WHERE siteCategoryId = :siteCategoryId AND userId = :userId";
