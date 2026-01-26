@@ -142,22 +142,22 @@ public class User extends PanacheEntityBase {
             nullable = false,
             columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    public Map<String, Object> preferences;
+    public Map<String, Object> preferences = new java.util.HashMap<>();
 
     @Column(
             name = "is_anonymous",
             nullable = false)
-    public boolean isAnonymous;
+    public boolean isAnonymous = true;
 
     @Column(
             name = "directory_karma",
             nullable = false)
-    public int directoryKarma;
+    public int directoryKarma = 0;
 
     @Column(
             name = "directory_trust_level",
             nullable = false)
-    public String directoryTrustLevel;
+    public String directoryTrustLevel = TRUST_LEVEL_UNTRUSTED;
 
     @Column(
             name = "admin_role")
@@ -201,12 +201,12 @@ public class User extends PanacheEntityBase {
     @Column(
             name = "created_at",
             nullable = false)
-    public Instant createdAt;
+    public Instant createdAt = Instant.now();
 
     @Column(
             name = "updated_at",
             nullable = false)
-    public Instant updatedAt;
+    public Instant updatedAt = Instant.now();
 
     @Column(
             name = "deleted_at")
