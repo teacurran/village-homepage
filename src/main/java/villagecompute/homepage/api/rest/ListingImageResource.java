@@ -17,7 +17,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
-import org.jboss.resteasy.reactive.MultipartForm;
+import jakarta.ws.rs.BeanParam;
 import villagecompute.homepage.api.types.ImageUploadForm;
 import villagecompute.homepage.api.types.ListingImageType;
 import villagecompute.homepage.api.types.SignedUrlType;
@@ -165,7 +165,7 @@ public class ListingImageResource {
             name = "bearerAuth")
     public Response uploadImage(@Parameter(
             description = "Listing UUID",
-            required = true) @PathParam("listingId") UUID listingId, @MultipartForm ImageUploadForm form) {
+            required = true) @PathParam("listingId") UUID listingId, @BeanParam ImageUploadForm form) {
 
         UUID userId = getCurrentUserId();
 
@@ -314,9 +314,8 @@ public class ListingImageResource {
     public Response listImages(@Parameter(
             description = "Listing UUID",
             required = true) @PathParam("listingId") UUID listingId) {
-        UUID userId = getCurrentUserId();
-
-        // 1. Validate listing exists (ownership check optional for read - could allow public)
+        // Note: No ownership check for read operations (images are public when listing is visible)
+        // 1. Validate listing exists
         MarketplaceListing listing = MarketplaceListing.findById(listingId);
         if (listing == null) {
             return Response.status(404).entity(Map.of("error", "Listing not found")).build();

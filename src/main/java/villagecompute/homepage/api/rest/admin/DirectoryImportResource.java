@@ -148,7 +148,10 @@ public class DirectoryImportResource {
             }
 
             // Count rows (basic validation)
-            long rowCount = Files.lines(file.uploadedFile()).count();
+            long rowCount;
+            try (var lines = Files.lines(file.uploadedFile())) {
+                rowCount = lines.count();
+            }
             if (rowCount > MAX_ROWS) {
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity(Map.of("error", "Too many rows (max " + MAX_ROWS + ")", "rows", rowCount)).build();
