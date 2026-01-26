@@ -256,7 +256,7 @@ public class AnalyticsResource {
                       target_url AS article_url,
                       metadata->>'article_slot' AS article_slot,
                       COUNT(*) AS total_clicks,
-                      COUNT(DISTINCT COALESCE(user_id, session_id)) AS unique_users
+                      COUNT(DISTINCT COALESCE(user_id::text, session_id)) AS unique_users
                     FROM link_clicks
                     WHERE click_type = 'profile_curated'
                       AND (metadata->>'profile_id')::UUID = :profileId

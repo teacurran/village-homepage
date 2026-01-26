@@ -229,7 +229,7 @@ public class LinkClick extends PanacheEntityBase {
      */
     public static long countUniqueUsersByTarget(UUID targetId, LocalDate startDate, LocalDate endDate) {
         return find(
-                "SELECT COUNT(DISTINCT COALESCE(userId, sessionId)) FROM LinkClick WHERE targetId = ?1 AND clickDate >= ?2 AND clickDate < ?3",
+                "SELECT COUNT(DISTINCT COALESCE(CAST(userId AS string), sessionId)) FROM LinkClick WHERE targetId = ?1 AND clickDate >= ?2 AND clickDate < ?3",
                 targetId, startDate, endDate).project(Long.class).firstResult();
     }
 

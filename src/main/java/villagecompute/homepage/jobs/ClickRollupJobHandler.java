@@ -201,7 +201,7 @@ public class ClickRollupJobHandler implements JobHandler {
                   lc.category_id,
                   dc.name AS category_name,
                   COUNT(*) AS total_clicks,
-                  COUNT(DISTINCT COALESCE(lc.user_id, lc.session_id)) AS unique_users,
+                  COUNT(DISTINCT COALESCE(lc.user_id::text, lc.session_id)) AS unique_users,
                   COUNT(DISTINCT lc.session_id) AS unique_sessions,
                   NOW(),
                   NOW()
@@ -237,7 +237,7 @@ public class ClickRollupJobHandler implements JobHandler {
                   click_type,
                   target_id,
                   COUNT(*) AS total_clicks,
-                  COUNT(DISTINCT COALESCE(user_id, session_id)) AS unique_users,
+                  COUNT(DISTINCT COALESCE(user_id::text, session_id)) AS unique_users,
                   COUNT(DISTINCT session_id) AS unique_sessions,
                   AVG(NULLIF((metadata->>'rank_in_category'), '')::NUMERIC) AS avg_rank,
                   AVG(NULLIF((metadata->>'score'), '')::NUMERIC) AS avg_score,
