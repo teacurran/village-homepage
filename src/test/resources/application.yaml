@@ -86,10 +86,11 @@ email:
     datasource:
       db-kind: postgresql
       # DevServices enabled by default - will start PostgreSQL container if jdbc.url not set
-      # PostgreSQLTestProfile overrides to use PostgreSQLTestResource for explicit control
+      # Using joshuasundance/postgis_pgvector which has both PostGIS (for geometry) and pgvector (for vector)
       devservices:
         enabled: true
-        image-name: postgres:17-alpine
+        image-name: joshuasundance/postgis_pgvector:latest
+        init-script-path: db/init-test-postgis.sql
     hibernate-orm:
       database:
         generation: drop-and-create
