@@ -85,10 +85,11 @@ email:
   quarkus:
     datasource:
       db-kind: postgresql
-      # PostgreSQLTestResource provides jdbc.url, username, and password
-      # DevServices is disabled - PostgreSQLTestProfile manages container directly
+      # DevServices enabled by default - will start PostgreSQL container if jdbc.url not set
+      # PostgreSQLTestProfile overrides to use PostgreSQLTestResource for explicit control
       devservices:
-        enabled: false
+        enabled: true
+        image-name: postgres:17-alpine
     hibernate-orm:
       database:
         generation: drop-and-create
