@@ -85,13 +85,10 @@ email:
   quarkus:
     datasource:
       db-kind: postgresql
-      # DevServices manages credentials - no explicit config needed
+      # PostgreSQLTestResource provides jdbc.url, username, and password
+      # DevServices is disabled - PostgreSQLTestProfile manages container directly
       devservices:
-        enabled: true
-        # Combined PostGIS + pgvector image (PostgreSQL 13 based)
-        # Has both geometry types for spatial queries and vector type for embeddings
-        image-name: joshuasundance/postgis_pgvector:latest
-        init-script-path: db/init-test-postgis.sql
+        enabled: false
     hibernate-orm:
       database:
         generation: drop-and-create

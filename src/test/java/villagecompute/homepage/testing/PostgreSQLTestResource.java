@@ -35,17 +35,15 @@ public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManag
 
     @Override
     public Map<String, String> start() {
-        // Start PostgreSQL 17 + pgvector container
-        // NOTE: Using ankane/pgvector image which includes both PostgreSQL 17 and pgvector
-        // PostGIS will be installed via init script
-        // Use asCompatibleSubstituteFor to allow pgvector image (based on postgres)
-        DockerImageName pgvectorImage = DockerImageName.parse("pgvector/pgvector:pg17")
+        // Start PostgreSQL with PostGIS + pgvector container
+        // Using joshuasundance/postgis_pgvector which has both extensions pre-installed
+        DockerImageName postgisImage = DockerImageName.parse("joshuasundance/postgis_pgvector:latest")
                 .asCompatibleSubstituteFor("postgres");
 
-        postgresContainer = new PostgreSQLContainer<>(pgvectorImage).withDatabaseName("homepage_test")
+        postgresContainer = new PostgreSQLContainer<>(postgisImage).withDatabaseName("homepage_test")
                 .withUsername("test").withPassword("test").withReuse(true)
-                // Enable PostGIS and pgvector extensions
-                .withInitScript("db/init-test-pgvector.sql");
+                // Enable both extensions
+                .withInitScript("db/init-test-postgis.sql");
 
         postgresContainer.start();
 

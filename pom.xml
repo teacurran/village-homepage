@@ -470,31 +470,10 @@
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
+                        <!-- Integration tests use PostgreSQLTestResource which manages container directly -->
+                        <!-- DevServices is disabled in PostgreSQLTestProfile -->
+                        <quarkus.datasource.db-kind>postgresql</quarkus.datasource.db-kind>
                     </systemPropertyVariables>
-                    <!-- Prevent .env file from loading during tests -->
-                    <environmentVariables>
-                        <QUARKUS_DOTENV_ENABLED>false</QUARKUS_DOTENV_ENABLED>
-                    </environmentVariables>
-                    <!--
-                        Run only pure unit tests (without @QuarkusTest).
-                        Integration tests conflict with local .env JDBC URL settings.
-                        TODO: Configure separate integration test profile or fix env var handling.
-                    -->
-                    <includes>
-                        <!-- Pure unit tests without @QuarkusTest -->
-                        <include>**/util/EmailValidatorTest.java</include>
-                        <include>**/config/AiConfigTest.java</include>
-                        <include>**/integration/stocks/AlphaVantageClientTest.java</include>
-                        <include>**/integration/weather/WeatherCodeMapperTest.java</include>
-                        <include>**/api/rest/WeatherWidgetResourceTest.java</include>
-                        <include>**/api/rest/NewsWidgetResourceTest.java</include>
-                        <include>**/api/rest/StockWidgetResourceTest.java</include>
-                        <include>**/jobs/StockRefreshJobHandlerTest.java</include>
-                        <include>**/services/StorageGatewayTest.java</include>
-                        <include>**/services/WeatherServiceTest.java</include>
-                        <include>**/services/StockServiceTest.java</include>
-                        <include>**/services/StorageGatewayWebPTest.java</include>
-                    </includes>
                     <!-- @{argLine} is set by JaCoCo plugin - append to it rather than replacing -->
                     <argLine>@{argLine}</argLine>
                 </configuration>
