@@ -50,8 +50,6 @@ public class PostgreSQLTestProfile implements QuarkusTestProfile {
     public Map<String, String> getConfigOverrides() {
         // Disable DevServices since we're using PostgreSQLTestResource
         // PostgreSQLTestResource provides jdbc.url, username, and password
-        return Map.of(
-                "quarkus.datasource.db-kind", "postgresql",
-                "quarkus.datasource.devservices.enabled", "false");
+        return Map.of("quarkus.datasource.db-kind", "postgresql", "quarkus.datasource.devservices.enabled", "false");
     }
 }
