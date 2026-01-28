@@ -147,14 +147,6 @@ jobs:
           PGPASSWORD=test psql -h localhost -U test -d homepage_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
       # ================================
-      # 13b. Run Database Migrations
-      # ================================
-      - name: Run database migrations
-        run: |
-          cd migrations
-          mvn migration:up -Dmigration.env=ci ${{ env.MAVEN_CLI_OPTS }}
-
-      # ================================
       # 14. Run Unit and Integration Tests
       # ================================
       - name: Run tests with coverage
@@ -171,8 +163,8 @@ jobs:
           QUARKUS_DATASOURCE_DEVSERVICES_ENABLED: "false"
           # Disable services that require external connections in CI
           QUARKUS_LANGCHAIN4J_ANTHROPIC_ENABLED: "false"
-          # Hibernate settings for test
-          QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: none
+          # Let Hibernate create the schema for CI tests
+          QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: drop-and-create
 
       # ================================
       # 15. Generate JaCoCo Coverage Report
