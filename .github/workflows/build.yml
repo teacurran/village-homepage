@@ -11,11 +11,34 @@ env:
   JAVA_VERSION: '21'
   NODE_VERSION: '20.10.0'
   MAVEN_CLI_OPTS: '-B --no-transfer-progress'
+  # Database configuration for tests
+  TEST_DATABASE_HOST: localhost
+  TEST_DATABASE_PORT: 5432
+  TEST_DATABASE_NAME: homepage_test
+  TEST_DATABASE_USER: test
+  TEST_DATABASE_PASSWORD: test
+  TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/homepage_test
 
 jobs:
   build-and-test:
     name: Build, Test, and Quality Gates
     runs-on: ubuntu-latest
+
+    # PostgreSQL service container with PostGIS + pgvector
+    services:
+      postgres:
+        image: joshuasundance/postgis_pgvector:latest
+        env:
+          POSTGRES_DB: homepage_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d homepage_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       # ================================
@@ -110,17 +133,50 @@ jobs:
         run: npm run build
 
       # ================================
+      # 13a. Install PostgreSQL Client and Enable Extensions
+      # ================================
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Enable PostgreSQL extensions
+        run: |
+          PGPASSWORD=test psql -h localhost -U test -d homepage_test -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+          PGPASSWORD=test psql -h localhost -U test -d homepage_test -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;"
+          PGPASSWORD=test psql -h localhost -U test -d homepage_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+      # ================================
+      # 13b. Run Database Migrations
+      # ================================
+      - name: Run database migrations
+        run: |
+          cd migrations
+          mvn migration:up -Dmigration.env=test ${{ env.MAVEN_CLI_OPTS }}
+        env:
+          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          TEST_DATABASE_USER: ${{ env.TEST_DATABASE_USER }}
+          TEST_DATABASE_PASSWORD: ${{ env.TEST_DATABASE_PASSWORD }}
+
+      # ================================
       # 14. Run Unit and Integration Tests
       # ================================
       - name: Run tests with coverage
         # TODO: Remove -Dmaven.test.failure.ignore=true once test failures are fixed
-        # Currently 282 test failures need individual attention (assertion errors, test data issues)
+        # Currently some test failures need individual attention (assertion errors, test data issues)
         run: ./mvnw verify ${{ env.MAVEN_CLI_OPTS }} -Dmaven.test.failure.ignore=true
         env:
-          # Quarkus test configuration - use PostgreSQL DevServices
-          QUARKUS_TEST_NATIVE_IMAGE_PROFILE: test
+          # Use the CI PostgreSQL service container (not DevServices)
+          QUARKUS_DATASOURCE_JDBC_URL: ${{ env.TEST_DATABASE_URL }}
+          QUARKUS_DATASOURCE_USERNAME: ${{ env.TEST_DATABASE_USER }}
+          QUARKUS_DATASOURCE_PASSWORD: ${{ env.TEST_DATABASE_PASSWORD }}
+          QUARKUS_DATASOURCE_DB_KIND: postgresql
+          # Disable DevServices - we're using the service container
+          QUARKUS_DATASOURCE_DEVSERVICES_ENABLED: "false"
           # Disable services that require external connections in CI
-          QUARKUS_LANGCHAIN4J_ANTHROPIC_ENABLED: false
+          QUARKUS_LANGCHAIN4J_ANTHROPIC_ENABLED: "false"
+          # Hibernate settings for test
+          QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: none
 
       # ================================
       # 15. Generate JaCoCo Coverage Report

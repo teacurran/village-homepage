@@ -15,6 +15,10 @@ import java.util.Map;
  * configuration overrides. This approach bypasses Quarkus Dev Services to avoid conflicts with .env file configuration.
  *
  * <p>
+ * <b>CI Mode:</b> When QUARKUS_DATASOURCE_JDBC_URL environment variable is set (e.g., in GitHub Actions), this resource
+ * skips container startup and returns an empty configuration map, allowing the tests to use the CI-provided database.
+ *
+ * <p>
  * <b>Usage:</b>
  *
  * <pre>
@@ -32,10 +36,20 @@ import java.util.Map;
 public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManager {
 
     private PostgreSQLContainer<?> postgresContainer;
+    private boolean usingCiDatabase = false;
 
     @Override
     public Map<String, String> start() {
-        // Start PostgreSQL with PostGIS + pgvector container
+        // Check if running in CI with pre-configured database
+        String ciJdbcUrl = System.getenv("QUARKUS_DATASOURCE_JDBC_URL");
+        if (ciJdbcUrl != null && !ciJdbcUrl.isEmpty()) {
+            // In CI: database is already available via service container
+            // Don't start Testcontainers, just use the CI database
+            usingCiDatabase = true;
+            return Map.of();
+        }
+
+        // Local development: Start PostgreSQL with PostGIS + pgvector container
         // Using joshuasundance/postgis_pgvector which has both extensions pre-installed
         DockerImageName postgisImage = DockerImageName.parse("joshuasundance/postgis_pgvector:latest")
                 .asCompatibleSubstituteFor("postgres");
@@ -60,7 +74,7 @@ public class PostgreSQLTestResource implements QuarkusTestResourceLifecycleManag
 
     @Override
     public void stop() {
-        if (postgresContainer != null) {
+        if (postgresContainer != null && !usingCiDatabase) {
             // Container will be reused across test classes (withReuse(true))
             // Testcontainers Ryuk will clean up on JVM exit
             postgresContainer.stop();
