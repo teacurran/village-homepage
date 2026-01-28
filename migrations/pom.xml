@@ -25,6 +25,14 @@
                     <!-- Point the plugin at this module directory so scripts/ and environments/ are resolved -->
                     <path>${project.basedir}</path>
                 </configuration>
+                <dependencies>
+                    <!-- PostgreSQL JDBC driver for running migrations -->
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>42.7.4</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
