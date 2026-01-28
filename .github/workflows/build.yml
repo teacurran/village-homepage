@@ -152,11 +152,12 @@ jobs:
       - name: Run database migrations
         run: |
           cd migrations
-          mvn migration:up -Dmigration.env=test ${{ env.MAVEN_CLI_OPTS }}
-        env:
-          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
-          TEST_DATABASE_USER: ${{ env.TEST_DATABASE_USER }}
-          TEST_DATABASE_PASSWORD: ${{ env.TEST_DATABASE_PASSWORD }}
+          mvn migration:up \
+            -Dmigration.driver=org.postgresql.Driver \
+            -Dmigration.url=${{ env.TEST_DATABASE_URL }} \
+            -Dmigration.username=${{ env.TEST_DATABASE_USER }} \
+            -Dmigration.password=${{ env.TEST_DATABASE_PASSWORD }} \
+            ${{ env.MAVEN_CLI_OPTS }}
 
       # ================================
       # 14. Run Unit and Integration Tests
